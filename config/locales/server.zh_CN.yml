@@ -1,0 +1,161 @@
+zh_CN:
+  site_settings:
+    rsc_campaign_enabled: 2026 世界杯活动：赛果齐全后自动补发未完成的返利和徽章
+    rsc_campaign_silver_badge_id: 绿茵观察家徽章 ID（需名称一致且不可重复授予）
+    rsc_campaign_gold_badge_id: 足坛预言家徽章 ID（需名称一致且不可重复授予）
+    rsc_read_only: RSC 目前为只读预览，交易、奖励、结算与通知已暂停。
+    rsc_enabled: 启用原生 RSC 系统（迁移与验收完成后再开启）
+    rsc_allowed_groups: 允许使用 RSC 的用户组
+    rsc_admin_groups: 允许管理 RSC 的用户组；站点管理员自动拥有管理权限
+    rsc_daily_outgoing_count: 每天转账、打赏与发红包的合计次数上限（北京时间）
+    rsc_daily_outgoing_amount: 每天转账、打赏与发红包的合计 RSC 上限
+    rsc_notifications_enabled: 投递 RSC 站内通知
+    rsc_native_trial_enabled: 启用原生 RSC 业务（上线前须完成数据导入、对账与行情验收）
+    rsc_odds_max_age_hours: 允许的赔率最大时效（小时）
+    rsc_sports_settlement_delay_seconds: 赛果确认到结算的等待时间（秒）
+    rsc_daily_rewards_enabled: 按北京时间发放前一天活跃奖励；启用前须停用旧奖励任务
+    rsc_daily_reward_delay_hours: 业务日结束后等待多少小时发放奖励（默认北京时间 02:00，与旧版一致）
+    rsc_crypto_stream_enabled: 启用 Coinbase 实时行情（多个容器共享单条订阅）
+    rsc_market_data_enabled: 启用外部行情同步（Yahoo、Coinbase、Kraken、OKX、Twelve Data）
+    rsc_sports_data_enabled: 启用 ESPN 赛事与赔率同步
+    rsc_twelve_data_api_key: Twelve Data 服务端 API 密钥
+    rsc_sports_leagues: 同步的联赛，格式 sport:league
+    rsc_high_risk_enabled: 允许虚拟币高风险模式（最高 100 倍；仍需用户单独选择）
+    rsc_market_sync_batch: 每次后台同步的标的数量上限
+    rsc_twelve_data_delay_seconds: Twelve Data 订阅所提供的报价延迟（秒），按实际套餐填写
+  discourse_rsc:
+    leagues:
+      fifa_world: 世界杯
+      uefa_champions: 欧冠
+      eng_1: 英超
+      esp_1: 西甲
+      ger_1: 德甲
+      ita_1: 意甲
+      fra_1: 法甲
+      uefa_europa: 欧联
+      chn_1: 中超
+      uefa_euro: 欧洲杯
+      conmebol_america: 美洲杯
+      afc_asian_cup: 亚洲杯
+      fifa_worldq_afc: 世预赛
+      fifa_cwc: 世俱杯
+      eng_fa: 足总杯
+      esp_copa_del_rey: 国王杯
+      nba: NBA
+      fiba: 男篮世界杯
+      mens-olympics-basketball: 奥运男篮
+    notifications:
+      transfer: 向你转账了 %{amount} RSC
+      post_tip: 打赏了你的帖子 %{amount} RSC
+      issuance: 向你发放了 %{amount} RSC
+      red_packet_claim: 红包到账 %{amount} RSC
+      red_packet_refund: 未领取红包已退回 %{amount} RSC
+      daily_reward: 每日奖励到账 %{amount} RSC
+      prediction_settled: '%{match} · %{status}，返还 %{amount} RSC'
+      stock_filled: '%{symbol} · 委托已成交，保证金 %{amount} RSC'
+      stock_closed: '%{symbol} · 持仓已平仓，返还 %{amount} RSC'
+      stock_liquidated: '%{symbol} · 持仓已爆仓，剩余返还 %{amount} RSC'
+      stock_stop_loss: '%{symbol} · 持仓触发止损，返还 %{amount} RSC'
+      stock_take_profit: '%{symbol} · 持仓触发止盈，返还 %{amount} RSC'
+      stock_refunded: 委托结束，退回 %{amount} RSC
+      red_packet_claimed_by: 领取了你的红包 %{amount} RSC
+    errors:
+      reset_below_retained: "目标总资产低于保留的持仓权益与未结算预测本金。"
+      instrument_inactive: "该标的已停用，请先在标的管理中核实并启用。"
+      campaign_not_ready: 世界杯活动资料不完整，或预测结算与赛果不一致，暂不能发放。
+      campaign_badge_missing: 请配置名称匹配、不可重复授予的活动徽章。
+      invalid_page: 页码或每页数量无效。
+      invalid_section: 交易档案栏目无效。
+      read_only: RSC 目前为只读预览，交易、奖励、结算与通知已暂停。
+      user_has_history: 该账号有 RSC 资产或账务历史，不能直接删除或合并。请保留用户 ID，可使用论坛匿名化功能。
+      invalid_amount: 金额格式或精度不正确。
+      amount_overflow: 金额超出支持范围。
+      invalid_user: 用户无效。
+      invalid_request_id: 请求编号格式不正确。
+      unbalanced_journal: 账务分录不平衡。
+      idempotency_conflict: 同一请求编号不能用于不同的交易。
+      account_not_found: 账户不存在。
+      wallet_frozen: 账户已冻结。
+      insufficient_balance: 余额不足。
+      login_required: 请先登录。
+      membership_required: 用户尚未获得使用 RSC 的权限。
+      self_transfer: 不能给自己转账或打赏。
+      invalid_post: 此帖子不能接受打赏。
+      admin_required: 需要 RSC 管理权限。
+      reason_required: 请填写发放原因。
+      daily_count_limit: 已达到每日转出次数上限。
+      daily_amount_limit: 已达到每日转出金额上限。
+      trial_disabled: 原生业务试用尚未开启。
+      invalid_order: 委托参数不正确。
+      invalid_quantity: 数量不满足最小值或步进要求。
+      order_pending: 此品种已有待处理委托。
+      too_many_orders: 待处理委托过多。
+      position_unavailable: 可平仓数量不足。
+      position_locked: 此持仓尚未达到最短持有时间。
+      position_conflict: 加仓必须使用相同方向与杠杆。
+      order_not_pending: 此委托已处理。
+      cancellation_locked: 当前尚不在可撤单时间内，请查看委托的撤单时间。
+      invalid_protection: 止盈或止损价格方向不正确。
+      quote_unavailable: 行情暂不可用。
+      quote_stale: 行情已过期，请等待更新。
+      market_closed: 当前不在交易时段。
+      match_locked: 赛事已封盘。
+      invalid_pick: 预测选项不正确。
+      odds_unavailable: 赔率不可用或已过期。
+      prediction_not_found: 未找到你的预测。
+      prediction_settled: 预测已结算。
+      prediction_exists: 你已有预测，请使用修改预测。
+      invalid_packet: 红包份数、金额或有效期不正确。
+      packet_limit: 红包金额超过限额。
+      packet_closed: 红包已关闭。
+      packet_claimed: 你已领取过此红包。
+      packet_expired: 红包已过期。
+      invalid_reward_date: 奖励日期必须早于今天。
+      high_risk_disabled: 高风险模式未启用，或尚未勾选高风险选项。
+      high_risk_position_limit: 一次只能在一个虚拟币标的上持有或挂出高风险仓位。
+      high_risk_cooldown: 高风险仓位平仓后需等待 30 分钟才能再次开仓。
+      position_risk_limit: 超过该标的允许使用的保证金比例。
+      portfolio_risk_limit: 超过账户组合的保证金风险上限。
+      crypto_daily_limit: 已达到今日虚拟币下单次数上限。
+      invalid_symbol: 标的代码格式不正确。
+      invalid_search: 请输入 2 至 60 个字符搜索标的。
+      provider_disabled: 行情同步尚未启用。
+      provider_cooldown: 数据源正在冷却，请稍后重试。
+      provider_busy: 行情请求繁忙，请稍后重试。
+      provider_unavailable: 行情服务暂时不可用，请稍后重试。
+      provider_no_data: 数据源暂未提供此标的数据。
+      provider_not_configured: 此标的尚未配置行情来源。
+      provider_key_required: 管理员尚未配置行情服务密钥。
+      provider_invalid_price: 数据源返回的价格无效。
+      provider_invalid_data: 数据源返回的数据不完整。
+      fx_stale: 汇率已过期，暂停此币种的报价换算。
+      invalid_range: 不支持此图表周期。
+      invalid_admin_input: 管理操作参数不完整或格式不正确。
+      invalid_admin_action: 不支持此管理操作。
+      invalid_status: 状态无效。
+      cannot_freeze_self: 不能冻结自己的钱包。
+      instrument_has_positions: 此标的仍有持仓或挂单，请先处理后再停用或更改类型。
+      invalid_expiry: 到期时间应在未来一年以内。
+      invalid_provider: 请选择支持的数据源。
+      invalid_category: 请选择支持的市场分类。
+      invalid_session: 交易时段无效。
+      invalid_sort: 不支持此排序方式。
+      provider_currency: 暂不支持此报价币种。
+      provider_response_too_large: 数据源响应过大，请稍后重试。
+      provider_http_400: 数据源暂时无法响应（400），请稍后重试。
+      provider_http_401: 数据源暂时无法响应（401），请稍后重试。
+      provider_http_403: 数据源暂时无法响应（403），请稍后重试。
+      provider_http_404: 数据源暂时无法响应（404），请稍后重试。
+      provider_http_429: 数据源暂时无法响应（429），请稍后重试。
+      provider_http_500: 数据源暂时无法响应（500），请稍后重试。
+      provider_http_502: 数据源暂时无法响应（502），请稍后重试。
+      provider_http_503: 数据源暂时无法响应（503），请稍后重试。
+      market_opening_disabled: 该杠杆或反向产品当前仅可平仓。
+      order_notional_below_min: 股票开仓名义金额至少为 1 RSC。
+      market_liquidity_limit: 委托超过近期成交量允许的模拟流动性上限。
+      take_profit_not_profitable: 止盈价必须越过计入双边手续费后的保本价。
+      stop_loss_beyond_liquidation: 止损价格必须在爆仓价之前触发。
+    statuses:
+      won: 预测命中
+      lost: 未命中
+      refunded: 已退款

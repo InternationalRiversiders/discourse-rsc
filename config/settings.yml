@@ -1,0 +1,69 @@
+plugins:
+  rsc_enabled:
+    default: false
+    client: true
+  rsc_read_only:
+    default: true
+    client: true
+  rsc_allowed_groups:
+    type: group_list
+    default: ""
+  rsc_admin_groups:
+    type: group_list
+    default: ""
+  rsc_daily_outgoing_count:
+    default: 20
+    min: 1
+    max: 10000
+  rsc_daily_outgoing_amount:
+    default: "300"
+  rsc_notifications_enabled:
+    default: true
+  rsc_native_trial_enabled:
+    default: false
+    client: true
+  rsc_odds_max_age_hours:
+    default: 6
+    min: 1
+    max: 24
+  rsc_sports_settlement_delay_seconds:
+    default: 600
+    min: 0
+    max: 86400
+  rsc_campaign_enabled:
+    default: false
+  rsc_campaign_silver_badge_id:
+    default: 0
+    min: 0
+  rsc_campaign_gold_badge_id:
+    default: 0
+    min: 0
+  rsc_daily_rewards_enabled:
+    default: false
+  rsc_daily_reward_delay_hours:
+    default: 2
+    min: 0
+    max: 23
+  rsc_crypto_stream_enabled:
+    default: false
+  rsc_market_data_enabled:
+    default: false
+  rsc_sports_data_enabled:
+    default: false
+  rsc_twelve_data_api_key:
+    default: ""
+    secret: true
+  rsc_sports_leagues:
+    default: "soccer:fifa.world|soccer:uefa.champions|soccer:eng.1|soccer:esp.1|soccer:ger.1|soccer:ita.1|soccer:fra.1|soccer:uefa.europa|soccer:chn.1|soccer:uefa.euro|soccer:conmebol.america|soccer:afc.asian.cup|soccer:fifa.worldq.afc|soccer:fifa.cwc|soccer:eng.fa|soccer:esp.copa_del_rey|basketball:nba|basketball:fiba|basketball:mens-olympics-basketball"
+    type: list
+  rsc_high_risk_enabled:
+    default: false
+    client: true
+  rsc_market_sync_batch:
+    default: 100
+    min: 1
+    max: 100
+  rsc_twelve_data_delay_seconds:
+    default: 900
+    min: 0
+    max: 3600

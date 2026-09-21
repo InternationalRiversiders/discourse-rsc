@@ -1,0 +1,22 @@
+# Cutover-only location blocks for the existing coin.river-side.cc TLS server.
+# Replace its old application locations; retain its current TLS configuration.
+# Do not enable while the legacy wallet remains the live source of truth.
+location = / {
+    return 302 https://river-side.cc/rsc;
+}
+location = /admin {
+    return 302 https://river-side.cc/rsc/admin;
+}
+location ~ "^/red-packet/([A-Za-z0-9_-]{8,100})/?$" {
+    return 302 https://river-side.cc/rsc/packets/$1;
+}
+location ~ "^/api/rsc-public/red-packets/([A-Za-z0-9_-]{8,100})/?$" {
+    return 302 https://river-side.cc/rsc/packet/$1/public.json;
+}
+location ^~ /api/rsc/ {
+    default_type application/json;
+    return 410 '{"errors":["RSC has moved to the forum. Reopen RSC from the forum navigation."]}';
+}
+location / {
+    return 302 https://river-side.cc/rsc;
+}

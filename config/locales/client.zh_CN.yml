@@ -1,0 +1,310 @@
+zh_CN:
+  js:
+    discourse_rsc:
+      notifications:
+        transfer: 向你转账了 %{amount} RSC
+        post_tip: 打赏了你的帖子 %{amount} RSC
+        issuance: 向你发放了 %{amount} RSC
+        red_packet_claim: 红包到账 %{amount} RSC
+        red_packet_refund: 未领取红包已退回 %{amount} RSC
+        daily_reward: 每日奖励到账 %{amount} RSC
+        prediction_settled: '%{match} · %{status}，返还 %{amount} RSC'
+        stock_filled: '%{symbol} · 委托已成交，保证金 %{amount} RSC'
+        stock_closed: '%{symbol} · 持仓已平仓，返还 %{amount} RSC'
+        stock_liquidated: '%{symbol} · 持仓已爆仓，剩余返还 %{amount} RSC'
+        stock_stop_loss: '%{symbol} · 持仓触发止损，返还 %{amount} RSC'
+        stock_take_profit: '%{symbol} · 持仓触发止盈，返还 %{amount} RSC'
+        stock_refunded: 委托结束，退回 %{amount} RSC
+        red_packet_claimed_by: 领取了你的红包 %{amount} RSC
+      ui:
+        reset_mode: "重置方式（cash 为余额，total_equity 为总资产）"
+        packet_membership_required: "领取红包需要加入 RSC 使用组。"
+        packet_login_required: "登录论坛后领取红包。"
+        login: "登录领取"
+        back_to_forum: "返回论坛"
+        admin_without_membership: "当前账号可管理 RSC，但尚无钱包使用权限。如需转账或交易，请由论坛管理员将账号加入 RSC 使用组。"
+        popular: 热门
+        category_tradable: 可交易
+        last_quote: 最近报价估值
+        cost: 缺少报价，按成本估值
+        credit: 收入
+        debit: 支出
+        trader_positions: 持仓
+        archived_chart: 历史行情快照，仅供查看，不用于成交或估值。
+        side: 方向
+        participants: 参与者
+        trader_detail: 交易档案
+        historical_performance: 历史时间加权收益
+        performance_hint: 仅展示旧系统资金流发生时的观测节点，不是每日净值；不包含切换后的收益。
+        zoom_in: 放大
+        zoom_out: 缩小
+        pan_earlier: 更早行情
+        pan_later: 更晚行情
+        reset_chart: 重置视图
+        market_health: 行情同步状态
+        fresh_quotes: 持仓标的可用报价
+        stale_quotes: 暂不可用的报价
+        quote_capacity: 当前开市持仓可能超出行情请求预算；请检查同步延迟，不要通过提高请求频率绕过限流。
+        chart_stale: 行情暂未更新，正在显示上次缓存的走势图。
+        campaign: 2026 世界杯活动
+        campaign_hint: 先检查赛果及发放记录；只补发缺失返利和徽章，已发奖励不会重发。
+        campaign_preview: 检查活动
+        campaign_pending: 待补发人数
+        campaign_apply: 补发缺失奖励
+        read_only: RSC 目前为只读预览，交易、奖励、结算与通知已暂停。
+        rank: 排名
+        admin_intro: 资金、数据源与社区规则，集中管理。
+        wallet_intro: 管理余额、查看收支，把心意送给校友。
+        market_intro: 市场行情、持仓与委托，一处查看。
+        sports_intro: 选择支持的队伍，关注每一场精彩对决。
+        title: 社区经济
+        available: 可用余额
+        trial: 原生试用 · 当前为测试环境，行情和赛事为演示数据
+        navigation: RSC 导航
+        wallet: 钱包与红包
+        market: 股市
+        sports: 赛事预测
+        transfer: 转账
+        recipient: 接收人用户名
+        amount: 金额（RSC）
+        create_packet: 发红包
+        packet_mode: 红包类型
+        fixed: 等额红包
+        random: 拼手气红包
+        per_share: 每份金额
+        total: 总金额
+        count: 份数
+        message: 祝福语
+        my_packets: 我的红包
+        history: 资金流水
+        time: 时间
+        operation: 项目
+        balance: 余额
+        empty: 暂无记录
+        instrument: 交易品种
+        price_chart: 价格走势
+        quote_time: 行情时间
+        auto_refresh: 每 15 秒刷新
+        order: 下单
+        direction: 方向
+        long: 做多
+        short: 做空
+        quantity: 数量
+        leverage: 杠杆
+        order_hint: 提交后预留资金，等待后续行情确认成交。提交后的 10 秒内可撤单。
+        submit_order: 提交委托
+        no_quotes: 暂无可用行情
+        positions: 我的持仓
+        margin: 保证金
+        pnl: 浮动盈亏
+        close_position: 确认平仓
+        take_profit: 止盈价
+        stop_loss: 止损价
+        save: 保存
+        no_positions: 暂无持仓
+        orders: 委托记录
+        status: 状态
+        cancel: 撤单
+        stake: 预测金额（RSC）
+        locked: 已封盘或赔率不可用
+        update_prediction: 修改预测
+        predict: 提交预测
+        your_prediction: 我的预测
+        no_matches: 暂无赛事
+        predictions: 预测记录
+        pick: 选项
+        odds: 锁定赔率
+        payout: 返还（RSC）
+        packet: 红包
+        close_packet: 收回剩余红包
+        share_packet: 复制当前页面链接即可分享红包
+        already_claimed: 你已领取过这个红包
+        claim_packet: 领取红包
+        saved: 操作成功
+        home: 主胜
+        away: 客胜
+        draw: 平局
+        open: 可领取
+        exhausted: 已领完
+        closed: 已收回
+        expired: 已过期
+        pending: 等待处理
+        executing: 处理中
+        filled: 已成交
+        failed: 交易失败
+        canceled: 已取消
+        rejected: 未成交，已退款
+        scheduled: 未开赛
+        live: 进行中
+        finished: 已结束
+        postponed: 已延期
+        won: 预测命中
+        lost: 未命中
+        refunded: 已退款
+        close: 平仓
+        admin_issue: 管理员发放
+        game_payout: 历史游戏结算
+        game_refund: 历史游戏退款
+        game_stake: 历史游戏投入
+        position_margin: 追加保证金
+        red_packet_fund: 发红包
+        reward_payout: 活跃奖励
+        trade_adjustment: 交易盈亏调整
+        trade_buy: 买入
+        trade_cover: 平空
+        trade_sell: 卖出 / 平多
+        trade_short: 做空
+        world_cup_payout: 赛事预测结算
+        world_cup_prediction: 赛事预测投入
+        world_cup_prediction_adjustment: 赛事预测调整
+        issuance: 管理员发放
+        post_tip: 帖子打赏
+        red_packet_open: 发红包
+        red_packet_claim: 领取红包
+        red_packet_refund: 红包退款
+        daily_reward: 每日奖励
+        prediction_stake: 赛事预测
+        prediction_settlement: 预测结算
+        stock_reserve: 委托预留
+        stock_fill: 开仓成交
+        stock_close: 平仓结算
+        stock_refund: 委托退款
+        match: 比赛
+        exchange_title: RSC 交易所
+        account_overview: 账户概览
+        portfolio_equity: 仓位权益
+        my_positions: 持仓数量
+        positions_count: 个标的
+        market_quotes: 市场行情
+        instruments_count: 个标的
+        market_categories: 市场板块
+        search_markets: 搜索代码或名称
+        sort_markets: 行情排序
+        sort_symbol: 按代码
+        gainers: 涨幅优先
+        losers: 跌幅优先
+        latest_price: 最新价 / RSC
+        daily_change: 日涨跌
+        no_quote: 暂无报价
+        stale_quote: 报价已过期
+        session_closed: 休市
+        delayed_quote: 延迟确认
+        session_open: 交易中
+        no_results: 没有匹配的标的
+        search_hint: 试试其他名称，或切换市场板块
+        previous_page: 上一页
+        next_page: 下一页
+        back_to_markets: 返回行情列表
+        previous_close_basis: 相对昨收；缺失时显示 —
+        category_all: 全部
+        category_us: 美股
+        category_cn: A 股
+        category_hk: 港股
+        category_crypto: 虚拟币
+        category_forex: 外汇
+        category_index: 指数
+        category_commodity: 商品
+        category_indices: 指数
+        category_metals: 贵金属
+        category_jp: 日股
+        category_eu: 欧股
+        category_ca: 加股
+        category_au: 澳股
+        category_sg: 新加坡
+        category_in: 印股
+        chart_mode: 折线 / K 线
+        external_search: 找不到标的？搜索并申请添加
+        search: 搜索
+        request_market: 申请添加
+        request_sent: 申请已提交，等待管理员审核
+        tip_summary: 打赏记录
+        leaderboard: 排行榜
+        administration: RSC 管理
+        high_risk_mode: 启用高风险模式（最高 100 倍）
+        liquidation_price: 预计爆仓价
+        add_margin: 追加保证金
+        ranking_hint: 默认按总资产排序；使用最近报价估值，缺价按成本估值。历史报价不用于成交。
+        total_pnl: 总交易盈亏
+        equity: 总资产
+        realized_pnl: 已实现盈亏（扣手续费）
+        trade_count: 成交次数
+        username: 用户名
+        circulating: 钱包余额合计
+        escrow: 托管资金
+        wallets: 钱包数
+        journals: 账本笔数
+        wallet_lookup: 查找钱包
+        admin_action: 管理操作
+        admin_action_hint: 所有操作记录原因。资产重置会取消挂单；清空持仓会注销保证金，请核对用户 ID 和金额。
+        wallet_status: 冻结 / 恢复钱包
+        reset_assets: 重置钱包资产
+        exemption: 临时豁免转出限额
+        reject_request: 拒绝标的申请
+        match_result: 人工核实待结算赛果
+        user_id: 用户 ID
+        clear_positions: 同时清空持仓
+        expires_at: 到期时间（ISO 8601）
+        symbol: 标的代码
+        name: 名称
+        provider: 数据源
+        provider_symbol: 数据源代码
+        category: 市场分类
+        currency: 报价币种
+        minimum: 最小数量
+        step: 数量步长
+        fee_bps: 手续费（基点）
+        active: 启用
+        id: 记录 ID
+        result: 赛果
+        reason: 操作原因
+        daily_rewards: 每日活跃奖励
+        date: 业务日期（北京时间）
+        preview: 预览
+        data_sources: 行情同步状态
+        sync_now: 排队同步行情与赛事
+        market_requests: 标的申请
+        settlement_review: 赛果与更正检查
+        notification_queue: 通知队列
+        audit_log: 管理审计
+        seed_catalog: 导入旧版标的目录
+        manual_quote: 更新手工报价
+        price: 价格（RSC）
+        previous_close: 昨收（RSC）
+        session_start: 交易时段开始（ISO 8601）
+        session_end: 交易时段结束（ISO 8601）
+        fund_activity: 资金流转记录
+        full_history: 查看全部流水
+        native_history: 原生账本
+        legacy_history: 迁移前历史
+        load_more: 加载更多
+        return_pct: 收益率
+        sort: 排序方式
+        today_reward: 今日活跃奖励
+        reward_login: 登录
+        reward_posts: 发帖与回复
+        reward_topics: 发主题
+        reward_replies: 回复
+        estimated_reward: 预计奖励（每日最多 10 RSC）
+        rewards_disabled: 自动发放尚未启用；此处显示今日活跃积分。
+        packet_days: 红包有效期（天）
+        packet_minimum: 每份最少（RSC）
+        packet_maximum: 每份最多（RSC）
+        packet_claims: 领取记录
+        league: 联赛筛选
+        stock_margin: 追加保证金
+        admin_adjustment: 管理员资产调整
+        admin_clear_position: 管理员清理持仓
+        legacy_opening: 迁移期初资产
+        pay_rewards: 发放奖励
+        starts_at: 豁免开始时间（ISO 8601，可留空）
+        asset_type: 资产类型（stock / etf / crypto）
+        price_moved: 行情波动超过成交保护范围
+        stock_liquidated: 触发强制平仓
+        stock_closed: 主动平仓
+        stock_take_profit: 触发止盈
+        stock_stop_loss: 触发止损
+        legacy_import: 迁移前记录
+        normal: 正常
+        high: 较高
+        liquidation: 达到强平线
+        legacy_pending_canceled: 迁移时取消的旧待成交单（未重复退款）

@@ -1,0 +1,162 @@
+en:
+  site_settings:
+    rsc_daily_reward_delay_hours: Hours after the UTC+8 business day ends before daily rewards become payable (legacy default 02:00).
+    rsc_campaign_enabled: Automatically issue missing 2026 World Cup rebates and badges after result verification
+    rsc_campaign_silver_badge_id: ID of the 绿茵观察家 badge; requires the matching name and a single grant per user
+    rsc_campaign_gold_badge_id: ID of the 足坛预言家 badge; requires the matching name and a single grant per user
+    rsc_read_only: RSC is in read-only preview. Trading, rewards, settlement and notifications are paused.
+    rsc_enabled: Enable native RSC after migration and acceptance testing
+    rsc_allowed_groups: Groups permitted to use RSC
+    rsc_admin_groups: Groups permitted to administer RSC; site admins are always administrators
+    rsc_daily_outgoing_count: Daily outgoing transfer, tip and red packet count (Asia/Shanghai)
+    rsc_daily_outgoing_amount: Daily outgoing RSC amount
+    rsc_notifications_enabled: Deliver RSC in-site notifications
+    rsc_native_trial_enabled: native trial enabled
+    rsc_odds_max_age_hours: odds max age hours
+    rsc_sports_settlement_delay_seconds: sports settlement delay seconds
+    rsc_daily_rewards_enabled: daily rewards enabled
+    rsc_crypto_stream_enabled: Enable the shared Coinbase live price stream
+    rsc_market_data_enabled: Enable external market data synchronization
+    rsc_sports_data_enabled: Enable ESPN fixtures and odds synchronization
+    rsc_twelve_data_api_key: Server-side Twelve Data API key
+    rsc_sports_leagues: Leagues to synchronize as sport:league
+    rsc_high_risk_enabled: Allow crypto high risk mode up to 100×, with user opt-in
+    rsc_market_sync_batch: Maximum instruments per background sync batch
+    rsc_twelve_data_delay_seconds: Quote delay in seconds for your Twelve Data subscription
+  discourse_rsc:
+    leagues:
+      fifa_world: FIFA World Cup
+      uefa_champions: UEFA Champions League
+      eng_1: Premier League
+      esp_1: La Liga
+      ger_1: Bundesliga
+      ita_1: Serie A
+      fra_1: Ligue 1
+      uefa_europa: UEFA Europa League
+      chn_1: Chinese Super League
+      uefa_euro: UEFA European Championship
+      conmebol_america: Copa América
+      afc_asian_cup: AFC Asian Cup
+      fifa_worldq_afc: AFC World Cup Qualifiers
+      fifa_cwc: FIFA Club World Cup
+      eng_fa: FA Cup
+      esp_copa_del_rey: Copa del Rey
+      nba: NBA
+      fiba: FIBA World Cup
+      mens-olympics-basketball: Olympic Basketball
+    notifications:
+      transfer: sent you %{amount} RSC
+      post_tip: tipped your post %{amount} RSC
+      issuance: issued %{amount} RSC to you
+      red_packet_claim: 'Packet received: %{amount} RSC'
+      red_packet_refund: 'Unclaimed packet refunded: %{amount} RSC'
+      daily_reward: 'Daily reward: %{amount} RSC'
+      prediction_settled: '%{match} · %{status}; %{amount} RSC returned'
+      stock_filled: '%{symbol} · Order filled; margin %{amount} RSC'
+      stock_closed: '%{symbol} · Position closed: %{amount} RSC returned'
+      stock_liquidated: '%{symbol} · Position liquidated: %{amount} RSC returned'
+      stock_stop_loss: '%{symbol} · Stop loss executed: %{amount} RSC returned'
+      stock_take_profit: '%{symbol} · Take profit executed: %{amount} RSC returned'
+      stock_refunded: 'Order reservation refunded: %{amount} RSC'
+      red_packet_claimed_by: claimed %{amount} RSC from your packet
+    errors:
+      reset_below_retained: "The target is below retained position equity and pending prediction stakes."
+      instrument_inactive: "This instrument is inactive. Review and enable it in instrument management first."
+      campaign_not_ready: Campaign data is incomplete or settled predictions disagree with results. Awards are blocked.
+      campaign_badge_missing: Configure campaign badges with matching names and only one grant per user.
+      invalid_page: Invalid page
+      invalid_section: Invalid section
+      read_only: RSC is in read-only preview. Trading, rewards, settlement and notifications are paused.
+      user_has_history: This account has RSC assets or accounting history and cannot be deleted or merged. Preserve its user ID; forum
+        anonymization is available.
+      invalid_amount: Invalid amount or decimal precision.
+      amount_overflow: Amount is outside the supported range.
+      invalid_user: Invalid user.
+      invalid_request_id: Invalid request ID.
+      unbalanced_journal: Accounting entries must balance.
+      idempotency_conflict: This request ID was already used for a different transaction.
+      account_not_found: Account not found.
+      wallet_frozen: The account is frozen.
+      insufficient_balance: Insufficient balance.
+      login_required: Please log in.
+      membership_required: The user is not permitted to use RSC.
+      self_transfer: You cannot transfer or tip yourself.
+      invalid_post: This post cannot receive tips.
+      admin_required: RSC administration permission is required.
+      reason_required: An issuance reason is required.
+      daily_count_limit: Daily outgoing transaction count exceeded.
+      daily_amount_limit: Daily outgoing amount exceeded.
+      trial_disabled: Trial disabled.
+      invalid_order: Invalid order.
+      invalid_quantity: Invalid quantity.
+      order_pending: Order pending.
+      too_many_orders: Too many orders.
+      position_unavailable: Position unavailable.
+      position_locked: Position locked.
+      position_conflict: Position conflict.
+      order_not_pending: Order not pending.
+      cancellation_locked: The order is outside its cancellation window.
+      invalid_protection: Invalid protection.
+      quote_unavailable: Quote unavailable.
+      quote_stale: Quote stale.
+      market_closed: Market closed.
+      match_locked: Match locked.
+      invalid_pick: Invalid pick.
+      odds_unavailable: Odds unavailable.
+      prediction_not_found: Prediction not found.
+      prediction_settled: Prediction settled.
+      prediction_exists: Prediction exists.
+      invalid_packet: Invalid packet.
+      packet_limit: Packet limit.
+      packet_closed: Packet closed.
+      packet_claimed: Packet claimed.
+      packet_expired: Packet expired.
+      invalid_reward_date: Invalid reward date.
+      high_risk_disabled: High risk disabled.
+      high_risk_position_limit: High risk position limit.
+      high_risk_cooldown: High risk cooldown.
+      position_risk_limit: Position risk limit.
+      portfolio_risk_limit: Portfolio risk limit.
+      crypto_daily_limit: Crypto daily limit.
+      invalid_symbol: Invalid symbol.
+      invalid_search: Invalid search.
+      provider_disabled: Provider disabled.
+      provider_cooldown: The provider is cooling down. Please try again later.
+      provider_busy: Quote requests are busy. Please try again later.
+      provider_unavailable: Provider unavailable.
+      provider_no_data: Provider no data.
+      provider_not_configured: Provider not configured.
+      provider_key_required: Provider key required.
+      provider_invalid_price: Provider invalid price.
+      provider_invalid_data: Provider invalid data.
+      fx_stale: Fx stale.
+      invalid_range: Invalid range.
+      invalid_admin_input: Invalid admin input.
+      invalid_admin_action: Invalid admin action.
+      invalid_status: Invalid status.
+      cannot_freeze_self: Cannot freeze self.
+      instrument_has_positions: Instrument has positions.
+      invalid_expiry: Invalid expiry.
+      invalid_provider: Invalid provider.
+      invalid_category: Invalid category.
+      invalid_session: Invalid session.
+      invalid_sort: Invalid sort.
+      provider_currency: Provider currency.
+      provider_response_too_large: Provider response too large.
+      provider_http_400: The data provider is unavailable (400). Please retry later.
+      provider_http_401: The data provider is unavailable (401). Please retry later.
+      provider_http_403: The data provider is unavailable (403). Please retry later.
+      provider_http_404: The data provider is unavailable (404). Please retry later.
+      provider_http_429: The data provider is unavailable (429). Please retry later.
+      provider_http_500: The data provider is unavailable (500). Please retry later.
+      provider_http_502: The data provider is unavailable (502). Please retry later.
+      provider_http_503: The data provider is unavailable (503). Please retry later.
+      market_opening_disabled: This leveraged or inverse product is close-only.
+      order_notional_below_min: Stock opening notional must be at least 1 RSC.
+      market_liquidity_limit: Order exceeds the recent simulated liquidity limit.
+      take_profit_not_profitable: Take-profit must be beyond the break-even price including both fees.
+      stop_loss_beyond_liquidation: Stop-loss must trigger before the liquidation price.
+    statuses:
+      won: Won
+      lost: Lost
+      refunded: Refunded

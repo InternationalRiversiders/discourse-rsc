@@ -1,0 +1,320 @@
+en:
+  js:
+    discourse_rsc:
+      notifications:
+        transfer: sent you %{amount} RSC
+        post_tip: tipped your post %{amount} RSC
+        issuance: issued %{amount} RSC to you
+        red_packet_claim: 'Packet received: %{amount} RSC'
+        red_packet_refund: 'Unclaimed packet refunded: %{amount} RSC'
+        daily_reward: 'Daily reward: %{amount} RSC'
+        prediction_settled: '%{match} · %{status}; %{amount} RSC returned'
+        stock_filled: '%{symbol} · Order filled; margin %{amount} RSC'
+        stock_closed: '%{symbol} · Position closed: %{amount} RSC returned'
+        stock_liquidated: '%{symbol} · Position liquidated: %{amount} RSC returned'
+        stock_stop_loss: '%{symbol} · Stop loss executed: %{amount} RSC returned'
+        stock_take_profit: '%{symbol} · Take profit executed: %{amount} RSC returned'
+        stock_refunded: 'Order reservation refunded: %{amount} RSC'
+        red_packet_claimed_by: claimed %{amount} RSC from your packet
+      ui:
+        reset_mode: "Reset mode (cash or total_equity)"
+        packet_membership_required: "RSC group membership is required to claim this packet."
+        packet_login_required: "Log in to the forum to claim this packet."
+        login: "Log in to claim"
+        back_to_forum: "Back to forum"
+        admin_without_membership: "You can administer RSC, but wallet access requires membership in an RSC allowed group. Ask a forum administrator to add your account to that group to use transfers or trading."
+        popular: Popular
+        category_tradable: Tradable
+        last_quote: Last quoted valuation
+        cost: No quote; valued at cost
+        credit: Credit
+        debit: Debit
+        trader_positions: Positions
+        archived_chart: Archived prices for viewing only; never used for trading or
+          valuation.
+        side: Side
+        participants: Participants
+        trader_detail: Trading profile
+        historical_performance: Historical time-weighted returns
+        performance_hint: Observations at legacy cash-flow boundaries, not daily equity.
+          Post-cutover returns are not included.
+        zoom_in: Zoom in
+        zoom_out: Zoom out
+        pan_earlier: Earlier prices
+        pan_later: Later prices
+        reset_chart: Reset view
+        market_health: Quote health
+        fresh_quotes: Fresh quotes for exposed instruments
+        stale_quotes: Unavailable quotes
+        quote_capacity: Open positions may exceed the quote request budget. Check sync delays without bypassing provider limits.
+        chart_stale: The provider is unavailable; showing the last cached chart.
+        campaign: 2026 World Cup campaign
+        campaign_hint: Checks results and award history. Only missing rebates and
+          badges are issued.
+        campaign_preview: Check campaign
+        campaign_pending: Participants awaiting awards
+        campaign_apply: Issue missing awards
+        read_only: RSC is in read-only preview. Trading, rewards, settlement and notifications
+          are paused.
+        rank: Rank
+        admin_intro: Manage balances, data sources, and community rules.
+        wallet_intro: Manage your balance, follow your activity, and share with the
+          community.
+        market_intro: Quotes, positions, and orders, together in one place.
+        sports_intro: Follow the fixtures and make your picks.
+        title: Community economy
+        available: Available balance
+        trial: Native preview · Test environment with demo quotes and matches
+        navigation: RSC navigation
+        wallet: Wallet & packets
+        market: Markets
+        sports: Predictions
+        transfer: Transfer
+        recipient: Recipient username
+        amount: Amount (RSC)
+        create_packet: Create packet
+        packet_mode: Packet type
+        fixed: Equal shares
+        random: Random shares
+        per_share: Amount per share
+        total: Total amount
+        count: Shares
+        message: Message
+        my_packets: My packets
+        history: Transactions
+        time: Time
+        operation: Type
+        balance: Balance
+        empty: No records yet
+        instrument: Instrument
+        price_chart: Price history
+        quote_time: Quote time
+        auto_refresh: Refreshes every 15 seconds
+        order: Place an order
+        direction: Direction
+        long: Long
+        short: Short
+        quantity: Quantity
+        leverage: Leverage
+        order_hint: Funds are reserved until a subsequent quote confirms the order.
+          Cancel within 10 seconds of submission.
+        submit_order: Submit order
+        no_quotes: No quotes available
+        positions: My positions
+        margin: Margin
+        pnl: Unrealized P&L
+        close_position: Close position
+        take_profit: Take profit
+        stop_loss: Stop loss
+        save: Save
+        no_positions: No open positions
+        orders: Orders
+        status: Status
+        cancel: Cancel
+        stake: Stake (RSC)
+        locked: Closed or odds unavailable
+        update_prediction: Update prediction
+        predict: Submit prediction
+        your_prediction: My prediction
+        no_matches: No matches available
+        predictions: Prediction history
+        pick: Pick
+        odds: Locked odds
+        payout: Payout (RSC)
+        packet: Packet
+        close_packet: Refund unclaimed shares
+        share_packet: Share this page URL to send the packet
+        already_claimed: You already claimed this packet
+        claim_packet: Claim packet
+        saved: Saved
+        home: Home
+        away: Away
+        draw: Draw
+        open: Open
+        exhausted: Claimed
+        closed: Closed
+        expired: Expired
+        pending: Pending
+        executing: Processing
+        filled: Filled
+        failed: Failed
+        canceled: Canceled
+        rejected: Rejected and refunded
+        scheduled: Scheduled
+        live: Live
+        finished: Finished
+        postponed: Postponed
+        won: Won
+        lost: Lost
+        refunded: Refunded
+        close: Close
+        admin_issue: Admin issuance
+        game_payout: Historical game payout
+        game_refund: Historical game refund
+        game_stake: Historical game stake
+        position_margin: Position margin
+        red_packet_fund: Red packet funding
+        reward_payout: Activity reward
+        trade_adjustment: Trading adjustment
+        trade_buy: Buy
+        trade_cover: Close short
+        trade_sell: Sell / close long
+        trade_short: Open short
+        world_cup_payout: Prediction payout
+        world_cup_prediction: Prediction stake
+        world_cup_prediction_adjustment: Prediction adjustment
+        issuance: Issuance
+        post_tip: Post tip
+        red_packet_open: Packet created
+        red_packet_claim: Packet claimed
+        red_packet_refund: Packet refund
+        daily_reward: Daily reward
+        prediction_stake: Prediction stake
+        prediction_settlement: Prediction settlement
+        stock_reserve: Order reservation
+        stock_fill: Position opened
+        stock_close: Position closed
+        stock_refund: Order refund
+        match: Match
+        exchange_title: RSC Exchange
+        account_overview: Account overview
+        portfolio_equity: Position equity
+        my_positions: Open positions
+        positions_count: instruments
+        market_quotes: Markets
+        instruments_count: instruments
+        market_categories: Market categories
+        search_markets: Search symbol or name
+        sort_markets: Sort markets
+        sort_symbol: By symbol
+        gainers: Top gainers
+        losers: Top losers
+        latest_price: Last / RSC
+        daily_change: Daily change
+        no_quote: No quote
+        stale_quote: Stale quote
+        session_closed: Closed
+        delayed_quote: Delayed execution
+        session_open: Open
+        no_results: No matching instruments
+        search_hint: Try another name or market category
+        previous_page: Previous page
+        next_page: Next page
+        back_to_markets: Back to markets
+        previous_close_basis: Relative to previous close; — when unavailable
+        category_all: All
+        category_us: US stocks
+        category_cn: China A-shares
+        category_hk: Hong Kong
+        category_crypto: Crypto
+        category_forex: Forex
+        category_index: Indices
+        category_commodity: Commodities
+        category_indices: Indices
+        category_metals: Metals
+        category_jp: Japan
+        category_eu: Europe
+        category_ca: Canada
+        category_au: Australia
+        category_sg: Singapore
+        category_in: India
+        chart_mode: Line / Candles
+        external_search: Search external markets
+        search: Search
+        request_market: Request market
+        request_sent: Request submitted for review
+        tip_summary: Post tips
+        leaderboard: Leaderboard
+        administration: RSC administration
+        high_risk_mode: High risk mode (up to 100×)
+        liquidation_price: Liquidation price
+        add_margin: Add margin
+        ranking_hint: Total assets by default. Valuations use the last quote, or entry
+          cost when missing. Historical quotes never authorize trades.
+        total_pnl: Total trading P&L
+        equity: Total equity
+        realized_pnl: Realized P&L after fees
+        trade_count: Trade count
+        username: Username
+        circulating: Wallet balances
+        escrow: Escrow
+        wallets: Wallets
+        journals: Journals
+        wallet_lookup: Find wallets
+        admin_action: Manage RSC
+        admin_action_hint: All changes require a reason. Asset resets cancel pending
+          orders. Clearing positions retires their margin; verify user ID and amount.
+        wallet_status: Freeze / restore wallet
+        reset_assets: Reset wallet assets
+        exemption: Temporary outgoing exemption
+        reject_request: Reject market request
+        match_result: Review unsettled match result
+        user_id: User ID
+        clear_positions: Clear positions too
+        expires_at: Expiry (ISO 8601)
+        symbol: Symbol
+        name: Name
+        provider: Provider
+        provider_symbol: Provider symbol
+        category: Category
+        currency: Quote currency
+        minimum: Minimum quantity
+        step: Quantity step
+        fee_bps: Fee (basis points)
+        active: Active
+        id: Record ID
+        result: Result
+        reason: Reason
+        daily_rewards: Daily activity rewards
+        date: Business date (Beijing)
+        preview: Preview
+        data_sources: Market data status
+        sync_now: Queue market and sports sync
+        market_requests: Market requests
+        settlement_review: Results and corrections
+        notification_queue: Notification queue
+        audit_log: Audit log
+        seed_catalog: Seed legacy market catalog
+        manual_quote: Update manual quote
+        price: Price (RSC)
+        previous_close: Previous close (RSC)
+        session_start: Session start (ISO 8601)
+        session_end: Session end (ISO 8601)
+        fund_activity: Fund activity
+        full_history: Browse all transactions
+        native_history: Native ledger
+        legacy_history: Imported history
+        load_more: Load more
+        return_pct: Return
+        sort: Sort by
+        today_reward: Today’s activity reward
+        reward_login: Visit
+        reward_posts: Topics and replies
+        reward_topics: Topics
+        reward_replies: Replies
+        estimated_reward: Estimated reward (up to 10 RSC/day)
+        rewards_disabled: Automatic payout is disabled; this shows today’s activity
+          score.
+        packet_days: Packet expiry (days)
+        packet_minimum: Minimum share (RSC)
+        packet_maximum: Maximum share (RSC)
+        packet_claims: Packet claims
+        league: Filter league
+        stock_margin: Add position margin
+        admin_adjustment: Administrative adjustment
+        admin_clear_position: Administrative position reset
+        legacy_opening: Imported opening assets
+        pay_rewards: Pay rewards
+        starts_at: Exemption starts at (ISO 8601, optional)
+        asset_type: Asset type (stock / etf / crypto)
+        price_moved: Price moved beyond the execution band
+        stock_liquidated: Liquidated
+        stock_closed: Position closed
+        stock_take_profit: Take profit
+        stock_stop_loss: Stop loss
+        legacy_import: Imported record
+        normal: Normal
+        high: High
+        liquidation: Liquidation threshold reached
+        legacy_pending_canceled: Pending legacy order canceled at migration; no duplicate
+          refund

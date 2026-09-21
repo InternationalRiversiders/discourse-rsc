@@ -1,0 +1,1608 @@
+# Curated liquid markets for RiversideCoin.
+# Format: EXCHANGE:SYMBOL|Name|Currency|Category|AssetType|FeeBps|Source|Rank
+# Source and Rank are optional; omitted ranks follow file order within each category.
+# Generated from major-index constituents and validated against Yahoo Finance.
+
+NASDAQ:NVDA|NVIDIA Corporation Common Stock|USD|us|stock|5|us-market-cap|1
+NASDAQ:AAPL|Apple Inc. Common Stock|USD|us|stock|5|us-market-cap|2
+NASDAQ:GOOGL|Alphabet Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|3
+NASDAQ:GOOG|Alphabet Inc. Class C Capital Stock|USD|us|stock|5|us-market-cap|4
+NASDAQ:MSFT|Microsoft Corporation Common Stock|USD|us|stock|5|us-market-cap|5
+NASDAQ:AMZN|Amazon.com Inc. Common Stock|USD|us|stock|5|us-market-cap|6
+NYSE:TSM|Taiwan Semiconductor Manufacturing Company Ltd.|USD|us|stock|5|us-market-cap|7
+NASDAQ:SPCX|Space Exploration Technologies Corp. Class A Common Stock|USD|us|stock|5|us-market-cap|8
+NASDAQ:AVGO|Broadcom Inc. Common Stock|USD|us|stock|5|us-market-cap|9
+NASDAQ:TSLA|Tesla Inc. Common Stock|USD|us|stock|5|us-market-cap|10
+NASDAQ:META|Meta Platforms Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|11
+NASDAQ:MU|Micron Technology Inc. Common Stock|USD|us|stock|5|us-market-cap|12
+NYSE:LLY|Eli Lilly and Company Common Stock|USD|us|stock|5|us-market-cap|13
+NYSE:BRK-B|Berkshire Hathaway Inc.|USD|us|stock|5|us-market-cap|14
+NASDAQ:WMT|Walmart Inc. Common Stock|USD|us|stock|5|us-market-cap|15
+NYSE:JPM|JP Morgan Chase & Co. Common Stock|USD|us|stock|5|us-market-cap|16
+NASDAQ:AMD|Advanced Micro Devices Inc. Common Stock|USD|us|stock|5|us-market-cap|17
+NASDAQ:ASML|ASML Holding N.V. New York Registry Shares|USD|us|stock|5|us-market-cap|18
+NASDAQ:INTC|Intel Corporation Common Stock|USD|us|stock|5|us-market-cap|19
+NYSE:V|Visa Inc.|USD|us|stock|5|us-market-cap|20
+NYSE:JNJ|Johnson & Johnson Common Stock|USD|us|stock|5|us-market-cap|21
+NYSE:AZN|AstraZeneca PLC Ordinary Shares|USD|us|stock|5|us-market-cap|22
+NYSE:XOM|Exxon Mobil Corporation Common Stock|USD|us|stock|5|us-market-cap|23
+NASDAQ:AMAT|Applied Materials Inc. Common Stock|USD|us|stock|5|us-market-cap|24
+NASDAQ:LRCX|Lam Research Corporation Common Stock|USD|us|stock|5|us-market-cap|25
+NYSE:CAT|Caterpillar Inc. Common Stock|USD|us|stock|5|us-market-cap|26
+NASDAQ:CSCO|Cisco Systems Inc. Common Stock (DE)|USD|us|stock|5|us-market-cap|27
+NYSE:ABBV|AbbVie Inc. Common Stock|USD|us|stock|5|us-market-cap|28
+NYSE:MA|Mastercard Incorporated Common Stock|USD|us|stock|5|us-market-cap|29
+NYSE:ORCL|Oracle Corporation Common Stock|USD|us|stock|5|us-market-cap|30
+NASDAQ:COST|Costco Wholesale Corporation Common Stock|USD|us|stock|5|us-market-cap|31
+NYSE:BAC|Bank of America Corporation Common Stock|USD|us|stock|5|us-market-cap|32
+NYSE:UNH|UnitedHealth Group Incorporated Common Stock (DE)|USD|us|stock|5|us-market-cap|33
+NYSE:GE|GE Aerospace Common Stock|USD|us|stock|5|us-market-cap|34
+NASDAQ:ARM|Arm Holdings plc American Depositary Shares|USD|us|stock|5|us-market-cap|35
+NYSE:KO|Coca-Cola Company (The) Common Stock|USD|us|stock|5|us-market-cap|36
+NYSE:HD|Home Depot Inc. (The) Common Stock|USD|us|stock|5|us-market-cap|37
+NYSE:PG|Procter & Gamble Company (The) Common Stock|USD|us|stock|5|us-market-cap|38
+NYSE:CVX|Chevron Corporation Common Stock|USD|us|stock|5|us-market-cap|39
+NYSE:MS|Morgan Stanley Common Stock|USD|us|stock|5|us-market-cap|40
+NASDAQ:KLAC|KLA Corporation Common Stock|USD|us|stock|5|us-market-cap|41
+NYSE:HSBC|HSBC Holdings plc. Common Stock|USD|us|stock|5|us-market-cap|42
+NYSE:MRK|Merck & Company Inc. Common Stock (new)|USD|us|stock|5|us-market-cap|43
+NASDAQ:NFLX|Netflix Inc. Common Stock|USD|us|stock|5|us-market-cap|44
+NASDAQ:SNDK|Sandisk Corporation Common Stock|USD|us|stock|5|us-market-cap|45
+NYSE:GS|Goldman Sachs Group Inc. (The) Common Stock|USD|us|stock|5|us-market-cap|46
+NYSE:NVS|Novartis AG Common Stock|USD|us|stock|5|us-market-cap|47
+NYSE:RY|Royal Bank Of Canada Common Stock|USD|us|stock|5|us-market-cap|48
+NYSE:PM|Philip Morris International Inc Common Stock|USD|us|stock|5|us-market-cap|49
+NYSE:GEV|GE Vernova Inc. Common Stock|USD|us|stock|5|us-market-cap|50
+NYSE:TM|Toyota Motor Corporation Common Stock|USD|us|stock|5|us-market-cap|51
+NASDAQ:PLTR|Palantir Technologies Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|52
+NASDAQ:TXN|Texas Instruments Incorporated Common Stock|USD|us|stock|5|us-market-cap|53
+NYSE:DELL|Dell Technologies Inc. Class C Common Stock|USD|us|stock|5|us-market-cap|54
+NYSE:WFC|Wells Fargo & Company Common Stock|USD|us|stock|5|us-market-cap|55
+NYSE:IBM|International Business Machines Corporation Common Stock|USD|us|stock|5|us-market-cap|56
+NYSE:RTX|RTX Corporation Common Stock|USD|us|stock|5|us-market-cap|57
+NASDAQ:PANW|Palo Alto Networks Inc. Common Stock|USD|us|stock|5|us-market-cap|58
+NYSE:C|Citigroup Inc. Common Stock|USD|us|stock|5|us-market-cap|59
+NASDAQ:LIN|Linde plc Ordinary Shares|USD|us|stock|5|us-market-cap|60
+NYSE:MUFG|Mitsubishi UFJ Financial Group Inc. Common Stock|USD|us|stock|5|us-market-cap|61
+NASDAQ:MRVL|Marvell Technology Inc. Common Stock|USD|us|stock|5|us-market-cap|62
+NYSE:AXP|American Express Company Common Stock|USD|us|stock|5|us-market-cap|63
+NYSE:SHEL|Shell PLC American Depositary Shares (each representing two (2) Ordinary Shares)|USD|us|stock|5|us-market-cap|64
+NYSE:BABA|Alibaba Group Holding Limited American Depositary Shares each representing eight Ordinary share|USD|us|stock|5|us-market-cap|65
+NYSE:NVO|Novo Nordisk A/S Common Stock|USD|us|stock|5|us-market-cap|66
+NYSE:BHP|BHP Group Limited American Depositary Shares (Each representing two Ordinary Shares)|USD|us|stock|5|us-market-cap|67
+NASDAQ:WDC|Western Digital Corporation Common Stock|USD|us|stock|5|us-market-cap|68
+NASDAQ:STX|Seagate Technology Holdings PLC Ordinary Shares (Ireland)|USD|us|stock|5|us-market-cap|69
+NYSE:APH|Amphenol Corporation Common Stock|USD|us|stock|5|us-market-cap|70
+NASDAQ:QCOM|QUALCOMM Incorporated Common Stock|USD|us|stock|5|us-market-cap|71
+NYSE:ANET|Arista Networks Inc. Common Stock|USD|us|stock|5|us-market-cap|72
+NASDAQ:TMUS|T-Mobile US Inc. Common Stock|USD|us|stock|5|us-market-cap|73
+NYSE:TD|Toronto Dominion Bank (The) Common Stock|USD|us|stock|5|us-market-cap|74
+NYSE:SAN|Banco Santander S.A. Sponsored ADR (Spain)|USD|us|stock|5|us-market-cap|75
+NYSE:VZ|Verizon Communications Inc. Common Stock|USD|us|stock|5|us-market-cap|76
+NASDAQ:AMGN|Amgen Inc. Common Stock|USD|us|stock|5|us-market-cap|77
+NASDAQ:PEP|PepsiCo Inc. Common Stock|USD|us|stock|5|us-market-cap|78
+NYSE:MCD|McDonald's Corporation Common Stock|USD|us|stock|5|us-market-cap|79
+NYSE:TMO|Thermo Fisher Scientific Inc Common Stock|USD|us|stock|5|us-market-cap|80
+NYSE:SAP|SAP  SE ADS|USD|us|stock|5|us-market-cap|81
+NYSE:GLW|Corning Incorporated Common Stock|USD|us|stock|5|us-market-cap|82
+NASDAQ:ADI|Analog Devices Inc. Common Stock|USD|us|stock|5|us-market-cap|83
+NYSE:NEE|NextEra Energy Inc. Common Stock|USD|us|stock|5|us-market-cap|84
+NASDAQ:CRWD|CrowdStrike Holdings Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|85
+NYSE:TJX|TJX Companies Inc. (The) Common Stock|USD|us|stock|5|us-market-cap|86
+NYSE:DIS|Walt Disney Company (The) Common Stock|USD|us|stock|5|us-market-cap|87
+NYSE:BA|Boeing Company (The) Common Stock|USD|us|stock|5|us-market-cap|88
+NYSE:TTE|TotalEnergies SE Ordinary Shares|USD|us|stock|5|us-market-cap|89
+NYSE:DE|Deere & Company Common Stock|USD|us|stock|5|us-market-cap|90
+NYSE:ABT|Abbott Laboratories Common Stock|USD|us|stock|5|us-market-cap|91
+NYSE:WELL|Welltower Inc. Common Stock|USD|us|stock|5|us-market-cap|92
+NASDAQ:APP|Applovin Corporation Class A Common Stock|USD|us|stock|5|us-market-cap|93
+NYSE:UNP|Union Pacific Corporation Common Stock|USD|us|stock|5|us-market-cap|94
+NASDAQ:GILD|Gilead Sciences Inc. Common Stock|USD|us|stock|5|us-market-cap|95
+NYSE:T|AT&T Inc.|USD|us|stock|5|us-market-cap|96
+NYSE:SCHW|Charles Schwab Corporation (The) Common Stock|USD|us|stock|5|us-market-cap|97
+NYSE:ETN|Eaton Corporation PLC Ordinary Shares|USD|us|stock|5|us-market-cap|98
+NYSE:UBER|Uber Technologies Inc. Common Stock|USD|us|stock|5|us-market-cap|99
+NYSE:SMFG|Sumitomo Mitsui Financial Group Inc Unsponsored American Depositary Shares (Japan)|USD|us|stock|5|us-market-cap|100
+NYSE:BUD|Anheuser-Busch Inbev SA Sponsored ADR (Belgium)|USD|us|stock|5|us-market-cap|101
+NASDAQ:IBKR|Interactive Brokers Group Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|102
+NYSE:UBS|UBS Group AG Registered Ordinary Shares|USD|us|stock|5|us-market-cap|103
+NASDAQ:SHOP|Shopify Inc. Class A Subordinate Voting Shares|USD|us|stock|5|us-market-cap|104
+NYSE:BLK|BlackRock Inc. Common Stock|USD|us|stock|5|us-market-cap|105
+NASDAQ:HON|Honeywell International Inc. Common Stock|USD|us|stock|5|us-market-cap|106
+NASDAQ:ISRG|Intuitive Surgical Inc. Common Stock|USD|us|stock|5|us-market-cap|107
+NYSE:SCCO|Southern Copper Corporation Common Stock|USD|us|stock|5|us-market-cap|108
+NASDAQ:BKNG|Booking Holdings Inc. Common Stock|USD|us|stock|5|us-market-cap|109
+NYSE:BBVA|Banco Bilbao Vizcaya Argentaria S.A. Common Stock|USD|us|stock|5|us-market-cap|110
+NYSE:DHR|Danaher Corporation Common Stock|USD|us|stock|5|us-market-cap|111
+NYSE:PFE|Pfizer Inc. Common Stock|USD|us|stock|5|us-market-cap|112
+NYSE:BTI|British American Tobacco  Industries p.l.c. Common Stock ADR|USD|us|stock|5|us-market-cap|113
+NYSE:UL|Unilever PLC American Depositary Shares (each representing One Ordinary Share)|USD|us|stock|5|us-market-cap|114
+NYSE:CVS|CVS Health Corporation Common Stock|USD|us|stock|5|us-market-cap|115
+NYSE:CB|Chubb Limited  Common Stock|USD|us|stock|5|us-market-cap|116
+NYSE:HDB|HDFC Bank Limited Common Stock|USD|us|stock|5|us-market-cap|117
+NYSE:PGR|Progressive Corporation (The) Common Stock|USD|us|stock|5|us-market-cap|118
+NYSE:PLD|Prologis Inc. Common Stock|USD|us|stock|5|us-market-cap|119
+NYSE:CRM|Salesforce Inc. Common Stock|USD|us|stock|5|us-market-cap|120
+NYSE:COP|ConocoPhillips Common Stock|USD|us|stock|5|us-market-cap|121
+NYSE:SYK|Stryker Corporation Common Stock|USD|us|stock|5|us-market-cap|122
+NYSE:COF|Capital One Financial Corporation Common Stock|USD|us|stock|5|us-market-cap|123
+NYSE:LOW|Lowe's Companies Inc. Common Stock|USD|us|stock|5|us-market-cap|124
+NASDAQ:VRTX|Vertex Pharmaceuticals Incorporated Common Stock|USD|us|stock|5|us-market-cap|125
+NYSE:BMO|Bank Of Montreal Common Stock|USD|us|stock|5|us-market-cap|126
+NYSE:MO|Altria Group Inc.|USD|us|stock|5|us-market-cap|127
+NYSE:ENB|Enbridge Inc Common Stock|USD|us|stock|5|us-market-cap|128
+NYSE:PH|Parker-Hannifin Corporation Common Stock|USD|us|stock|5|us-market-cap|129
+NYSE:MFG|Mizuho Financial Group Inc. Sponosred ADR (Japan)|USD|us|stock|5|us-market-cap|130
+NYSE:SONY|Sony Group Corporation American Depositary Shares|USD|us|stock|5|us-market-cap|131
+NYSE:SPGI|S&P Global Inc. Common Stock|USD|us|stock|5|us-market-cap|132
+NASDAQ:SBUX|Starbucks Corporation Common Stock|USD|us|stock|5|us-market-cap|133
+NYSE:RIO|Rio Tinto Plc Common Stock|USD|us|stock|5|us-market-cap|134
+NYSE:BMY|Bristol-Myers Squibb Company Common Stock|USD|us|stock|5|us-market-cap|135
+NYSE:LMT|Lockheed Martin Corporation Common Stock|USD|us|stock|5|us-market-cap|136
+NYSE:VRT|Vertiv Holdings LLC Class A Common Stock|USD|us|stock|5|us-market-cap|137
+NASDAQ:FTNT|Fortinet Inc. Common Stock|USD|us|stock|5|us-market-cap|138
+NYSE:SO|Southern Company (The) Common Stock|USD|us|stock|5|us-market-cap|139
+NASDAQ:PDD|PDD Holdings Inc. American Depositary Shares|USD|us|stock|5|us-market-cap|140
+NASDAQ:EQIX|Equinix Inc. Common Stock REIT|USD|us|stock|5|us-market-cap|141
+NYSE:HWM|Howmet Aerospace Inc. Common Stock|USD|us|stock|5|us-market-cap|142
+NYSE:GSK|GSK plc American Depositary Shares (Each representing two Ordinary Shares)|USD|us|stock|5|us-market-cap|143
+NYSE:BNS|Bank Nova Scotia Halifax Pfd 3 Ordinary Shares|USD|us|stock|5|us-market-cap|144
+NYSE:TT|Trane Technologies plc|USD|us|stock|5|us-market-cap|145
+NYSE:IBN|ICICI Bank Limited Common Stock|USD|us|stock|5|us-market-cap|146
+NYSE:BN|Brookfield Corporation Class A Limited Voting Shares|USD|us|stock|5|us-market-cap|147
+NYSE:PBR|Petroleo Brasileiro S.A. Petrobras ADS|USD|us|stock|5|us-market-cap|148
+NASDAQ:SNY|Sanofi ADS|USD|us|stock|5|us-market-cap|149
+NYSE:CM|Canadian Imperial Bank of Commerce Common Stock|USD|us|stock|5|us-market-cap|150
+NASDAQ:CDNS|Cadence Design Systems Inc. Common Stock|USD|us|stock|5|us-market-cap|151
+NYSE:MDT|Medtronic plc. Ordinary Shares|USD|us|stock|5|us-market-cap|152
+NYSE:PWR|Quanta Services Inc. Common Stock|USD|us|stock|5|us-market-cap|153
+NYSE:NEM|Newmont Corporation|USD|us|stock|5|us-market-cap|154
+NYSE:NOW|ServiceNow Inc. Common Stock|USD|us|stock|5|us-market-cap|155
+NYSE:DUK|Duke Energy Corporation (Holding Company) Common Stock|USD|us|stock|5|us-market-cap|156
+NASDAQ:MAR|Marriott International Class A Common Stock|USD|us|stock|5|us-market-cap|157
+NYSE:BNY|The Bank of New York Mellon Corporation Common Stock|USD|us|stock|5|us-market-cap|158
+NYSE:PNC|PNC Financial Services Group Inc. (The) Common Stock|USD|us|stock|5|us-market-cap|159
+NYSE:BP|BP p.l.c. Common Stock|USD|us|stock|5|us-market-cap|160
+NASDAQ:CEG|Constellation Energy Corporation Common Stock|USD|us|stock|5|us-market-cap|161
+NYSE:WMB|Williams Companies Inc. (The) Common Stock|USD|us|stock|5|us-market-cap|162
+NYSE:SPOT|Spotify Technology S.A. Ordinary Shares|USD|us|stock|5|us-market-cap|163
+NYSE:CMI|Cummins Inc. Common Stock|USD|us|stock|5|us-market-cap|164
+NYSE:USB|U.S. Bancorp Common Stock|USD|us|stock|5|us-market-cap|165
+NASDAQ:MNST|Monster Beverage Corporation|USD|us|stock|5|us-market-cap|166
+NYSE:GD|General Dynamics Corporation Common Stock|USD|us|stock|5|us-market-cap|167
+NYSE:BCS|Barclays PLC Common Stock|USD|us|stock|5|us-market-cap|168
+NYSE:UPS|United Parcel Service Inc. Common Stock|USD|us|stock|5|us-market-cap|169
+NYSE:MCK|McKesson Corporation Common Stock|USD|us|stock|5|us-market-cap|170
+NYSE:WM|Waste Management Inc. Common Stock|USD|us|stock|5|us-market-cap|171
+NASDAQ:ADP|Automatic Data Processing Inc. Common Stock|USD|us|stock|5|us-market-cap|172
+NYSE:FCX|Freeport-McMoRan Inc. Common Stock|USD|us|stock|5|us-market-cap|173
+NYSE:ASX|ASE Technology Holding Co. Ltd. American Depositary Shares (each representing Two Common Shares)|USD|us|stock|5|us-market-cap|174
+NYSE:ING|ING Group N.V. Common Stock|USD|us|stock|5|us-market-cap|175
+NASDAQ:HOOD|Robinhood Markets Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|176
+NASDAQ:CSX|CSX Corporation Common Stock|USD|us|stock|5|us-market-cap|177
+NASDAQ:ABNB|Airbnb Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|178
+NASDAQ:SNPS|Synopsys Inc. Common Stock|USD|us|stock|5|us-market-cap|179
+NYSE:HCA|HCA Healthcare Inc. Common Stock|USD|us|stock|5|us-market-cap|180
+NYSE:SNOW|Snowflake Inc. Common Stock|USD|us|stock|5|us-market-cap|181
+NYSE:RACE|Ferrari N.V. Common Shares|USD|us|stock|5|us-market-cap|182
+NYSE:ACN|Accenture plc Class A Ordinary Shares (Ireland)|USD|us|stock|5|us-market-cap|183
+NYSE:ELV|Elevance Health Inc. Common Stock|USD|us|stock|5|us-market-cap|184
+NYSE:BX|Blackstone Inc. Common Stock|USD|us|stock|5|us-market-cap|185
+NYSE:MMM|3M Company Common Stock|USD|us|stock|5|us-market-cap|186
+NASDAQ:DDOG|Datadog Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|187
+NYSE:RCL|Royal Caribbean Cruises Ltd. Common Stock|USD|us|stock|5|us-market-cap|188
+NASDAQ:MELI|MercadoLibre Inc. Common Stock|USD|us|stock|5|us-market-cap|189
+NYSE:SHW|Sherwin-Williams Company (The) Common Stock|USD|us|stock|5|us-market-cap|190
+NYSE:JCI|Johnson Controls International plc Ordinary Share|USD|us|stock|5|us-market-cap|191
+NYSE:LYG|Lloyds Banking Group Plc American Depositary Shares|USD|us|stock|5|us-market-cap|192
+NYSE:NET|Cloudflare Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|193
+NASDAQ:CMCSA|Comcast Corporation Class A Common Stock|USD|us|stock|5|us-market-cap|194
+NYSE:CNQ|Canadian Natural Resources Limited Common Stock|USD|us|stock|5|us-market-cap|195
+NYSE:NGG|National Grid Transco PLC National Grid PLC (NEW) American Depositary Shares|USD|us|stock|5|us-market-cap|196
+NYSE:AMT|American Tower Corporation (REIT) Common Stock|USD|us|stock|5|us-market-cap|197
+NYSE:MRSH|Marsh Common Stock|USD|us|stock|5|us-market-cap|198
+NYSE:KKR|KKR & Co. Inc. Common Stock|USD|us|stock|5|us-market-cap|199
+NASDAQ:ADBE|Adobe Inc. Common Stock|USD|us|stock|5|us-market-cap|200
+NYSE:EMR|Emerson Electric Company Common Stock|USD|us|stock|5|us-market-cap|201
+NASDAQ:CME|CME Group Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|202
+NYSE:ECL|Ecolab Inc. Common Stock|USD|us|stock|5|us-market-cap|203
+NASDAQ:DASH|DoorDash Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|204
+NYSE:EPD|Enterprise Products Partners L.P. Common Stock|USD|us|stock|5|us-market-cap|205
+NASDAQ:NTES|NetEase Inc. American Depositary Shares|USD|us|stock|5|us-market-cap|206
+NYSE:AEM|Agnico Eagle Mines Limited Common Stock|USD|us|stock|5|us-market-cap|207
+NYSE:MCO|Moody's Corporation Common Stock|USD|us|stock|5|us-market-cap|208
+NYSE:CP|Canadian Pacific Kansas City Limited Common Shares|USD|us|stock|5|us-market-cap|209
+NASDAQ:MDLZ|Mondelez International Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|210
+NYSE:EQNR|Equinor ASA|USD|us|stock|5|us-market-cap|211
+NYSE:ITW|Illinois Tool Works Inc. Common Stock|USD|us|stock|5|us-market-cap|212
+NYSE:VLO|Valero Energy Corporation Common Stock|USD|us|stock|5|us-market-cap|213
+NYSE:FDX|FedEx Corporation Common Stock|USD|us|stock|5|us-market-cap|214
+NYSE:HLT|Hilton Worldwide Holdings Inc. Common Stock|USD|us|stock|5|us-market-cap|215
+NASDAQ:AEP|American Electric Power Company Inc. Common Stock|USD|us|stock|5|us-market-cap|216
+NYSE:CRH|CRH PLC Ordinary Shares|USD|us|stock|5|us-market-cap|217
+NYSE:CI|The Cigna Group Common Stock|USD|us|stock|5|us-market-cap|218
+NYSE:NOK|Nokia Corporation Sponsored American Depositary Shares|USD|us|stock|5|us-market-cap|219
+NYSE:COHR|Coherent Corp. Common Stock|USD|us|stock|5|us-market-cap|220
+NASDAQ:ORLY|O'Reilly Automotive Inc. Common Stock|USD|us|stock|5|us-market-cap|221
+NYSE:MPC|Marathon Petroleum Corporation Common Stock|USD|us|stock|5|us-market-cap|222
+NYSE:TDG|Transdigm Group Incorporated Common Stock|USD|us|stock|5|us-market-cap|223
+NYSE:KMI|Kinder Morgan Inc. Common Stock|USD|us|stock|5|us-market-cap|224
+NYSE:CL|Colgate-Palmolive Company Common Stock|USD|us|stock|5|us-market-cap|225
+NYSE:SPG|Simon Property Group Inc. Common Stock|USD|us|stock|5|us-market-cap|226
+NYSE:CNI|Canadian National Railway Company Common Stock|USD|us|stock|5|us-market-cap|227
+NASDAQ:INTU|Intuit Inc. Common Stock|USD|us|stock|5|us-market-cap|228
+NYSE:BAM|Brookfield Asset Management Inc Class A Limited Voting Shares|USD|us|stock|5|us-market-cap|229
+NYSE:TRP|TC Energy Corporation Common Stock|USD|us|stock|5|us-market-cap|230
+NYSE:E|ENI S.p.A. Common Stock|USD|us|stock|5|us-market-cap|231
+NYSE:BE|Bloom Energy Corporation Class A Common Stock|USD|us|stock|5|us-market-cap|232
+NYSE:NOC|Northrop Grumman Corporation Common Stock|USD|us|stock|5|us-market-cap|233
+NYSE:NWG|NatWest Group plc American Depositary Shares (each representing two (2) Ordinary Shares)|USD|us|stock|5|us-market-cap|234
+NYSE:EOG|EOG Resources Inc. Common Stock|USD|us|stock|5|us-market-cap|235
+NYSE:GM|General Motors Company Common Stock|USD|us|stock|5|us-market-cap|236
+NYSE:URI|United Rentals Inc. Common Stock|USD|us|stock|5|us-market-cap|237
+NYSE:SLB|SLB Limited Common Shares|USD|us|stock|5|us-market-cap|238
+NYSE:NSC|Norfolk Southern Corporation Common Stock|USD|us|stock|5|us-market-cap|239
+NYSE:AON|Aon plc Class A Ordinary Shares (Ireland)|USD|us|stock|5|us-market-cap|240
+NYSE:ICE|Intercontinental Exchange Inc. Common Stock|USD|us|stock|5|us-market-cap|241
+NASDAQ:NXPI|NXP Semiconductors N.V. Common Stock|USD|us|stock|5|us-market-cap|242
+NYSE:TRV|The Travelers Companies Inc. Common Stock|USD|us|stock|5|us-market-cap|243
+NYSE:PSX|Phillips 66 Common Stock|USD|us|stock|5|us-market-cap|244
+NASDAQ:CTAS|Cintas Corporation Common Stock|USD|us|stock|5|us-market-cap|245
+NASDAQ:ROST|Ross Stores Inc. Common Stock|USD|us|stock|5|us-market-cap|246
+NYSE:CVNA|Carvana Co. Class A Common Stock|USD|us|stock|5|us-market-cap|247
+NASDAQ:TER|Teradyne Inc. Common Stock|USD|us|stock|5|us-market-cap|248
+NYSE:APO|Apollo Global Management Inc. (New) Common Stock|USD|us|stock|5|us-market-cap|249
+NYSE:CIEN|Ciena Corporation Common Stock|USD|us|stock|5|us-market-cap|250
+NYSE:DLR|Digital Realty Trust Inc. Common Stock|USD|us|stock|5|us-market-cap|251
+NYSE:MFC|Manulife Financial Corporation Common Stock|USD|us|stock|5|us-market-cap|252
+NASDAQ:ALAB|Astera Labs Inc. Common Stock|USD|us|stock|5|us-market-cap|253
+NASDAQ:WBD|Warner Bros. Discovery Inc. Series A Common Stock|USD|us|stock|5|us-market-cap|254
+NYSE:MSI|Motorola Solutions Inc. Common Stock|USD|us|stock|5|us-market-cap|255
+NYSE:RSG|Republic Services Inc. Common Stock|USD|us|stock|5|us-market-cap|256
+NASDAQ:REGN|Regeneron Pharmaceuticals Inc. Common Stock|USD|us|stock|5|us-market-cap|257
+NYSE:BSX|Boston Scientific Corporation Common Stock|USD|us|stock|5|us-market-cap|258
+NYSE:FIX|Comfort Systems USA Inc. Common Stock|USD|us|stock|5|us-market-cap|259
+NASDAQ:MPWR|Monolithic Power Systems Inc. Common Stock|USD|us|stock|5|us-market-cap|260
+NYSE:UMC|United Microelectronics Corporation (NEW) Common Stock|USD|us|stock|5|us-market-cap|261
+NYSE:VALE|VALE S.A.  American Depositary Shares Each Representing one common share|USD|us|stock|5|us-market-cap|262
+NYSE:NU|Nu Holdings Ltd. Class A Ordinary Shares|USD|us|stock|5|us-market-cap|263
+NYSE:GWW|W.W. Grainger Inc. Common Stock|USD|us|stock|5|us-market-cap|264
+NYSE:TGT|Target Corporation Common Stock|USD|us|stock|5|us-market-cap|265
+NYSE:SU|Suncor Energy  Inc. Common Stock|USD|us|stock|5|us-market-cap|266
+NASDAQ:LITE|Lumentum Holdings Inc. Common Stock|USD|us|stock|5|us-market-cap|267
+NASDAQ:PCAR|PACCAR Inc. Common Stock|USD|us|stock|5|us-market-cap|268
+NYSE:STM|STMicroelectronics N.V. Common Stock|USD|us|stock|5|us-market-cap|269
+NYSE:DB|Deutsche Bank AG Common Stock|USD|us|stock|5|us-market-cap|270
+NYSE:TFC|Truist Financial Corporation Common Stock|USD|us|stock|5|us-market-cap|271
+NYSE:B|Barrick Mining Corporation Common Shares|USD|us|stock|5|us-market-cap|272
+NYSE:APD|Air Products and Chemicals Inc. Common Stock|USD|us|stock|5|us-market-cap|273
+NYSE:ALL|Allstate Corporation (The) Common Stock|USD|us|stock|5|us-market-cap|274
+NYSE:SRE|DBA Sempra Common Stock|USD|us|stock|5|us-market-cap|275
+NYSE:CARR|Carrier Global Corporation Common Stock|USD|us|stock|5|us-market-cap|276
+NYSE:AFL|AFLAC Incorporated Common Stock|USD|us|stock|5|us-market-cap|277
+NYSE:D|Dominion Energy Inc. Common Stock|USD|us|stock|5|us-market-cap|278
+NASDAQ:NBIS|Nebius Group N.V. Class A Ordinary Shares|USD|us|stock|5|us-market-cap|279
+NYSE:DAL|Delta Air Lines Inc. Common Stock|USD|us|stock|5|us-market-cap|280
+NYSE:NKE|Nike Inc. Common Stock|USD|us|stock|5|us-market-cap|281
+NYSE:O|Realty Income Corporation Common Stock|USD|us|stock|5|us-market-cap|282
+NYSE:TRGP|Targa Resources Inc. Common Stock|USD|us|stock|5|us-market-cap|283
+NYSE:AJG|Arthur J. Gallagher & Co. Common Stock|USD|us|stock|5|us-market-cap|284
+NYSE:HPE|Hewlett Packard Enterprise Company Common Stock|USD|us|stock|5|us-market-cap|285
+NYSE:TEL|TE Connectivity plc Ordinary Shares|USD|us|stock|5|us-market-cap|286
+NYSE:RELX|RELX PLC PLC American Depositary Shares (Each representing One Ordinary Share)|USD|us|stock|5|us-market-cap|287
+NYSE:PSA|Public Storage Common Stock|USD|us|stock|5|us-market-cap|288
+NYSE:F|Ford Motor Company Common Stock|USD|us|stock|5|us-market-cap|289
+NYSE:OKE|ONEOK Inc. Common Stock|USD|us|stock|5|us-market-cap|290
+NYSE:KEYS|Keysight Technologies Inc. Common Stock|USD|us|stock|5|us-market-cap|291
+NASDAQ:BKR|Baker Hughes Company Class A Common Stock|USD|us|stock|5|us-market-cap|292
+NYSE:SE|Sea Limited American Depositary Shares each representing one Class A Ordinary Share|USD|us|stock|5|us-market-cap|293
+NYSE:CAH|Cardinal Health Inc. Common Stock|USD|us|stock|5|us-market-cap|294
+NYSE:COR|Cencora Inc. Common Stock|USD|us|stock|5|us-market-cap|295
+NYSE:MET|MetLife Inc. Common Stock|USD|us|stock|5|us-market-cap|296
+NYSE:CTVA|Corteva Inc. Common Stock|USD|us|stock|5|us-market-cap|297
+NYSE:VST|Vistra Corp. Common Stock|USD|us|stock|5|us-market-cap|298
+NASDAQ:ARGX|argenx SE American Depositary Shares|USD|us|stock|5|us-market-cap|299
+AMEX:IMO|Imperial Oil Limited Common Stock|USD|us|stock|5|us-market-cap|300
+NYSE:NUE|Nucor Corporation Common Stock|USD|us|stock|5|us-market-cap|301
+NYSE:AME|AMETEK Inc.|USD|us|stock|5|us-market-cap|302
+NYSE:LHX|L3Harris Technologies Inc. Common Stock|USD|us|stock|5|us-market-cap|303
+NASDAQ:FAST|Fastenal Company Common Stock|USD|us|stock|5|us-market-cap|304
+NASDAQ:FLEX|Flex Ltd. Ordinary Shares|USD|us|stock|5|us-market-cap|305
+NYSE:ETR|Entergy Corporation Common Stock|USD|us|stock|5|us-market-cap|306
+NYSE:ROK|Rockwell Automation Inc. Common Stock|USD|us|stock|5|us-market-cap|307
+NASDAQ:CRWV|CoreWeave Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|308
+NYSE:EW|Edwards Lifesciences Corporation Common Stock|USD|us|stock|5|us-market-cap|309
+NASDAQ:EA|Electronic Arts Inc. Common Stock|USD|us|stock|5|us-market-cap|310
+NYSE:WPM|Wheaton Precious Metals Corp Common Shares (Canada)|USD|us|stock|5|us-market-cap|311
+NASDAQ:XEL|Xcel Energy Inc. Common Stock|USD|us|stock|5|us-market-cap|312
+NYSE:AZO|AutoZone Inc. Common Stock|USD|us|stock|5|us-market-cap|313
+NASDAQ:MDLN|Medline Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|314
+NYSE:FITB|Fifth Third Bancorp Common Stock|USD|us|stock|5|us-market-cap|315
+NYSE:ABEV|Ambev S.A. American Depositary Shares (Each representing 1 Common Share)|USD|us|stock|5|us-market-cap|316
+NYSE:LNG|Cheniere Energy Inc. Common Stock|USD|us|stock|5|us-market-cap|317
+NASDAQ:FANG|Diamondback Energy Inc. Common Stock|USD|us|stock|5|us-market-cap|318
+NYSE:OXY|Occidental Petroleum Corporation Common Stock|USD|us|stock|5|us-market-cap|319
+NASDAQ:FER|Ferrovial N.V. Ordinary Shares|USD|us|stock|5|us-market-cap|320
+NASDAQ:RKLB|Rocket Lab Corporation Common Stock|USD|us|stock|5|us-market-cap|321
+NYSE:DVN|Devon Energy Corporation Common Stock|USD|us|stock|5|us-market-cap|322
+NASDAQ:EXC|Exelon Corporation Common Stock|USD|us|stock|5|us-market-cap|323
+NYSE:HEI|Heico Corporation Common Stock|USD|us|stock|5|us-market-cap|324
+NASDAQ:EBAY|eBay Inc. Common Stock|USD|us|stock|5|us-market-cap|325
+NASDAQ:MCHP|Microchip Technology Incorporated Common Stock|USD|us|stock|5|us-market-cap|326
+NYSE:DHI|D.R. Horton Inc. Common Stock|USD|us|stock|5|us-market-cap|327
+NYSE:FERG|Ferguson Enterprises Inc. Common Stock|USD|us|stock|5|us-market-cap|328
+NYSE:PCG|Pacific Gas & Electric Co. Common Stock|USD|us|stock|5|us-market-cap|329
+NYSE:STT|State Street Corporation Common Stock|USD|us|stock|5|us-market-cap|330
+NYSE:CVE|Cenovus Energy Inc Common Stock|USD|us|stock|5|us-market-cap|331
+NYSE:DEO|Diageo plc Common Stock|USD|us|stock|5|us-market-cap|332
+NYSE:XYZ|Block Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|333
+NASDAQ:CCEP|Coca-Cola Europacific Partners plc Ordinary Shares|USD|us|stock|5|us-market-cap|334
+NYSE:HUM|Humana Inc. Common Stock|USD|us|stock|5|us-market-cap|335
+NYSE:VIK|Viking Holdings Ltd Ordinary Shares|USD|us|stock|5|us-market-cap|336
+NYSE:WAB|Westinghouse Air Brake Technologies Corporation Common Stock|USD|us|stock|5|us-market-cap|337
+NYSE:MT|Arcelor Mittal NY Registry Shares NEW|USD|us|stock|5|us-market-cap|338
+NYSE:CCJ|Cameco Corporation Common Stock|USD|us|stock|5|us-market-cap|339
+NASDAQ:ODFL|Old Dominion Freight Line Inc. Common Stock|USD|us|stock|5|us-market-cap|340
+NASDAQ:KDP|Keurig Dr Pepper Inc. Common Stock|USD|us|stock|5|us-market-cap|341
+NYSE:GRMN|Garmin Ltd. Common Stock (Switzerland)|USD|us|stock|5|us-market-cap|342
+NASDAQ:NDAQ|Nasdaq Inc. Common Stock|USD|us|stock|5|us-market-cap|343
+NASDAQ:GFS|GlobalFoundries Inc. Ordinary Shares|USD|us|stock|5|us-market-cap|344
+NASDAQ:CRDO|Credo Technology Group Holding Ltd Ordinary Shares|USD|us|stock|5|us-market-cap|345
+NASDAQ:TTWO|Take-Two Interactive Software Inc. Common Stock|USD|us|stock|5|us-market-cap|346
+NASDAQ:UAL|United Airlines Holdings Inc. Common Stock|USD|us|stock|5|us-market-cap|347
+NYSE:FMX|Fomento Economico Mexicano S.A.B. de C.V. Common Stock|USD|us|stock|5|us-market-cap|348
+NYSE:INFY|Infosys Limited American Depositary Shares|USD|us|stock|5|us-market-cap|349
+NASDAQ:IDXX|IDEXX Laboratories Inc. Common Stock|USD|us|stock|5|us-market-cap|350
+NYSE:VTR|Ventas Inc. Common Stock|USD|us|stock|5|us-market-cap|351
+NYSE:SLF|Sun Life Financial Inc. Common Stock|USD|us|stock|5|us-market-cap|352
+NYSE:YUM|Yum! Brands Inc.|USD|us|stock|5|us-market-cap|353
+NYSE:IX|ORIX Corporation American Depositary Shares|USD|us|stock|5|us-market-cap|354
+NYSE:VIV|Telefonica Brasil S.A. American Depositary Shares (Each representing One Common Share)|USD|us|stock|5|us-market-cap|355
+NYSE:BDX|Becton Dickinson and Company Common Stock|USD|us|stock|5|us-market-cap|356
+NYSE:WCN|Waste Connections Inc. Common Shares|USD|us|stock|5|us-market-cap|357
+NYSE:CMG|Chipotle Mexican Grill Inc. Common Stock|USD|us|stock|5|us-market-cap|358
+NYSE:RKT|Rocket Companies Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|359
+NYSE:LYV|Live Nation Entertainment Inc. Common Stock|USD|us|stock|5|us-market-cap|360
+NYSE:PEG|Public Service Enterprise Group Incorporated Common Stock|USD|us|stock|5|us-market-cap|361
+NYSE:CCL|Carnival Corporation Ltd. Common Shares|USD|us|stock|5|us-market-cap|362
+NYSE:FNV|Franco-Nevada Corporation|USD|us|stock|5|us-market-cap|363
+NASDAQ:ADSK|Autodesk Inc. Common Stock|USD|us|stock|5|us-market-cap|364
+NYSE:ED|Consolidated Edison Inc. Common Stock|USD|us|stock|5|us-market-cap|365
+NYSE:TKO|TKO Group Holdings Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|366
+NYSE:HLN|Haleon plc American Depositary Shares (Each representing two Ordinary Shares)|USD|us|stock|5|us-market-cap|367
+NYSE:AU|AngloGold Ashanti PLC Ordinary Shares|USD|us|stock|5|us-market-cap|368
+NYSE:AMP|Ameriprise Financial Inc. Common Stock|USD|us|stock|5|us-market-cap|369
+NYSE:HMC|Honda Motor Company Ltd. Common Stock|USD|us|stock|5|us-market-cap|370
+NASDAQ:CBRS|Cerebras Systems Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|371
+NYSE:VMC|Vulcan Materials Company (Holding Company) Common Stock|USD|us|stock|5|us-market-cap|372
+NYSE:MSCI|MSCI Inc. Common Stock|USD|us|stock|5|us-market-cap|373
+NYSE:CBRE|CBRE Group Inc Common Stock Class A|USD|us|stock|5|us-market-cap|374
+NYSE:AIG|American International Group Inc. New Common Stock|USD|us|stock|5|us-market-cap|375
+NYSE:SYY|Sysco Corporation Common Stock|USD|us|stock|5|us-market-cap|376
+NYSE:IRM|Iron Mountain Incorporated (Delaware)Common Stock REIT|USD|us|stock|5|us-market-cap|377
+NASDAQ:COIN|Coinbase Global Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|378
+NASDAQ:PYPL|PayPal Holdings Inc. Common Stock|USD|us|stock|5|us-market-cap|379
+NASDAQ:ALNY|Alnylam Pharmaceuticals Inc. Common Stock|USD|us|stock|5|us-market-cap|380
+NYSE:CLS|Celestica Inc. Common Stock|USD|us|stock|5|us-market-cap|381
+NYSE:WEC|WEC Energy Group Inc. Common Stock|USD|us|stock|5|us-market-cap|382
+NASDAQ:RVMD|Revolution Medicines Inc. Common Stock|USD|us|stock|5|us-market-cap|383
+NYSE:TEVA|Teva Pharmaceutical Industries Limited American Depositary Shares|USD|us|stock|5|us-market-cap|384
+NYSE:A|Agilent Technologies Inc. Common Stock|USD|us|stock|5|us-market-cap|385
+NYSE:JBL|Jabil Inc. Common Stock|USD|us|stock|5|us-market-cap|386
+NYSE:PRU|Prudential Financial Inc. Common Stock|USD|us|stock|5|us-market-cap|387
+NASDAQ:NTRA|Natera Inc. Common Stock|USD|us|stock|5|us-market-cap|388
+NASDAQ:AXON|Axon Enterprise Inc. Common Stock|USD|us|stock|5|us-market-cap|389
+NYSE:MLM|Martin Marietta Materials Inc. Common Stock|USD|us|stock|5|us-market-cap|390
+NYSE:ADM|Archer-Daniels-Midland Company Common Stock|USD|us|stock|5|us-market-cap|391
+NASDAQ:ERIC|Ericsson American Depositary Shares|USD|us|stock|5|us-market-cap|392
+NYSE:WAT|Waters Corporation Common Stock|USD|us|stock|5|us-market-cap|393
+NYSE:KVUE|Kenvue Inc. Common Stock|USD|us|stock|5|us-market-cap|394
+NYSE:HIG|The Hartford Insurance Group Inc. Common Stock|USD|us|stock|5|us-market-cap|395
+NYSE:BBD|Banco Bradesco Sa American Depositary Shares|USD|us|stock|5|us-market-cap|396
+NASDAQ:TRI|Thomson Reuters Corporation Common Shares|USD|us|stock|5|us-market-cap|397
+NYSE:HSY|The Hershey Company Common Stock|USD|us|stock|5|us-market-cap|398
+NASDAQ:KMB|Kimberly-Clark Corporation Common Stock|USD|us|stock|5|us-market-cap|399
+NYSE:BAP|Credicorp Ltd. Common Stock|USD|us|stock|5|us-market-cap|400
+NASDAQ:HBAN|Huntington Bancshares Incorporated Common Stock|USD|us|stock|5|us-market-cap|401
+NYSE:CCI|Crown Castle Inc. Common Stock|USD|us|stock|5|us-market-cap|402
+NYSE:WDS|Woodside Energy Group Limited American Depositary Shares each representing one Ordinary Share|USD|us|stock|5|us-market-cap|403
+NYSE:ARES|Ares Management Corporation Class A Common Stock|USD|us|stock|5|us-market-cap|404
+NASDAQ:PAYX|Paychex Inc. Common Stock|USD|us|stock|5|us-market-cap|405
+NASDAQ:ON|ON Semiconductor Corporation Common Stock|USD|us|stock|5|us-market-cap|406
+NYSE:EME|EMCOR Group Inc. Common Stock|USD|us|stock|5|us-market-cap|407
+NASDAQ:BIDU|Baidu Inc. ADS|USD|us|stock|5|us-market-cap|408
+NASDAQ:STLD|Steel Dynamics Inc.|USD|us|stock|5|us-market-cap|409
+NYSE:KR|Kroger Company (The) Common Stock|USD|us|stock|5|us-market-cap|410
+NYSE:KB|KB Financial Group Inc|USD|us|stock|5|us-market-cap|411
+NYSE:CHT|Chunghwa Telecom Co. Ltd.|USD|us|stock|5|us-market-cap|412
+NYSE:MTB|M&T Bank Corporation Common Stock|USD|us|stock|5|us-market-cap|413
+NASDAQ:JD|JD.com Inc. American Depositary Shares|USD|us|stock|5|us-market-cap|414
+NASDAQ:ROP|Roper Technologies Inc. Common Stock|USD|us|stock|5|us-market-cap|415
+NASDAQ:ACGL|Arch Capital Group Ltd. Common Stock|USD|us|stock|5|us-market-cap|416
+NYSE:RBLX|Roblox Corporation Class A Common Stock|USD|us|stock|5|us-market-cap|417
+NYSE:PUK|Prudential Public Limited Company Common Stock|USD|us|stock|5|us-market-cap|418
+NASDAQ:RYAAY|Ryanair Holdings plc American Depositary Shares|USD|us|stock|5|us-market-cap|419
+NYSE:QSR|Restaurant Brands International Inc. Common Shares|USD|us|stock|5|us-market-cap|420
+NYSE:ALC|Alcon Inc. Ordinary Shares|USD|us|stock|5|us-market-cap|421
+NASDAQ:ESLT|Elbit Systems Ltd. Ordinary Shares|USD|us|stock|5|us-market-cap|422
+NYSE:Q|Qnity Electronics Inc. Common Stock|USD|us|stock|5|us-market-cap|423
+NASDAQ:VOD|Vodafone Group Plc American Depositary Shares|USD|us|stock|5|us-market-cap|424
+NYSE:EQT|EQT Corporation Common Stock|USD|us|stock|5|us-market-cap|425
+NYSE:AEE|Ameren Corporation Common Stock|USD|us|stock|5|us-market-cap|426
+NYSE:CNC|Centene Corporation Common Stock|USD|us|stock|5|us-market-cap|427
+NASDAQ:RPRX|Royalty Pharma plc Class A Ordinary Shares|USD|us|stock|5|us-market-cap|428
+NASDAQ:NTRS|Northern Trust Corporation Common Stock|USD|us|stock|5|us-market-cap|429
+NYSE:DTE|DTE Energy Company Common Stock|USD|us|stock|5|us-market-cap|430
+NYSE:RDDT|Reddit Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|431
+NYSE:IQV|IQVIA Holdings Inc. Common Stock|USD|us|stock|5|us-market-cap|432
+NYSE:ZTS|Zoetis Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|433
+NASDAQ:BIIB|Biogen Inc. Common Stock|USD|us|stock|5|us-market-cap|434
+NYSE:UI|Ubiquiti Inc. Common Stock|USD|us|stock|5|us-market-cap|435
+NYSE:IR|Ingersoll Rand Inc. Common Stock|USD|us|stock|5|us-market-cap|436
+NYSE:CPNG|Coupang Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|437
+NASDAQ:EXPE|Expedia Group Inc. Common Stock|USD|us|stock|5|us-market-cap|438
+NYSE:EXR|Extra Space Storage Inc Common Stock|USD|us|stock|5|us-market-cap|439
+NYSE:NRG|NRG Energy Inc. Common Stock|USD|us|stock|5|us-market-cap|440
+NYSE:MTZ|MasTec Inc. Common Stock|USD|us|stock|5|us-market-cap|441
+NYSE:LVS|Las Vegas Sands Corp. Common Stock|USD|us|stock|5|us-market-cap|442
+NASDAQ:ONC|BeOne Medicines Ltd. American Depositary Shares|USD|us|stock|5|us-market-cap|443
+NYSE:AMRZ|Amrize Ltd Ordinary Shares|USD|us|stock|5|us-market-cap|444
+NASDAQ:WDAY|Workday Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|445
+NYSE:AXIA|AXIA Energia American Depositary Shares (Each representing one Common Share)|USD|us|stock|5|us-market-cap|446
+NYSE:DOV|Dover Corporation Common Stock|USD|us|stock|5|us-market-cap|447
+NYSE:SUNB|Sunbelt Rentals Holdings Inc. Common Stock|USD|us|stock|5|us-market-cap|448
+NYSE:EC|Ecopetrol S.A. American Depositary Shares|USD|us|stock|5|us-market-cap|449
+NYSE:TS|Tenaris S.A. American Depositary Shares|USD|us|stock|5|us-market-cap|450
+NYSE:GFI|Gold Fields Limited American Depositary Shares|USD|us|stock|5|us-market-cap|451
+NASDAQ:GEHC|GE HealthCare Technologies Inc. Common Stock|USD|us|stock|5|us-market-cap|452
+NASDAQ:NTAP|NetApp Inc. Common Stock|USD|us|stock|5|us-market-cap|453
+NYSE:CFG|Citizens Financial Group Inc. Common Stock|USD|us|stock|5|us-market-cap|454
+NYSE:FTS|Fortis Inc. Common Shares|USD|us|stock|5|us-market-cap|455
+NYSE:TPR|Tapestry Inc. Common Stock|USD|us|stock|5|us-market-cap|456
+NYSE:CNP|CenterPoint Energy Inc (Holding Co) Common Stock|USD|us|stock|5|us-market-cap|457
+NYSE:CRS|Carpenter Technology Corporation Common Stock|USD|us|stock|5|us-market-cap|458
+NYSE:NTR|Nutrien Ltd. Common Shares|USD|us|stock|5|us-market-cap|459
+NYSE:ATO|Atmos Energy Corporation Common Stock|USD|us|stock|5|us-market-cap|460
+NYSE:RJF|Raymond James Financial Inc. Common Stock|USD|us|stock|5|us-market-cap|461
+NYSE:EL|Estee Lauder Companies Inc. (The) Common Stock|USD|us|stock|5|us-market-cap|462
+NYSE:EIX|Edison International Common Stock|USD|us|stock|5|us-market-cap|463
+NYSE:VICI|VICI Properties Inc. Common Stock|USD|us|stock|5|us-market-cap|464
+NYSE:TWLO|Twilio Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|465
+NYSE:RMD|ResMed Inc. Common Stock|USD|us|stock|5|us-market-cap|466
+NYSE:KGC|Kinross Gold Corporation Common Stock|USD|us|stock|5|us-market-cap|467
+NYSE:TDY|Teledyne Technologies Incorporated Common Stock|USD|us|stock|5|us-market-cap|468
+NASDAQ:MSTR|Strategy Inc Common Stock Class A|USD|us|stock|5|us-market-cap|469
+NASDAQ:CASY|Casey's General Stores Inc. Common Stock|USD|us|stock|5|us-market-cap|470
+NYSE:SHG|Shinhan Financial Group Co Ltd American Depositary Shares|USD|us|stock|5|us-market-cap|471
+NYSE:HAL|Halliburton Company Common Stock|USD|us|stock|5|us-market-cap|472
+NYSE:TECK|Teck Resources Ltd Ordinary Shares|USD|us|stock|5|us-market-cap|473
+NASDAQ:CINF|Cincinnati Financial Corporation Common Stock|USD|us|stock|5|us-market-cap|474
+NASDAQ:CPRT|Copart Inc. (DE) Common Stock|USD|us|stock|5|us-market-cap|475
+NASDAQ:ECHO|EchoStar  Corporation Common Stock|USD|us|stock|5|us-market-cap|476
+NASDAQ:TSEM|Tower Semiconductor Ltd. Ordinary Shares|USD|us|stock|5|us-market-cap|477
+NASDAQ:MTSI|MACOM Technology Solutions Holdings Inc. Common Stock|USD|us|stock|5|us-market-cap|478
+NYSE:WSM|Williams-Sonoma Inc. Common Stock (DE)|USD|us|stock|5|us-market-cap|479
+NASDAQ:KHC|The Kraft Heinz Company Common Stock|USD|us|stock|5|us-market-cap|480
+NYSE:OTIS|Otis Worldwide Corporation Common Stock|USD|us|stock|5|us-market-cap|481
+NYSE:FE|FirstEnergy Corp. Common Stock|USD|us|stock|5|us-market-cap|482
+NASDAQ:INIO|INNIO N.V. Ordinary Shares|USD|us|stock|5|us-market-cap|483
+NYSE:VEEV|Veeva Systems Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|484
+NYSE:PPL|PPL Corporation Common Stock|USD|us|stock|5|us-market-cap|485
+NASDAQ:ASTS|AST SpaceMobile Inc. Class A Common Stock|USD|us|stock|5|us-market-cap|486
+NYSE:XYL|Xylem Inc. Common Stock New|USD|us|stock|5|us-market-cap|487
+NYSE:ES|Eversource Energy (D/B/A) Common Stock|USD|us|stock|5|us-market-cap|488
+NYSE:PPG|PPG Industries Inc. Common Stock|USD|us|stock|5|us-market-cap|489
+NYSE:PBA|Pembina Pipeline Corp. Ordinary Shares (Canada)|USD|us|stock|5|us-market-cap|490
+NYSE:FICO|Fair Isaac Corporation Common Stock|USD|us|stock|5|us-market-cap|491
+NYSE:HUBB|Hubbell Inc Common Stock|USD|us|stock|5|us-market-cap|492
+NYSE:TPL|Texas Pacific Land Corporation Common Stock|USD|us|stock|5|us-market-cap|493
+NYSE:VG|Venture Global Inc. Class A common stock|USD|us|stock|5|us-market-cap|494
+NASDAQ:DXCM|DexCom Inc. Common Stock|USD|us|stock|5|us-market-cap|495
+NYSE:ATI|ATI Inc. Common Stock|USD|us|stock|5|us-market-cap|496
+NASDAQ:ILMN|Illumina Inc. Common Stock|USD|us|stock|5|us-market-cap|497
+NASDAQ:MRNA|Moderna Inc. Common Stock|USD|us|stock|5|us-market-cap|498
+NASDAQ:FTAI|FTAI Aviation Ltd. Common Stock|USD|us|stock|5|us-market-cap|499
+NYSE:AER|AerCap Holdings N.V. Ordinary Shares|USD|us|stock|5|us-market-cap|500
+SSE:601939|建设银行|CNY|cn|stock|10|csi300-market-cap|1
+SSE:601398|工商银行|CNY|cn|stock|10|csi300-market-cap|2
+SSE:601288|农业银行|CNY|cn|stock|10|csi300-market-cap|3
+SSE:600941|中国移动|CNY|cn|stock|10|csi300-market-cap|4
+SSE:601988|中国银行|CNY|cn|stock|10|csi300-market-cap|5
+SZSE:300750|宁德时代|CNY|cn|stock|10|csi300-market-cap|6
+SSE:601857|XD中国石|CNY|cn|stock|10|csi300-market-cap|7
+SSE:600519|XD贵州茅|CNY|cn|stock|10|csi300-market-cap|8
+SZSE:300308|中际旭创|CNY|cn|stock|10|csi300-market-cap|9
+SSE:601138|工业富联|CNY|cn|stock|10|csi300-market-cap|10
+SSE:600938|中国海油|CNY|cn|stock|10|csi300-market-cap|11
+SSE:688981|中芯国际|CNY|cn|stock|10|csi300-market-cap|12
+SSE:601628|中国人寿|CNY|cn|stock|10|csi300-market-cap|13
+SSE:688256|寒武纪|CNY|cn|stock|10|csi300-market-cap|14
+SSE:600036|招商银行|CNY|cn|stock|10|csi300-market-cap|15
+SSE:601088|中国神华|CNY|cn|stock|10|csi300-market-cap|16
+SSE:601318|中国平安|CNY|cn|stock|10|csi300-market-cap|17
+SSE:688041|海光信息|CNY|cn|stock|10|csi300-market-cap|18
+SZSE:300502|新易盛|CNY|cn|stock|10|csi300-market-cap|19
+SZSE:002594|比亚迪|CNY|cn|stock|10|csi300-market-cap|20
+SSE:601899|XD紫金矿|CNY|cn|stock|10|csi300-market-cap|21
+SSE:600900|长江电力|CNY|cn|stock|10|csi300-market-cap|22
+SZSE:000333|美的集团|CNY|cn|stock|10|csi300-market-cap|23
+SSE:601658|邮储银行|CNY|cn|stock|10|csi300-market-cap|24
+SZSE:002371|北方华创|CNY|cn|stock|10|csi300-market-cap|25
+SSE:601328|交通银行|CNY|cn|stock|10|csi300-market-cap|26
+SSE:600028|中国石化|CNY|cn|stock|10|csi300-market-cap|27
+SSE:603986|兆易创新|CNY|cn|stock|10|csi300-market-cap|28
+SZSE:002475|立讯精密|CNY|cn|stock|10|csi300-market-cap|29
+SSE:601728|中国电信|CNY|cn|stock|10|csi300-market-cap|30
+SZSE:002384|东山精密|CNY|cn|stock|10|csi300-market-cap|31
+SSE:600183|生益科技|CNY|cn|stock|10|csi300-market-cap|32
+SSE:600030|中信证券|CNY|cn|stock|10|csi300-market-cap|33
+SSE:601998|中信银行|CNY|cn|stock|10|csi300-market-cap|34
+SSE:688012|中微公司|CNY|cn|stock|10|csi300-market-cap|35
+SSE:603993|洛阳钼业|CNY|cn|stock|10|csi300-market-cap|36
+SSE:601166|兴业银行|CNY|cn|stock|10|csi300-market-cap|37
+SSE:603259|药明康德|CNY|cn|stock|10|csi300-market-cap|38
+SZSE:300394|天孚通信|CNY|cn|stock|10|csi300-market-cap|39
+SSE:600276|恒瑞医药|CNY|cn|stock|10|csi300-market-cap|40
+SSE:688008|澜起科技|CNY|cn|stock|10|csi300-market-cap|41
+SZSE:300059|东方财富|CNY|cn|stock|10|csi300-market-cap|42
+SZSE:300476|胜宏科技|CNY|cn|stock|10|csi300-market-cap|43
+SZSE:300274|阳光电源|CNY|cn|stock|10|csi300-market-cap|44
+SSE:601211|XD国泰海|CNY|cn|stock|10|csi300-market-cap|45
+SZSE:300408|三环集团|CNY|cn|stock|10|csi300-market-cap|46
+SSE:601319|中国人保|CNY|cn|stock|10|csi300-market-cap|47
+SZSE:002415|海康威视|CNY|cn|stock|10|csi300-market-cap|48
+SSE:600176|中国巨石|CNY|cn|stock|10|csi300-market-cap|49
+SZSE:002916|深南电路|CNY|cn|stock|10|csi300-market-cap|50
+SZSE:300433|蓝思科技|CNY|cn|stock|10|csi300-market-cap|51
+SSE:600000|浦发银行|CNY|cn|stock|10|csi300-market-cap|52
+SZSE:000725|京东方Ａ|CNY|cn|stock|10|csi300-market-cap|53
+SZSE:301308|江波龙|CNY|cn|stock|10|csi300-market-cap|54
+SZSE:000858|五 粮 液|CNY|cn|stock|10|csi300-market-cap|55
+SZSE:002463|沪电股份|CNY|cn|stock|10|csi300-market-cap|56
+SSE:601601|中国太保|CNY|cn|stock|10|csi300-market-cap|57
+SZSE:002938|鹏鼎控股|CNY|cn|stock|10|csi300-market-cap|58
+SSE:600150|中国船舶|CNY|cn|stock|10|csi300-market-cap|59
+SZSE:000338|潍柴动力|CNY|cn|stock|10|csi300-market-cap|60
+SSE:688072|拓荆科技|CNY|cn|stock|10|csi300-market-cap|61
+SSE:601066|中信建投|CNY|cn|stock|10|csi300-market-cap|62
+SZSE:000657|中钨高新|CNY|cn|stock|10|csi300-market-cap|63
+SSE:600309|万华化学|CNY|cn|stock|10|csi300-market-cap|64
+SSE:601816|京沪高铁|CNY|cn|stock|10|csi300-market-cap|65
+SSE:600522|中天科技|CNY|cn|stock|10|csi300-market-cap|66
+SZSE:000651|格力电器|CNY|cn|stock|10|csi300-market-cap|67
+SZSE:002142|宁波银行|CNY|cn|stock|10|csi300-market-cap|68
+SSE:601919|XD中远海|CNY|cn|stock|10|csi300-market-cap|69
+SSE:600919|江苏银行|CNY|cn|stock|10|csi300-market-cap|70
+SSE:600930|华电新能|CNY|cn|stock|10|csi300-market-cap|71
+SSE:601225|XD陕西煤|CNY|cn|stock|10|csi300-market-cap|72
+SSE:688082|盛美上海|CNY|cn|stock|10|csi300-market-cap|73
+SZSE:003816|中国广核|CNY|cn|stock|10|csi300-market-cap|74
+SZSE:000001|平安银行|CNY|cn|stock|10|csi300-market-cap|75
+SZSE:002714|牧原股份|CNY|cn|stock|10|csi300-market-cap|76
+SSE:603288|海天味业|CNY|cn|stock|10|csi300-market-cap|77
+SSE:601336|新华保险|CNY|cn|stock|10|csi300-market-cap|78
+SSE:600690|海尔智家|CNY|cn|stock|10|csi300-market-cap|79
+SSE:601688|华泰证券|CNY|cn|stock|10|csi300-market-cap|80
+SSE:601985|中国核电|CNY|cn|stock|10|csi300-market-cap|81
+SSE:600406|国电南瑞|CNY|cn|stock|10|csi300-market-cap|82
+SZSE:300033|同花顺|CNY|cn|stock|10|csi300-market-cap|83
+SSE:601668|中国建筑|CNY|cn|stock|10|csi300-market-cap|84
+SSE:600584|长电科技|CNY|cn|stock|10|csi300-market-cap|85
+SSE:600188|兖矿能源|CNY|cn|stock|10|csi300-market-cap|86
+SSE:600999|招商证券|CNY|cn|stock|10|csi300-market-cap|87
+SSE:688521|芯原股份|CNY|cn|stock|10|csi300-market-cap|88
+SSE:601818|光大银行|CNY|cn|stock|10|csi300-market-cap|89
+SZSE:000776|广发证券|CNY|cn|stock|10|csi300-market-cap|90
+SZSE:002050|三花智控|CNY|cn|stock|10|csi300-market-cap|91
+SSE:601995|中金公司|CNY|cn|stock|10|csi300-market-cap|92
+SZSE:300124|汇川技术|CNY|cn|stock|10|csi300-market-cap|93
+SSE:600111|北方稀土|CNY|cn|stock|10|csi300-market-cap|94
+SZSE:000063|中兴通讯|CNY|cn|stock|10|csi300-market-cap|95
+SSE:600025|华能水电|CNY|cn|stock|10|csi300-market-cap|96
+SSE:601898|中煤能源|CNY|cn|stock|10|csi300-market-cap|97
+SZSE:002353|杰瑞股份|CNY|cn|stock|10|csi300-market-cap|98
+SSE:600031|三一重工|CNY|cn|stock|10|csi300-market-cap|99
+SZSE:300760|迈瑞医疗|CNY|cn|stock|10|csi300-market-cap|100
+SZSE:002352|顺丰控股|CNY|cn|stock|10|csi300-market-cap|101
+SZSE:000988|华工科技|CNY|cn|stock|10|csi300-market-cap|102
+SSE:601872|招商轮船|CNY|cn|stock|10|csi300-market-cap|103
+SSE:600887|伊利股份|CNY|cn|stock|10|csi300-market-cap|104
+SZSE:000792|盐湖股份|CNY|cn|stock|10|csi300-market-cap|105
+SZSE:302132|中航成飞|CNY|cn|stock|10|csi300-market-cap|106
+SSE:600989|宝丰能源|CNY|cn|stock|10|csi300-market-cap|107
+SSE:601766|中国中车|CNY|cn|stock|10|csi300-market-cap|108
+SSE:600362|江西铜业|CNY|cn|stock|10|csi300-market-cap|109
+SSE:601100|恒立液压|CNY|cn|stock|10|csi300-market-cap|110
+SSE:603019|中科曙光|CNY|cn|stock|10|csi300-market-cap|111
+SSE:601600|中国铝业|CNY|cn|stock|10|csi300-market-cap|112
+SSE:600016|民生银行|CNY|cn|stock|10|csi300-market-cap|113
+SZSE:001280|中国铀业|CNY|cn|stock|10|csi300-market-cap|114
+SSE:600160|巨化股份|CNY|cn|stock|10|csi300-market-cap|115
+SZSE:002028|思源电气|CNY|cn|stock|10|csi300-market-cap|116
+SSE:601881|中国银河|CNY|cn|stock|10|csi300-market-cap|117
+SZSE:300014|亿纬锂能|CNY|cn|stock|10|csi300-market-cap|118
+SSE:600549|厦门钨业|CNY|cn|stock|10|csi300-market-cap|119
+SZSE:002600|领益智造|CNY|cn|stock|10|csi300-market-cap|120
+SZSE:002460|赣锋锂业|CNY|cn|stock|10|csi300-market-cap|121
+SSE:600809|山西汾酒|CNY|cn|stock|10|csi300-market-cap|122
+SSE:600660|福耀玻璃|CNY|cn|stock|10|csi300-market-cap|123
+SSE:601111|中国国航|CNY|cn|stock|10|csi300-market-cap|124
+SSE:600346|恒力石化|CNY|cn|stock|10|csi300-market-cap|125
+SSE:601633|长城汽车|CNY|cn|stock|10|csi300-market-cap|126
+SZSE:300442|润泽科技|CNY|cn|stock|10|csi300-market-cap|127
+SSE:600050|XD中国联|CNY|cn|stock|10|csi300-market-cap|128
+SSE:601009|南京银行|CNY|cn|stock|10|csi300-market-cap|129
+SZSE:300999|金龙鱼|CNY|cn|stock|10|csi300-market-cap|130
+SSE:601229|上海银行|CNY|cn|stock|10|csi300-market-cap|131
+SSE:601698|中国卫通|CNY|cn|stock|10|csi300-market-cap|132
+SSE:605117|德业股份|CNY|cn|stock|10|csi300-market-cap|133
+SSE:600019|宝钢股份|CNY|cn|stock|10|csi300-market-cap|134
+SSE:601868|中国能建|CNY|cn|stock|10|csi300-market-cap|135
+SSE:688126|沪硅产业|CNY|cn|stock|10|csi300-market-cap|136
+SSE:600760|中航沈飞|CNY|cn|stock|10|csi300-market-cap|137
+SSE:600011|华能国际|CNY|cn|stock|10|csi300-market-cap|138
+SZSE:002493|荣盛石化|CNY|cn|stock|10|csi300-market-cap|139
+SSE:600089|特变电工|CNY|cn|stock|10|csi300-market-cap|140
+SSE:688396|华润微|CNY|cn|stock|10|csi300-market-cap|141
+SZSE:000100|TCL科技|CNY|cn|stock|10|csi300-market-cap|142
+SSE:600104|上汽集团|CNY|cn|stock|10|csi300-market-cap|143
+SSE:600018|上港集团|CNY|cn|stock|10|csi300-market-cap|144
+SSE:601888|中国中免|CNY|cn|stock|10|csi300-market-cap|145
+SZSE:000568|泸州老窖|CNY|cn|stock|10|csi300-market-cap|146
+SSE:688183|生益电子|CNY|cn|stock|10|csi300-market-cap|147
+SZSE:000166|申万宏源|CNY|cn|stock|10|csi300-market-cap|148
+SSE:603501|豪威集团|CNY|cn|stock|10|csi300-market-cap|149
+SSE:600026|中远海能|CNY|cn|stock|10|csi300-market-cap|150
+SSE:688506|百利天恒|CNY|cn|stock|10|csi300-market-cap|151
+SSE:600905|三峡能源|CNY|cn|stock|10|csi300-market-cap|152
+SSE:600926|杭州银行|CNY|cn|stock|10|csi300-market-cap|153
+SZSE:000408|藏格矿业|CNY|cn|stock|10|csi300-market-cap|154
+SSE:601727|上海电气|CNY|cn|stock|10|csi300-market-cap|155
+SSE:600547|山东黄金|CNY|cn|stock|10|csi300-market-cap|156
+SZSE:002837|英维克|CNY|cn|stock|10|csi300-market-cap|157
+SSE:603296|华勤技术|CNY|cn|stock|10|csi300-market-cap|158
+SSE:600886|国投电力|CNY|cn|stock|10|csi300-market-cap|159
+SSE:601169|北京银行|CNY|cn|stock|10|csi300-market-cap|160
+SSE:601127|赛力斯|CNY|cn|stock|10|csi300-market-cap|161
+SSE:600015|华夏银行|CNY|cn|stock|10|csi300-market-cap|162
+SSE:601390|中国中铁|CNY|cn|stock|10|csi300-market-cap|163
+SZSE:002736|国信证券|CNY|cn|stock|10|csi300-market-cap|164
+SZSE:002709|天赐材料|CNY|cn|stock|10|csi300-market-cap|165
+SZSE:002466|天齐锂业|CNY|cn|stock|10|csi300-market-cap|166
+SZSE:002602|世纪华通|CNY|cn|stock|10|csi300-market-cap|167
+SSE:600010|包钢股份|CNY|cn|stock|10|csi300-market-cap|168
+SSE:600893|航发动力|CNY|cn|stock|10|csi300-market-cap|169
+SZSE:002202|金风科技|CNY|cn|stock|10|csi300-market-cap|170
+SSE:600875|东方电气|CNY|cn|stock|10|csi300-market-cap|171
+SSE:600029|南方航空|CNY|cn|stock|10|csi300-market-cap|172
+SZSE:000425|徐工机械|CNY|cn|stock|10|csi300-market-cap|173
+SSE:601012|隆基绿能|CNY|cn|stock|10|csi300-market-cap|174
+SZSE:002230|科大讯飞|CNY|cn|stock|10|csi300-market-cap|175
+SZSE:000977|浪潮信息|CNY|cn|stock|10|csi300-market-cap|176
+SSE:601800|中国交建|CNY|cn|stock|10|csi300-market-cap|177
+SSE:688111|金山办公|CNY|cn|stock|10|csi300-market-cap|178
+SSE:601006|大秦铁路|CNY|cn|stock|10|csi300-market-cap|179
+SSE:600118|中国卫星|CNY|cn|stock|10|csi300-market-cap|180
+SSE:601689|拓普集团|CNY|cn|stock|10|csi300-market-cap|181
+SSE:600585|海螺水泥|CNY|cn|stock|10|csi300-market-cap|182
+SZSE:002001|新 和 成|CNY|cn|stock|10|csi300-market-cap|183
+SZSE:002179|中航光电|CNY|cn|stock|10|csi300-market-cap|184
+SSE:600115|中国东航|CNY|cn|stock|10|csi300-market-cap|185
+SZSE:300661|圣邦股份|CNY|cn|stock|10|csi300-market-cap|186
+SSE:603799|华友钴业|CNY|cn|stock|10|csi300-market-cap|187
+SSE:600489|中金黄金|CNY|cn|stock|10|csi300-market-cap|188
+SZSE:000617|中油资本|CNY|cn|stock|10|csi300-market-cap|189
+SZSE:000538|云南白药|CNY|cn|stock|10|csi300-market-cap|190
+SSE:600460|士兰微|CNY|cn|stock|10|csi300-market-cap|191
+SZSE:002648|卫星化学|CNY|cn|stock|10|csi300-market-cap|192
+SSE:600795|国电电力|CNY|cn|stock|10|csi300-market-cap|193
+SZSE:000630|铜陵有色|CNY|cn|stock|10|csi300-market-cap|194
+SSE:601669|中国电建|CNY|cn|stock|10|csi300-market-cap|195
+SSE:601186|中国铁建|CNY|cn|stock|10|csi300-market-cap|196
+SSE:605499|东鹏饮料|CNY|cn|stock|10|csi300-market-cap|197
+SSE:688271|联影医疗|CNY|cn|stock|10|csi300-market-cap|198
+SZSE:300498|温氏股份|CNY|cn|stock|10|csi300-market-cap|199
+SSE:600958|东方证券|CNY|cn|stock|10|csi300-market-cap|200
+SZSE:002241|歌尔股份|CNY|cn|stock|10|csi300-market-cap|201
+SZSE:000895|双汇发展|CNY|cn|stock|10|csi300-market-cap|202
+SSE:601825|沪农商行|CNY|cn|stock|10|csi300-market-cap|203
+SZSE:000807|云铝股份|CNY|cn|stock|10|csi300-market-cap|204
+SSE:603893|瑞芯微|CNY|cn|stock|10|csi300-market-cap|205
+SZSE:300316|晶盛机电|CNY|cn|stock|10|csi300-market-cap|206
+SSE:601838|成都银行|CNY|cn|stock|10|csi300-market-cap|207
+SSE:601916|XD浙商银|CNY|cn|stock|10|csi300-market-cap|208
+SZSE:000301|东方盛虹|CNY|cn|stock|10|csi300-market-cap|209
+SZSE:300015|爱尔眼科|CNY|cn|stock|10|csi300-market-cap|210
+SZSE:000938|紫光股份|CNY|cn|stock|10|csi300-market-cap|211
+SZSE:002311|海大集团|CNY|cn|stock|10|csi300-market-cap|212
+SSE:601077|渝农商行|CNY|cn|stock|10|csi300-market-cap|213
+SZSE:002049|紫光国微|CNY|cn|stock|10|csi300-market-cap|214
+SZSE:301165|锐捷网络|CNY|cn|stock|10|csi300-market-cap|215
+SSE:600600|青岛啤酒|CNY|cn|stock|10|csi300-market-cap|216
+SSE:600023|浙能电力|CNY|cn|stock|10|csi300-market-cap|217
+SSE:600039|四川路桥|CNY|cn|stock|10|csi300-market-cap|218
+SZSE:002027|分众传媒|CNY|cn|stock|10|csi300-market-cap|219
+SZSE:300450|先导智能|CNY|cn|stock|10|csi300-market-cap|220
+SSE:600482|中国动力|CNY|cn|stock|10|csi300-market-cap|221
+SSE:600674|川投能源|CNY|cn|stock|10|csi300-market-cap|222
+SZSE:000625|长安汽车|CNY|cn|stock|10|csi300-market-cap|223
+SSE:601788|光大证券|CNY|cn|stock|10|csi300-market-cap|224
+SSE:688036|传音控股|CNY|cn|stock|10|csi300-market-cap|225
+SZSE:000708|中信特钢|CNY|cn|stock|10|csi300-market-cap|226
+SSE:600436|片仔癀|CNY|cn|stock|10|csi300-market-cap|227
+SZSE:002625|光启技术|CNY|cn|stock|10|csi300-market-cap|228
+SZSE:001965|招商公路|CNY|cn|stock|10|csi300-market-cap|229
+SZSE:000157|中联重科|CNY|cn|stock|10|csi300-market-cap|230
+SZSE:301269|华大九天|CNY|cn|stock|10|csi300-market-cap|231
+SSE:601018|宁波港|CNY|cn|stock|10|csi300-market-cap|232
+SSE:600221|海航控股|CNY|cn|stock|10|csi300-market-cap|233
+SSE:601360|三六零|CNY|cn|stock|10|csi300-market-cap|234
+SSE:600066|宇通客车|CNY|cn|stock|10|csi300-market-cap|235
+SZSE:002304|洋河股份|CNY|cn|stock|10|csi300-market-cap|236
+SZSE:001979|招商蛇口|CNY|cn|stock|10|csi300-market-cap|237
+SSE:601901|方正证券|CNY|cn|stock|10|csi300-market-cap|238
+SSE:688047|龙芯中科|CNY|cn|stock|10|csi300-market-cap|239
+SZSE:300803|指南针|CNY|cn|stock|10|csi300-market-cap|240
+SSE:600009|上海机场|CNY|cn|stock|10|csi300-market-cap|241
+SZSE:300866|安克创新|CNY|cn|stock|10|csi300-market-cap|242
+SSE:600048|保利发展|CNY|cn|stock|10|csi300-market-cap|243
+SSE:601607|上海医药|CNY|cn|stock|10|csi300-market-cap|244
+SSE:600196|复星医药|CNY|cn|stock|10|csi300-market-cap|245
+SZSE:002422|科伦药业|CNY|cn|stock|10|csi300-market-cap|246
+SSE:603260|合盛硅业|CNY|cn|stock|10|csi300-market-cap|247
+SZSE:000768|中航西飞|CNY|cn|stock|10|csi300-market-cap|248
+SSE:600438|通威股份|CNY|cn|stock|10|csi300-market-cap|249
+SSE:600415|小商品城|CNY|cn|stock|10|csi300-market-cap|250
+SSE:601877|正泰电器|CNY|cn|stock|10|csi300-market-cap|251
+SSE:600426|华鲁恒升|CNY|cn|stock|10|csi300-market-cap|252
+SSE:600233|圆通速递|CNY|cn|stock|10|csi300-market-cap|253
+SZSE:002236|大华股份|CNY|cn|stock|10|csi300-market-cap|254
+SZSE:002558|巨人网络|CNY|cn|stock|10|csi300-market-cap|255
+SSE:600372|中航机载|CNY|cn|stock|10|csi300-market-cap|256
+SSE:601377|兴业证券|CNY|cn|stock|10|csi300-market-cap|257
+SSE:600027|XD华电国|CNY|cn|stock|10|csi300-market-cap|258
+SSE:601059|信达证券|CNY|cn|stock|10|csi300-market-cap|259
+SSE:601238|广汽集团|CNY|cn|stock|10|csi300-market-cap|260
+SSE:688009|中国通号|CNY|cn|stock|10|csi300-market-cap|261
+SZSE:002532|天山铝业|CNY|cn|stock|10|csi300-market-cap|262
+SSE:601618|中国中冶|CNY|cn|stock|10|csi300-market-cap|263
+SZSE:001391|国货航|CNY|cn|stock|10|csi300-market-cap|264
+SSE:601456|国联民生|CNY|cn|stock|10|csi300-market-cap|265
+SSE:600741|华域汽车|CNY|cn|stock|10|csi300-market-cap|266
+SZSE:300418|昆仑万维|CNY|cn|stock|10|csi300-market-cap|267
+SSE:600803|新奥股份|CNY|cn|stock|10|csi300-market-cap|268
+SZSE:002074|国轩高科|CNY|cn|stock|10|csi300-market-cap|269
+SSE:688223|晶科能源|CNY|cn|stock|10|csi300-market-cap|270
+SZSE:000975|山金国际|CNY|cn|stock|10|csi300-market-cap|271
+SZSE:002920|德赛西威|CNY|cn|stock|10|csi300-market-cap|272
+SSE:600219|南山铝业|CNY|cn|stock|10|csi300-market-cap|273
+SSE:600845|宝信软件|CNY|cn|stock|10|csi300-market-cap|274
+SZSE:000963|华东医药|CNY|cn|stock|10|csi300-market-cap|275
+SSE:601021|春秋航空|CNY|cn|stock|10|csi300-market-cap|276
+SSE:601117|中国化学|CNY|cn|stock|10|csi300-market-cap|277
+SSE:601878|浙商证券|CNY|cn|stock|10|csi300-market-cap|278
+SZSE:301236|软通动力|CNY|cn|stock|10|csi300-market-cap|279
+SZSE:300628|亿联网络|CNY|cn|stock|10|csi300-market-cap|280
+SSE:600918|中泰证券|CNY|cn|stock|10|csi300-market-cap|281
+SZSE:000596|古井贡酒|CNY|cn|stock|10|csi300-market-cap|282
+SSE:600061|国投资本|CNY|cn|stock|10|csi300-market-cap|283
+SSE:600570|恒生电子|CNY|cn|stock|10|csi300-market-cap|284
+SSE:688472|阿特斯|CNY|cn|stock|10|csi300-market-cap|285
+SSE:601058|赛轮轮胎|CNY|cn|stock|10|csi300-market-cap|286
+SSE:601136|首创证券|CNY|cn|stock|10|csi300-market-cap|287
+SSE:688303|大全能源|CNY|cn|stock|10|csi300-market-cap|288
+SZSE:000999|华润三九|CNY|cn|stock|10|csi300-market-cap|289
+SZSE:000002|万  科Ａ|CNY|cn|stock|10|csi300-market-cap|290
+SZSE:300832|新产业|CNY|cn|stock|10|csi300-market-cap|291
+SSE:603392|万泰生物|CNY|cn|stock|10|csi300-market-cap|292
+SZSE:300251|光线传媒|CNY|cn|stock|10|csi300-market-cap|293
+SSE:600515|海南机场|CNY|cn|stock|10|csi300-market-cap|294
+SSE:600085|同仁堂|CNY|cn|stock|10|csi300-market-cap|295
+SSE:600588|用友网络|CNY|cn|stock|10|csi300-market-cap|296
+SSE:603369|今世缘|CNY|cn|stock|10|csi300-market-cap|297
+SZSE:300122|智飞生物|CNY|cn|stock|10|csi300-market-cap|298
+SZSE:300413|芒果超媒|CNY|cn|stock|10|csi300-market-cap|299
+SZSE:300896|爱美客|CNY|cn|stock|10|csi300-market-cap|300
+HKEX:0005|汇丰控股|HKD|hk|stock|10|hsci-top50|1
+HKEX:9988|阿里巴巴-W|HKD|hk|stock|10|hsci-top50|2
+HKEX:0700|腾讯控股|HKD|hk|stock|10|hsci-top50|3
+HKEX:1299|友邦保险|HKD|hk|stock|10|hsci-top50|4
+HKEX:0939|建设银行|HKD|hk|stock|10|hsci-top50|5
+HKEX:1398|工商银行|HKD|hk|stock|10|hsci-top50|6
+HKEX:0941|中国移动|HKD|hk|stock|10|hsci-top50|7
+HKEX:1810|小米集团-W|HKD|hk|stock|10|hsci-top50|8
+HKEX:0388|香港交易所|HKD|hk|stock|10|hsci-top50|9
+HKEX:0883|中国海洋石油|HKD|hk|stock|10|hsci-top50|10
+HKEX:3690|美团-W|HKD|hk|stock|10|hsci-top50|11
+HKEX:2318|中国平安|HKD|hk|stock|10|hsci-top50|12
+HKEX:3988|中国银行|HKD|hk|stock|10|hsci-top50|13
+HKEX:0981|中芯国际|HKD|hk|stock|10|hsci-top50|14
+HKEX:1211|比亚迪股份|HKD|hk|stock|10|hsci-top50|15
+HKEX:9999|网易-S|HKD|hk|stock|10|hsci-top50|16
+HKEX:0857|中国石油股份|HKD|hk|stock|10|hsci-top50|17
+HKEX:2628|中国人寿|HKD|hk|stock|10|hsci-top50|18
+HKEX:6160|百济神州|HKD|hk|stock|10|hsci-top50|19
+HKEX:2899|紫金矿业|HKD|hk|stock|10|hsci-top50|20
+HKEX:0016|新鸿基地产|HKD|hk|stock|10|hsci-top50|21
+HKEX:0001|长和|HKD|hk|stock|10|hsci-top50|22
+HKEX:3968|招商银行|HKD|hk|stock|10|hsci-top50|23
+HKEX:9618|京东集团-SW|HKD|hk|stock|10|hsci-top50|24
+HKEX:2388|中银香港|HKD|hk|stock|10|hsci-top50|25
+HKEX:1288|农业银行|HKD|hk|stock|10|hsci-top50|26
+HKEX:0669|创科实业|HKD|hk|stock|10|hsci-top50|27
+HKEX:0992|联想集团|HKD|hk|stock|10|hsci-top50|28
+HKEX:9888|百度集团-SW|HKD|hk|stock|10|hsci-top50|29
+HKEX:1088|中国神华|HKD|hk|stock|10|hsci-top50|30
+HKEX:1801|信达生物|HKD|hk|stock|10|hsci-top50|31
+HKEX:1024|快手-W|HKD|hk|stock|10|hsci-top50|32
+HKEX:1347|华虹半导体|HKD|hk|stock|10|hsci-top50|33
+HKEX:9992|泡泡玛特|HKD|hk|stock|10|hsci-top50|34
+HKEX:0002|中电控股|HKD|hk|stock|10|hsci-top50|35
+HKEX:0175|吉利汽车|HKD|hk|stock|10|hsci-top50|36
+HKEX:2269|药明生物|HKD|hk|stock|10|hsci-top50|37
+HKEX:9987|百胜中国|HKD|hk|stock|10|hsci-top50|38
+HKEX:1109|华润置地|HKD|hk|stock|10|hsci-top50|39
+HKEX:2020|安踏体育|HKD|hk|stock|10|hsci-top50|40
+HKEX:0823|领展房产基金|HKD|hk|stock|10|hsci-top50|41
+HKEX:9868|小鹏汽车-W|HKD|hk|stock|10|hsci-top50|42
+HKEX:3750|宁德时代|HKD|hk|stock|10|hsci-top50|43
+HKEX:2328|中国财险|HKD|hk|stock|10|hsci-top50|44
+HKEX:1378|中国宏桥|HKD|hk|stock|10|hsci-top50|45
+HKEX:0386|中国石油化工股份|HKD|hk|stock|10|hsci-top50|46
+HKEX:2423|贝壳-W|HKD|hk|stock|10|hsci-top50|47
+HKEX:1113|长实集团|HKD|hk|stock|10|hsci-top50|48
+HKEX:9961|携程集团-S|HKD|hk|stock|10|hsci-top50|49
+HKEX:9926|康方生物|HKD|hk|stock|10|hsci-top50|50
+HKEX:0003|香港中华煤气|HKD|hk|stock|10|hsci-large-mid|51
+HKEX:0004|九龍倉集團|HKD|hk|stock|10|hsci-large-mid|52
+HKEX:0006|电能实业|HKD|hk|stock|10|hsci-large-mid|53
+HKEX:0012|恒基地产|HKD|hk|stock|10|hsci-large-mid|54
+HKEX:0027|银河娱乐|HKD|hk|stock|10|hsci-large-mid|55
+HKEX:0066|港铁公司|HKD|hk|stock|10|hsci-large-mid|56
+HKEX:0083|信和置業|HKD|hk|stock|10|hsci-large-mid|57
+HKEX:0100|MINIMAX - W|HKD|hk|stock|10|hsci-large-mid|58
+HKEX:0135|昆侖能源|HKD|hk|stock|10|hsci-large-mid|59
+HKEX:0151|中國旺旺|HKD|hk|stock|10|hsci-large-mid|60
+HKEX:0241|阿里健康|HKD|hk|stock|10|hsci-large-mid|61
+HKEX:0267|中信股份|HKD|hk|stock|10|hsci-large-mid|62
+HKEX:0285|比亚迪电子|HKD|hk|stock|10|hsci-large-mid|63
+HKEX:0288|万洲国际|HKD|hk|stock|10|hsci-large-mid|64
+HKEX:0291|华润啤酒|HKD|hk|stock|10|hsci-large-mid|65
+HKEX:0316|东方海外国际|HKD|hk|stock|10|hsci-large-mid|66
+HKEX:0322|康师傅控股|HKD|hk|stock|10|hsci-large-mid|67
+HKEX:0688|中国海外发展|HKD|hk|stock|10|hsci-large-mid|68
+HKEX:0728|中國電信|HKD|hk|stock|10|hsci-large-mid|69
+HKEX:0762|中国联通|HKD|hk|stock|10|hsci-large-mid|70
+HKEX:0836|华润电力|HKD|hk|stock|10|hsci-large-mid|71
+HKEX:0960|龙湖集团|HKD|hk|stock|10|hsci-large-mid|72
+HKEX:0998|中信銀行|HKD|hk|stock|10|hsci-large-mid|73
+HKEX:1038|长江基建集团|HKD|hk|stock|10|hsci-large-mid|74
+HKEX:1093|石藥集團|HKD|hk|stock|10|hsci-large-mid|75
+HKEX:1177|中國生物製藥|HKD|hk|stock|10|hsci-large-mid|76
+HKEX:1179|華住集團 - S|HKD|hk|stock|10|hsci-large-mid|77
+HKEX:1193|華潤燃氣|HKD|hk|stock|10|hsci-large-mid|78
+HKEX:1209|华润万象生活|HKD|hk|stock|10|hsci-large-mid|79
+HKEX:1519|極兔速遞 - W|HKD|hk|stock|10|hsci-large-mid|80
+HKEX:1658|郵儲銀行|HKD|hk|stock|10|hsci-large-mid|81
+HKEX:1698|騰訊音樂 - SW|HKD|hk|stock|10|hsci-large-mid|82
+HKEX:1768|鳴鳴很忙|HKD|hk|stock|10|hsci-large-mid|83
+HKEX:1876|百威亞太|HKD|hk|stock|10|hsci-large-mid|84
+HKEX:1913|普拉達|HKD|hk|stock|10|hsci-large-mid|85
+HKEX:1928|金沙中國有限公司|HKD|hk|stock|10|hsci-large-mid|86
+HKEX:1929|周大福|HKD|hk|stock|10|hsci-large-mid|87
+HKEX:1972|太古地產|HKD|hk|stock|10|hsci-large-mid|88
+HKEX:1997|九龙仓置业|HKD|hk|stock|10|hsci-large-mid|89
+HKEX:2015|理想汽車 - W|HKD|hk|stock|10|hsci-large-mid|90
+HKEX:2057|中通快遞 - W|HKD|hk|stock|10|hsci-large-mid|91
+HKEX:2097|蜜雪集團|HKD|hk|stock|10|hsci-large-mid|92
+HKEX:2259|紫金黃金國際|HKD|hk|stock|10|hsci-large-mid|93
+HKEX:2313|申洲國際|HKD|hk|stock|10|hsci-large-mid|94
+HKEX:2319|蒙牛乳業|HKD|hk|stock|10|hsci-large-mid|95
+HKEX:2378|保誠|HKD|hk|stock|10|hsci-large-mid|96
+HKEX:2382|舜宇光學科技|HKD|hk|stock|10|hsci-large-mid|97
+HKEX:2513|智譜|HKD|hk|stock|10|hsci-large-mid|98
+HKEX:2601|中國太保|HKD|hk|stock|10|hsci-large-mid|99
+HKEX:2618|京東物流|HKD|hk|stock|10|hsci-large-mid|100
+HKEX:2638|港燈 - SS|HKD|hk|stock|10|hsci-large-mid|101
+HKEX:2688|新奥能源|HKD|hk|stock|10|hsci-large-mid|102
+HKEX:2888|渣打集團|HKD|hk|stock|10|hsci-large-mid|103
+HKEX:3328|交通銀行|HKD|hk|stock|10|hsci-large-mid|104
+HKEX:3692|翰森製藥|HKD|hk|stock|10|hsci-large-mid|105
+HKEX:6181|老鋪黃金|HKD|hk|stock|10|hsci-large-mid|106
+HKEX:6618|京東健康|HKD|hk|stock|10|hsci-large-mid|107
+HKEX:6690|海爾智家|HKD|hk|stock|10|hsci-large-mid|108
+HKEX:6823|香港電訊 - SS|HKD|hk|stock|10|hsci-large-mid|109
+HKEX:6862|海底撈|HKD|hk|stock|10|hsci-large-mid|110
+HKEX:6969|思摩爾國際|HKD|hk|stock|10|hsci-large-mid|111
+HKEX:9626|嗶哩嗶哩 - W|HKD|hk|stock|10|hsci-large-mid|112
+HKEX:9633|農夫山泉|HKD|hk|stock|10|hsci-large-mid|113
+HKEX:9660|地平線機器人 - W|HKD|hk|stock|10|hsci-large-mid|114
+HKEX:9866|蔚來 - SW|HKD|hk|stock|10|hsci-large-mid|115
+HKEX:9901|新東方 - S|HKD|hk|stock|10|hsci-large-mid|116
+HKEX:9973|奇瑞汽車|HKD|hk|stock|10|hsci-large-mid|117
+HKEX:0008|電訊盈科|HKD|hk|stock|10|hsci-large-mid|118
+HKEX:0013|和黃醫藥|HKD|hk|stock|10|hsci-large-mid|119
+HKEX:0014|希慎興業|HKD|hk|stock|10|hsci-large-mid|120
+HKEX:0017|新世界發展|HKD|hk|stock|10|hsci-large-mid|121
+HKEX:0019|太古股份公司A|HKD|hk|stock|10|hsci-large-mid|122
+HKEX:0020|商湯 - W|HKD|hk|stock|10|hsci-large-mid|123
+HKEX:0023|東亞銀行|HKD|hk|stock|10|hsci-large-mid|124
+HKEX:0087|太古股份公司B|HKD|hk|stock|10|hsci-large-mid|125
+HKEX:0101|恒隆地产|HKD|hk|stock|10|hsci-large-mid|126
+HKEX:0123|越秀地產|HKD|hk|stock|10|hsci-large-mid|127
+HKEX:0136|中國儒意|HKD|hk|stock|10|hsci-large-mid|128
+HKEX:0142|第一太平|HKD|hk|stock|10|hsci-large-mid|129
+HKEX:0144|招商局港口|HKD|hk|stock|10|hsci-large-mid|130
+HKEX:0148|建滔集團|HKD|hk|stock|10|hsci-large-mid|131
+HKEX:0152|深圳國際|HKD|hk|stock|10|hsci-large-mid|132
+HKEX:0168|青島啤酒股份|HKD|hk|stock|10|hsci-large-mid|133
+HKEX:0179|德昌電機控股|HKD|hk|stock|10|hsci-large-mid|134
+HKEX:0189|東岳集團|HKD|hk|stock|10|hsci-large-mid|135
+HKEX:0220|統一企業中國|HKD|hk|stock|10|hsci-large-mid|136
+HKEX:0257|光大環境|HKD|hk|stock|10|hsci-large-mid|137
+HKEX:0268|金蝶國際|HKD|hk|stock|10|hsci-large-mid|138
+HKEX:0270|粵海投資|HKD|hk|stock|10|hsci-large-mid|139
+HKEX:0293|國泰航空|HKD|hk|stock|10|hsci-large-mid|140
+HKEX:0300|美的集团|HKD|hk|stock|10|hsci-large-mid|141
+HKEX:0303|VTECH HOLDINGS|HKD|hk|stock|10|hsci-large-mid|142
+HKEX:0325|布魯可|HKD|hk|stock|10|hsci-large-mid|143
+HKEX:0354|中國軟件國際|HKD|hk|stock|10|hsci-large-mid|144
+HKEX:0358|江西銅業股份|HKD|hk|stock|10|hsci-large-mid|145
+HKEX:0371|北控水務集團|HKD|hk|stock|10|hsci-large-mid|146
+HKEX:0384|中國燃氣|HKD|hk|stock|10|hsci-large-mid|147
+HKEX:0390|中國中鐵|HKD|hk|stock|10|hsci-large-mid|148
+HKEX:0392|北京控股|HKD|hk|stock|10|hsci-large-mid|149
+HKEX:0425|敏實集團|HKD|hk|stock|10|hsci-large-mid|150
+HKEX:0467|聯合能源集團|HKD|hk|stock|10|hsci-large-mid|151
+HKEX:0486|俄鋁|HKD|hk|stock|10|hsci-large-mid|152
+HKEX:0512|遠大醫藥|HKD|hk|stock|10|hsci-large-mid|153
+HKEX:0522|ASMPT|HKD|hk|stock|10|hsci-large-mid|154
+HKEX:0551|裕元集團|HKD|hk|stock|10|hsci-large-mid|155
+HKEX:0586|海螺創業|HKD|hk|stock|10|hsci-large-mid|156
+HKEX:0631|三一國際|HKD|hk|stock|10|hsci-large-mid|157
+HKEX:0636|KLN|HKD|hk|stock|10|hsci-large-mid|158
+HKEX:0656|復星國際|HKD|hk|stock|10|hsci-large-mid|159
+HKEX:0659|周大福創建|HKD|hk|stock|10|hsci-large-mid|160
+HKEX:0670|中國東方航空股份|HKD|hk|stock|10|hsci-large-mid|161
+HKEX:0683|嘉里建設|HKD|hk|stock|10|hsci-large-mid|162
+HKEX:0753|中國國航|HKD|hk|stock|10|hsci-large-mid|163
+HKEX:0754|合生創展集團|HKD|hk|stock|10|hsci-large-mid|164
+HKEX:0763|中興通訊|HKD|hk|stock|10|hsci-large-mid|165
+HKEX:0772|閱文集團|HKD|hk|stock|10|hsci-large-mid|166
+HKEX:0780|同程旅行|HKD|hk|stock|10|hsci-large-mid|167
+HKEX:0788|中國鐵塔|HKD|hk|stock|10|hsci-large-mid|168
+HKEX:0800|文遠知行 - W|HKD|hk|stock|10|hsci-large-mid|169
+HKEX:0817|中國金茂|HKD|hk|stock|10|hsci-large-mid|170
+HKEX:0853|微創醫療|HKD|hk|stock|10|hsci-large-mid|171
+HKEX:0867|康哲藥業|HKD|hk|stock|10|hsci-large-mid|172
+HKEX:0868|信义玻璃|HKD|hk|stock|10|hsci-large-mid|173
+HKEX:0880|澳博控股|HKD|hk|stock|10|hsci-large-mid|174
+HKEX:0881|中升控股|HKD|hk|stock|10|hsci-large-mid|175
+HKEX:0902|華能國際電力股份|HKD|hk|stock|10|hsci-large-mid|176
+HKEX:0914|海螺水泥|HKD|hk|stock|10|hsci-large-mid|177
+HKEX:0916|龍源電力|HKD|hk|stock|10|hsci-large-mid|178
+HKEX:0917|趣致集團|HKD|hk|stock|10|hsci-large-mid|179
+HKEX:0966|中國太平|HKD|hk|stock|10|hsci-large-mid|180
+TSE:7203|TOYOTA MOTOR CORP.|JPY|jp|stock|10|nikkei225|1
+TSE:6758|SONY GROUP CORP.|JPY|jp|stock|10|nikkei225|2
+TSE:9984|SOFTBANK GROUP CORP.|JPY|jp|stock|10|nikkei225|3
+TSE:8306|MITSUBISHI UFJ FINANCIAL GROUP, INC.|JPY|jp|stock|10|nikkei225|4
+TSE:8035|TOKYO ELECTRON LTD.|JPY|jp|stock|10|nikkei225|5
+TSE:6861|KEYENCE CORP.|JPY|jp|stock|10|nikkei225|6
+TSE:6857|ADVANTEST CORP.|JPY|jp|stock|10|nikkei225|7
+TSE:6501|HITACHI, LTD.|JPY|jp|stock|10|nikkei225|8
+TSE:7974|NINTENDO CO., LTD.|JPY|jp|stock|10|nikkei225|9
+TSE:6098|RECRUIT HOLDINGS CO., LTD.|JPY|jp|stock|10|nikkei225|10
+TSE:9432|NTT, INC.|JPY|jp|stock|10|nikkei225|11
+TSE:9983|FAST RETAILING CO., LTD.|JPY|jp|stock|10|nikkei225|12
+TSE:6902|DENSO CORP.|JPY|jp|stock|10|nikkei225|13
+TSE:8316|SUMITOMO MITSUI FINANCIAL GROUP, INC.|JPY|jp|stock|10|nikkei225|14
+TSE:8766|TOKIO MARINE HOLDINGS, INC.|JPY|jp|stock|10|nikkei225|15
+TSE:4063|SHIN-ETSU CHEMICAL CO., LTD.|JPY|jp|stock|10|nikkei225|16
+TSE:8031|MITSUI & CO., LTD.|JPY|jp|stock|10|nikkei225|17
+TSE:8058|MITSUBISHI CORP.|JPY|jp|stock|10|nikkei225|18
+TSE:8001|ITOCHU CORP.|JPY|jp|stock|10|nikkei225|19
+TSE:7011|MITSUBISHI HEAVY IND., LTD.|JPY|jp|stock|10|nikkei225|20
+TSE:1332|NISSUI CORP.|JPY|jp|stock|10|nikkei225|21
+TSE:1605|INPEX CORP.|JPY|jp|stock|10|nikkei225|22
+TSE:1721|COMSYS HOLDINGS CORP.|JPY|jp|stock|10|nikkei225|23
+TSE:1801|TAISEI CORP.|JPY|jp|stock|10|nikkei225|24
+TSE:1802|OBAYASHI CORP.|JPY|jp|stock|10|nikkei225|25
+TSE:1803|SHIMIZU CORP.|JPY|jp|stock|10|nikkei225|26
+TSE:1808|HASEKO CORP.|JPY|jp|stock|10|nikkei225|27
+TSE:1812|KAJIMA CORP.|JPY|jp|stock|10|nikkei225|28
+TSE:1925|DAIWA HOUSE IND. CO., LTD.|JPY|jp|stock|10|nikkei225|29
+TSE:1928|SEKISUI HOUSE, LTD.|JPY|jp|stock|10|nikkei225|30
+TSE:1963|JGC HOLDINGS CORP.|JPY|jp|stock|10|nikkei225|31
+TSE:2002|NISSHIN SEIFUN GROUP INC.|JPY|jp|stock|10|nikkei225|32
+TSE:2269|MEIJI HOLDINGS CO., LTD.|JPY|jp|stock|10|nikkei225|33
+TSE:2282|NH FOODS LTD.|JPY|jp|stock|10|nikkei225|34
+TSE:2413|M3, INC.|JPY|jp|stock|10|nikkei225|35
+TSE:2432|DENA CO., LTD.|JPY|jp|stock|10|nikkei225|36
+TSE:2501|SAPPORO HOLDINGS LTD.|JPY|jp|stock|10|nikkei225|37
+TSE:2502|ASAHI GROUP HOLDINGS, LTD.|JPY|jp|stock|10|nikkei225|38
+TSE:2503|KIRIN HOLDINGS CO., LTD.|JPY|jp|stock|10|nikkei225|39
+TSE:2768|SOJITZ CORP.|JPY|jp|stock|10|nikkei225|40
+TSE:2801|KIKKOMAN CORP.|JPY|jp|stock|10|nikkei225|41
+TSE:2802|AJINOMOTO CO., INC.|JPY|jp|stock|10|nikkei225|42
+TSE:285A|KIOXIA HOLDINGS CORP.|JPY|jp|stock|10|nikkei225|43
+TSE:2871|NICHIREI CORP.|JPY|jp|stock|10|nikkei225|44
+TSE:2914|JAPAN TOBACCO INC.|JPY|jp|stock|10|nikkei225|45
+TSE:3086|J.FRONT RETAILING CO., LTD.|JPY|jp|stock|10|nikkei225|46
+TSE:3092|ZOZO, INC.|JPY|jp|stock|10|nikkei225|47
+TSE:3099|ISETAN MITSUKOSHI HOLDINGS LTD.|JPY|jp|stock|10|nikkei225|48
+TSE:3289|TOKYU FUDOSAN HOLDINGS CORP.|JPY|jp|stock|10|nikkei225|49
+TSE:3382|SEVEN & I HOLDINGS CO., LTD.|JPY|jp|stock|10|nikkei225|50
+TSE:3401|TEIJIN LTD.|JPY|jp|stock|10|nikkei225|51
+TSE:3402|TORAY INDUSTRIES, INC.|JPY|jp|stock|10|nikkei225|52
+TSE:3405|KURARAY CO., LTD.|JPY|jp|stock|10|nikkei225|53
+TSE:3407|ASAHI KASEI CORP.|JPY|jp|stock|10|nikkei225|54
+TSE:3436|SUMCO CORP.|JPY|jp|stock|10|nikkei225|55
+TSE:3659|NEXON CO., LTD.|JPY|jp|stock|10|nikkei225|56
+TSE:3697|SHIFT INC.|JPY|jp|stock|10|nikkei225|57
+TSE:3861|OJI HOLDINGS CORP.|JPY|jp|stock|10|nikkei225|58
+TSE:4004|RESONAC HOLDINGS CORP.|JPY|jp|stock|10|nikkei225|59
+TSE:4005|SUMITOMO CHEMICAL CO., LTD.|JPY|jp|stock|10|nikkei225|60
+TSE:4021|NISSAN CHEMICAL CORP.|JPY|jp|stock|10|nikkei225|61
+TSE:4042|TOSOH CORP.|JPY|jp|stock|10|nikkei225|62
+TSE:4043|TOKUYAMA CORP.|JPY|jp|stock|10|nikkei225|63
+TSE:4061|DENKA CO., LTD.|JPY|jp|stock|10|nikkei225|64
+TSE:4062|IBIDEN CO., LTD.|JPY|jp|stock|10|nikkei225|65
+TSE:4151|KYOWA KIRIN CO., LTD.|JPY|jp|stock|10|nikkei225|66
+TSE:4183|MITSUI CHEMICALS, INC.|JPY|jp|stock|10|nikkei225|67
+TSE:4188|MITSUBISHI CHEMICAL GROUP CORP.|JPY|jp|stock|10|nikkei225|68
+TSE:4208|UBE CORP.|JPY|jp|stock|10|nikkei225|69
+TSE:4307|NOMURA RESEARCH INSTITUTE, LTD.|JPY|jp|stock|10|nikkei225|70
+TSE:4324|DENTSU GROUP INC.|JPY|jp|stock|10|nikkei225|71
+TSE:4385|MERCARI, INC.|JPY|jp|stock|10|nikkei225|72
+TSE:4452|KAO CORP.|JPY|jp|stock|10|nikkei225|73
+TSE:4502|TAKEDA PHARMACEUTICAL CO., LTD.|JPY|jp|stock|10|nikkei225|74
+TSE:4503|ASTELLAS PHARMA INC.|JPY|jp|stock|10|nikkei225|75
+TSE:4506|SUMITOMO PHARMA CO., LTD.|JPY|jp|stock|10|nikkei225|76
+TSE:4507|SHIONOGI & CO., LTD.|JPY|jp|stock|10|nikkei225|77
+TSE:4519|CHUGAI PHARMACEUTICAL CO., LTD.|JPY|jp|stock|10|nikkei225|78
+TSE:4523|EISAI CO., LTD.|JPY|jp|stock|10|nikkei225|79
+TSE:4543|TERUMO CORP.|JPY|jp|stock|10|nikkei225|80
+TSE:4568|DAIICHI SANKYO CO., LTD.|JPY|jp|stock|10|nikkei225|81
+TSE:4578|OTSUKA HOLDINGS CO., LTD.|JPY|jp|stock|10|nikkei225|82
+TSE:4661|ORIENTAL LAND CO., LTD.|JPY|jp|stock|10|nikkei225|83
+TSE:4689|LY CORP.|JPY|jp|stock|10|nikkei225|84
+TSE:4704|TREND MICRO INC.|JPY|jp|stock|10|nikkei225|85
+TSE:4751|CYBERAGENT, INC.|JPY|jp|stock|10|nikkei225|86
+TSE:4755|RAKUTEN GROUP, INC.|JPY|jp|stock|10|nikkei225|87
+TSE:4901|FUJIFILM HOLDINGS CORP.|JPY|jp|stock|10|nikkei225|88
+TSE:4902|KONICA MINOLTA, INC.|JPY|jp|stock|10|nikkei225|89
+TSE:4911|SHISEIDO CO., LTD.|JPY|jp|stock|10|nikkei225|90
+TSE:5019|IDEMITSU KOSAN CO., LTD.|JPY|jp|stock|10|nikkei225|91
+TSE:5020|ENEOS HOLDINGS, INC.|JPY|jp|stock|10|nikkei225|92
+TSE:5101|THE YOKOHAMA RUBBER CO., LTD.|JPY|jp|stock|10|nikkei225|93
+TSE:5108|BRIDGESTONE CORP.|JPY|jp|stock|10|nikkei225|94
+TSE:5201|AGC INC.|JPY|jp|stock|10|nikkei225|95
+TSE:5214|NIPPON ELECTRIC GLASS CO., LTD.|JPY|jp|stock|10|nikkei225|96
+TSE:5233|TAIHEIYO CEMENT CORP.|JPY|jp|stock|10|nikkei225|97
+TSE:5301|TOKAI CARBON CO., LTD.|JPY|jp|stock|10|nikkei225|98
+TSE:5332|TOTO LTD.|JPY|jp|stock|10|nikkei225|99
+TSE:5333|NGK CORP.|JPY|jp|stock|10|nikkei225|100
+TSE:5401|NIPPON STEEL CORP.|JPY|jp|stock|10|nikkei225|101
+TSE:5406|KOBE STEEL, LTD.|JPY|jp|stock|10|nikkei225|102
+TSE:5411|JFE HOLDINGS, INC.|JPY|jp|stock|10|nikkei225|103
+TSE:543A|ARCHION CORP.|JPY|jp|stock|10|nikkei225|104
+TSE:5631|THE JAPAN STEEL WORKS, LTD.|JPY|jp|stock|10|nikkei225|105
+TSE:5706|MITSUI KINZOKU CO., LTD.|JPY|jp|stock|10|nikkei225|106
+TSE:5711|MITSUBISHI MATERIALS CORP.|JPY|jp|stock|10|nikkei225|107
+TSE:5713|SUMITOMO METAL MINING CO., LTD.|JPY|jp|stock|10|nikkei225|108
+TSE:5714|DOWA HOLDINGS CO., LTD.|JPY|jp|stock|10|nikkei225|109
+TSE:5801|FURUKAWA ELECTRIC CO., LTD.|JPY|jp|stock|10|nikkei225|110
+TSE:5802|SUMITOMO ELECTRIC IND., LTD.|JPY|jp|stock|10|nikkei225|111
+TSE:5803|FUJIKURA LTD.|JPY|jp|stock|10|nikkei225|112
+TSE:5831|SHIZUOKA FINANCIAL GROUP, INC.|JPY|jp|stock|10|nikkei225|113
+TSE:6103|OKUMA CORP.|JPY|jp|stock|10|nikkei225|114
+TSE:6113|AMADA CO., LTD.|JPY|jp|stock|10|nikkei225|115
+TSE:6146|DISCO CORP.|JPY|jp|stock|10|nikkei225|116
+TSE:6178|JAPAN POST HOLDINGS CO., LTD.|JPY|jp|stock|10|nikkei225|117
+TSE:6273|SMC CORP.|JPY|jp|stock|10|nikkei225|118
+TSE:6301|KOMATSU LTD.|JPY|jp|stock|10|nikkei225|119
+TSE:6302|SUMITOMO HEAVY IND., LTD.|JPY|jp|stock|10|nikkei225|120
+TSE:6305|HITACHI CONST. MACH. CO., LTD.|JPY|jp|stock|10|nikkei225|121
+TSE:6326|KUBOTA CORP.|JPY|jp|stock|10|nikkei225|122
+TSE:6361|EBARA CORP.|JPY|jp|stock|10|nikkei225|123
+TSE:6367|DAIKIN INDUSTRIES, LTD.|JPY|jp|stock|10|nikkei225|124
+TSE:6471|NSK LTD.|JPY|jp|stock|10|nikkei225|125
+TSE:6472|NTN CORP.|JPY|jp|stock|10|nikkei225|126
+TSE:6473|JTEKT CORP.|JPY|jp|stock|10|nikkei225|127
+TSE:6479|MINEBEA MITSUMI INC.|JPY|jp|stock|10|nikkei225|128
+TSE:6503|MITSUBISHI ELECTRIC CORP.|JPY|jp|stock|10|nikkei225|129
+TSE:6504|FUJI ELECTRIC CO., LTD.|JPY|jp|stock|10|nikkei225|130
+TSE:6506|YASKAWA ELECTRIC CORP.|JPY|jp|stock|10|nikkei225|131
+TSE:6526|SOCIONEXT INC.|JPY|jp|stock|10|nikkei225|132
+TSE:6532|BAYCURRENT, INC.|JPY|jp|stock|10|nikkei225|133
+TSE:6645|OMRON CORP.|JPY|jp|stock|10|nikkei225|134
+TSE:6701|NEC CORP.|JPY|jp|stock|10|nikkei225|135
+TSE:6702|FUJITSU LTD.|JPY|jp|stock|10|nikkei225|136
+TSE:6723|RENESAS ELECTRONICS CORP.|JPY|jp|stock|10|nikkei225|137
+TSE:6724|SEIKO EPSON CORP.|JPY|jp|stock|10|nikkei225|138
+TSE:6752|PANASONIC HOLDINGS CORP.|JPY|jp|stock|10|nikkei225|139
+TSE:6753|SHARP CORP.|JPY|jp|stock|10|nikkei225|140
+TSE:6762|TDK CORP.|JPY|jp|stock|10|nikkei225|141
+TSE:6770|ALPS ALPINE CO., LTD.|JPY|jp|stock|10|nikkei225|142
+TSE:6841|YOKOGAWA ELECTRIC CORP.|JPY|jp|stock|10|nikkei225|143
+TSE:6920|LASERTEC CORP.|JPY|jp|stock|10|nikkei225|144
+TSE:6954|FANUC CORP.|JPY|jp|stock|10|nikkei225|145
+TSE:6963|ROHM CO., LTD.|JPY|jp|stock|10|nikkei225|146
+TSE:6971|KYOCERA CORP.|JPY|jp|stock|10|nikkei225|147
+TSE:6976|TAIYO YUDEN CO., LTD.|JPY|jp|stock|10|nikkei225|148
+TSE:6981|MURATA MANUFACTURING CO., LTD.|JPY|jp|stock|10|nikkei225|149
+TSE:6988|NITTO DENKO CORP.|JPY|jp|stock|10|nikkei225|150
+TSE:7004|KANADEVIA CORP.|JPY|jp|stock|10|nikkei225|151
+TSE:7012|KAWASAKI HEAVY IND., LTD.|JPY|jp|stock|10|nikkei225|152
+TSE:7013|IHI CORP.|JPY|jp|stock|10|nikkei225|153
+TSE:7186|YOKOHAMA FINANCIAL GROUP, INC.|JPY|jp|stock|10|nikkei225|154
+TSE:7201|NISSAN MOTOR CO., LTD.|JPY|jp|stock|10|nikkei225|155
+TSE:7202|ISUZU MOTORS LTD.|JPY|jp|stock|10|nikkei225|156
+TSE:7211|MITSUBISHI MOTORS CORP.|JPY|jp|stock|10|nikkei225|157
+TSE:7261|MAZDA MOTOR CORP.|JPY|jp|stock|10|nikkei225|158
+TSE:7267|HONDA MOTOR CO., LTD.|JPY|jp|stock|10|nikkei225|159
+TSE:7269|SUZUKI MOTOR CORP.|JPY|jp|stock|10|nikkei225|160
+TSE:7270|SUBARU CORP.|JPY|jp|stock|10|nikkei225|161
+TSE:7272|YAMAHA MOTOR CO., LTD.|JPY|jp|stock|10|nikkei225|162
+TSE:7453|RYOHIN KEIKAKU CO., LTD.|JPY|jp|stock|10|nikkei225|163
+TSE:7532|PAN PACIFIC INTERNATIONAL HOLDINGS CORP.|JPY|jp|stock|10|nikkei225|164
+TSE:7731|NIKON CORP.|JPY|jp|stock|10|nikkei225|165
+TSE:7733|OLYMPUS CORP.|JPY|jp|stock|10|nikkei225|166
+TSE:7735|SCREEN HOLDINGS CO., LTD.|JPY|jp|stock|10|nikkei225|167
+TSE:7741|HOYA CORP.|JPY|jp|stock|10|nikkei225|168
+TSE:7751|CANON INC.|JPY|jp|stock|10|nikkei225|169
+TSE:7752|RICOH CO., LTD.|JPY|jp|stock|10|nikkei225|170
+TSE:7832|BANDAI NAMCO HOLDINGS INC.|JPY|jp|stock|10|nikkei225|171
+TSE:7911|TOPPAN HOLDINGS INC.|JPY|jp|stock|10|nikkei225|172
+TSE:7912|DAI NIPPON PRINTING CO., LTD.|JPY|jp|stock|10|nikkei225|173
+TSE:7951|YAMAHA CORP.|JPY|jp|stock|10|nikkei225|174
+TSE:8002|MARUBENI CORP.|JPY|jp|stock|10|nikkei225|175
+TSE:8015|TOYOTA TSUSHO CORP.|JPY|jp|stock|10|nikkei225|176
+TSE:8053|SUMITOMO CORP.|JPY|jp|stock|10|nikkei225|177
+TSE:8233|TAKASHIMAYA CO., LTD.|JPY|jp|stock|10|nikkei225|178
+TSE:8252|MARUI GROUP CO., LTD.|JPY|jp|stock|10|nikkei225|179
+TSE:8253|CREDIT SAISON CO., LTD.|JPY|jp|stock|10|nikkei225|180
+TSE:8267|AEON CO., LTD.|JPY|jp|stock|10|nikkei225|181
+TSE:8304|AOZORA BANK, LTD.|JPY|jp|stock|10|nikkei225|182
+TSE:8308|RESONA HOLDINGS, INC.|JPY|jp|stock|10|nikkei225|183
+TSE:8309|SUMITOMO MITSUI TRUST GROUP, INC.|JPY|jp|stock|10|nikkei225|184
+TSE:8331|THE CHIBA BANK, LTD.|JPY|jp|stock|10|nikkei225|185
+TSE:8354|FUKUOKA FINANCIAL GROUP, INC.|JPY|jp|stock|10|nikkei225|186
+TSE:8411|MIZUHO FINANCIAL GROUP, INC.|JPY|jp|stock|10|nikkei225|187
+TSE:8591|ORIX CORP.|JPY|jp|stock|10|nikkei225|188
+TSE:8601|DAIWA SECURITIES GROUP INC.|JPY|jp|stock|10|nikkei225|189
+TSE:8604|NOMURA HOLDINGS, INC.|JPY|jp|stock|10|nikkei225|190
+TSE:8630|SOMPO HOLDINGS, INC.|JPY|jp|stock|10|nikkei225|191
+TSE:8697|JAPAN EXCHANGE GROUP, INC.|JPY|jp|stock|10|nikkei225|192
+TSE:8725|MS&AD INSURANCE GROUP HOLDINGS, INC.|JPY|jp|stock|10|nikkei225|193
+TSE:8750|DAIICHI LIFE GROUP, INC.|JPY|jp|stock|10|nikkei225|194
+TSE:8795|T&D HOLDINGS, INC.|JPY|jp|stock|10|nikkei225|195
+TSE:8801|MITSUI FUDOSAN CO., LTD.|JPY|jp|stock|10|nikkei225|196
+TSE:8802|MITSUBISHI ESTATE CO., LTD.|JPY|jp|stock|10|nikkei225|197
+TSE:8804|TOKYO TATEMONO CO., LTD.|JPY|jp|stock|10|nikkei225|198
+TSE:8830|SUMITOMO REALTY & DEVELOPMENT CO., LTD.|JPY|jp|stock|10|nikkei225|199
+TSE:9001|TOBU RAILWAY CO., LTD.|JPY|jp|stock|10|nikkei225|200
+TSE:9005|TOKYU CORP.|JPY|jp|stock|10|nikkei225|201
+TSE:9007|ODAKYU ELECTRIC RAILWAY CO., LTD.|JPY|jp|stock|10|nikkei225|202
+TSE:9008|KEIO CORP.|JPY|jp|stock|10|nikkei225|203
+TSE:9009|KEISEI ELECTRIC RAILWAY CO., LTD.|JPY|jp|stock|10|nikkei225|204
+TSE:9020|EAST JAPAN RAILWAY CO.|JPY|jp|stock|10|nikkei225|205
+TSE:9021|WEST JAPAN RAILWAY CO.|JPY|jp|stock|10|nikkei225|206
+TSE:9022|CENTRAL JAPAN RAILWAY CO., LTD.|JPY|jp|stock|10|nikkei225|207
+TSE:9064|YAMATO HOLDINGS CO., LTD.|JPY|jp|stock|10|nikkei225|208
+TSE:9101|NIPPON YUSEN K.K.|JPY|jp|stock|10|nikkei225|209
+TSE:9104|MITSUI O.S.K.LINES, LTD.|JPY|jp|stock|10|nikkei225|210
+TSE:9107|KAWASAKI KISEN KAISHA, LTD.|JPY|jp|stock|10|nikkei225|211
+TSE:9147|NIPPON EXPRESS HOLDINGS, INC.|JPY|jp|stock|10|nikkei225|212
+TSE:9201|JAPAN AIRLINES CO., LTD.|JPY|jp|stock|10|nikkei225|213
+TSE:9202|ANA HOLDINGS INC.|JPY|jp|stock|10|nikkei225|214
+TSE:9433|KDDI CORP.|JPY|jp|stock|10|nikkei225|215
+TSE:9434|SOFTBANK CORP.|JPY|jp|stock|10|nikkei225|216
+TSE:9501|TOKYO ELECTRIC POWER COMPANY HOLDINGS, I|JPY|jp|stock|10|nikkei225|217
+TSE:9502|CHUBU ELECTRIC POWER CO., INC.|JPY|jp|stock|10|nikkei225|218
+TSE:9503|THE KANSAI ELECTRIC POWER CO., INC.|JPY|jp|stock|10|nikkei225|219
+TSE:9531|TOKYO GAS CO., LTD.|JPY|jp|stock|10|nikkei225|220
+TSE:9532|OSAKA GAS CO., LTD.|JPY|jp|stock|10|nikkei225|221
+TSE:9602|TOHO CO., LTD|JPY|jp|stock|10|nikkei225|222
+TSE:9735|SECOM CO., LTD.|JPY|jp|stock|10|nikkei225|223
+TSE:9766|KONAMI GROUP CORP.|JPY|jp|stock|10|nikkei225|224
+TSE:9843|NITORI HOLDINGS CO., LTD.|JPY|jp|stock|10|nikkei225|225
+AMS:ASML|ASML Holding|EUR|eu|stock|10|stoxx600-top300|1
+LSE:HSBA|HSBC HOLDINGS PLC|GBX|eu|stock|10|stoxx600-top300|2
+SIX:NOVN|NOVARTIS AG|CHF|eu|stock|10|stoxx600-top300|3
+SIX:ROP|ROCHE PS PAR AG|CHF|eu|stock|10|stoxx600-top300|4
+LSE:AZN|AstraZeneca|GBX|eu|stock|10|stoxx600-top300|5
+SIX:NESN|NESTLE SA|CHF|eu|stock|10|stoxx600-top300|6
+XETRA:SIE|Siemens|EUR|eu|stock|10|stoxx600-top300|7
+AMS:SHELL|SHELL PLC|EUR|eu|stock|10|stoxx600-top300|8
+BME:SAN|BANCO SANTANDER SA|EUR|eu|stock|10|stoxx600-top300|9
+EPA:SU|Schneider Electric|EUR|eu|stock|10|stoxx600-top300|10
+EPA:TTE|TotalEnergies|EUR|eu|stock|10|stoxx600-top300|11
+XETRA:ALV|Allianz|EUR|eu|stock|10|stoxx600-top300|12
+SIX:ABBN|ABB LTD|CHF|eu|stock|10|stoxx600-top300|13
+LSE:RR|ROLLS-ROYCE HOLDINGS PLC|GBX|eu|stock|10|stoxx600-top300|14
+SIX:UBSG|UBS GROUP AG|CHF|eu|stock|10|stoxx600-top300|15
+CPH:NOVO-B|NOVO NORDISK CLASS B|DKK|eu|stock|10|stoxx600-top300|16
+BME:IBE|IBERDROLA SA|EUR|eu|stock|10|stoxx600-top300|17
+XETRA:SAP|SAP|EUR|eu|stock|10|stoxx600-top300|18
+XETRA:ENR|Siemens Energy|EUR|eu|stock|10|stoxx600-top300|19
+EPA:SAF|Safran|EUR|eu|stock|10|stoxx600-top300|20
+BME:BBVA|BANCO BILBAO VIZCAYA ARGENTARIA SA|EUR|eu|stock|10|stoxx600-top300|21
+EPA:MC|LVMH Moët Hennessy Louis Vuitton|EUR|eu|stock|10|stoxx600-top300|22
+LSE:BATS|BRITISH AMERICAN TOBACCO|GBX|eu|stock|10|stoxx600-top300|23
+BIT:UCG|UNICREDIT|EUR|eu|stock|10|stoxx600-top300|24
+LSE:ULVR|UNILEVER PLC|GBX|eu|stock|10|stoxx600-top300|25
+EPA:AIR|Airbus|EUR|eu|stock|10|stoxx600-top300|26
+EPA:AI|Air Liquide|EUR|eu|stock|10|stoxx600-top300|27
+SIX:CFR|COMPAGNIE FINANCIERE RICHEMONT SA|CHF|eu|stock|10|stoxx600-top300|28
+XETRA:IFX|Infineon Technologies|EUR|eu|stock|10|stoxx600-top300|29
+EPA:BNP|BNP Paribas|EUR|eu|stock|10|stoxx600-top300|30
+SIX:ZURN|ZURICH INSURANCE GROUP AG|CHF|eu|stock|10|stoxx600-top300|31
+LSE:GSK|GLAXOSMITHKLINE|GBX|eu|stock|10|stoxx600-top300|32
+EPA:OR|L'Oréal|EUR|eu|stock|10|stoxx600-top300|33
+BIT:ISP|INTESA SANPAOLO|EUR|eu|stock|10|stoxx600-top300|34
+LSE:BP|BP PLC|GBX|eu|stock|10|stoxx600-top300|35
+XETRA:DTE|Deutsche Telekom|EUR|eu|stock|10|stoxx600-top300|36
+LSE:RIO|RIO TINTO PLC|GBX|eu|stock|10|stoxx600-top300|37
+EPA:SAN|Sanofi|EUR|eu|stock|10|stoxx600-top300|38
+LSE:BARC|BARCLAYS PLC|GBX|eu|stock|10|stoxx600-top300|39
+AMS:INGA|ING Group|EUR|eu|stock|10|stoxx600-top300|40
+BIT:ENEL|ENEL|EUR|eu|stock|10|stoxx600-top300|41
+EPA:DG|Vinci SA|EUR|eu|stock|10|stoxx600-top300|42
+EPA:CS|Axa|EUR|eu|stock|10|stoxx600-top300|43
+BRU:ABI|Anheuser-Busch InBev|EUR|eu|stock|10|stoxx600-top300|44
+LSE:NG|NATIONAL GRID PLC|GBX|eu|stock|10|stoxx600-top300|45
+LSE:LLOY|LLOYDS BANKING GROUP PLC|GBX|eu|stock|10|stoxx600-top300|46
+HEL:NOKIA|NOKIA|EUR|eu|stock|10|stoxx600-top300|47
+STO:INVE-B|INVESTOR CLASS B|SEK|eu|stock|10|stoxx600-top300|48
+LSE:BA|BAE SYSTEMS PLC|GBX|eu|stock|10|stoxx600-top300|49
+LSE:NWG|NATWEST GROUP PLC|GBX|eu|stock|10|stoxx600-top300|50
+BME:ITX|INDUSTRIA DE DISENO TEXTIL SA|EUR|eu|stock|10|stoxx600-top300|51
+XETRA:MUV2|Munich Re|EUR|eu|stock|10|stoxx600-top300|52
+EPA:GLE|SOCIETE GENERALE SA|EUR|eu|stock|10|stoxx600-top300|53
+XETRA:DBK|Deutsche Bank|EUR|eu|stock|10|stoxx600-top300|54
+LSE:GLEN|GLENCORE PLC|GBX|eu|stock|10|stoxx600-top300|55
+EPA:RMS|Hermès|EUR|eu|stock|10|stoxx600-top300|56
+HEL:NDA-FI|NORDEA BANK|EUR|eu|stock|10|stoxx600-top300|57
+EPA:ENGI|ENGIE SA|EUR|eu|stock|10|stoxx600-top300|58
+EPA:EL|EssilorLuxottica|EUR|eu|stock|10|stoxx600-top300|59
+LSE:REL|RELX PLC|GBX|eu|stock|10|stoxx600-top300|60
+LSE:CPG|COMPASS GROUP PLC|GBX|eu|stock|10|stoxx600-top300|61
+XETRA:DHL|Deutsche Post|EUR|eu|stock|10|stoxx600-top300|62
+AMS:ASM|ASM INTERNATIONAL NV|EUR|eu|stock|10|stoxx600-top300|63
+BRU:ARGX|Argenx|EUR|eu|stock|10|stoxx600-top300|64
+AMS:PRX|Prosus|EUR|eu|stock|10|stoxx600-top300|65
+LSE:AAL|Anglo American plc|GBX|eu|stock|10|stoxx600-top300|66
+STO:VOLV-B|VOLVO CLASS B|SEK|eu|stock|10|stoxx600-top300|67
+BIT:G|ASSICURAZIONI GENERALI|EUR|eu|stock|10|stoxx600-top300|68
+XETRA:BAYN|Bayer|EUR|eu|stock|10|stoxx600-top300|69
+STO:ATCO-A|ATLAS COPCO CLASS A|SEK|eu|stock|10|stoxx600-top300|70
+EPA:BN|Danone|EUR|eu|stock|10|stoxx600-top300|71
+LSE:LSEG|LONDON STOCK EXCHANGE GROUP PLC|GBX|eu|stock|10|stoxx600-top300|72
+XETRA:DB1|Deutsche Börse|EUR|eu|stock|10|stoxx600-top300|73
+XETRA:RHM|Rheinmetall|EUR|eu|stock|10|stoxx600-top300|74
+SIX:HOLN|HOLCIM LTD AG|CHF|eu|stock|10|stoxx600-top300|75
+BIT:PRY|PRYSMIAN|EUR|eu|stock|10|stoxx600-top300|76
+BME:CABK|CAIXABANK SA|EUR|eu|stock|10|stoxx600-top300|77
+LSE:STAN|STANDARD CHARTERED PLC|GBX|eu|stock|10|stoxx600-top300|78
+XETRA:BAS|BASF|EUR|eu|stock|10|stoxx600-top300|79
+BIT:STMMI|STMICROELECTRONICS NV|EUR|eu|stock|10|stoxx600-top300|80
+CPH:DSV|DSV|DKK|eu|stock|10|stoxx600-top300|81
+BIT:ENI|ENI|EUR|eu|stock|10|stoxx600-top300|82
+SIX:LONN|LONZA GROUP AG|CHF|eu|stock|10|stoxx600-top300|83
+SIX:SREN|SWISS RE AG|CHF|eu|stock|10|stoxx600-top300|84
+LSE:DGE|DIAGEO PLC|GBX|eu|stock|10|stoxx600-top300|85
+EPA:SGO|Saint-Gobain|EUR|eu|stock|10|stoxx600-top300|86
+XETRA:EOAN|E.ON|EUR|eu|stock|10|stoxx600-top300|87
+EPA:LR|LEGRAND SA|EUR|eu|stock|10|stoxx600-top300|88
+STO:SAND|SANDVIK|SEK|eu|stock|10|stoxx600-top300|89
+BIT:RACE|FERRARI NV|EUR|eu|stock|10|stoxx600-top300|90
+SIX:GALD|GALDERMA GROUP N AG|CHF|eu|stock|10|stoxx600-top300|91
+LSE:RKT|RECKITT BENCKISER GROUP PLC|GBX|eu|stock|10|stoxx600-top300|92
+LSE:HLN|HALEON PLC|GBX|eu|stock|10|stoxx600-top300|93
+XETRA:RWE|RWE|EUR|eu|stock|10|stoxx600-top300|94
+VIE:EBS|ERSTE GROUP BANK AG|EUR|eu|stock|10|stoxx600-top300|95
+SIX:SDZ|SANDOZ GROUP AG|CHF|eu|stock|10|stoxx600-top300|96
+LSE:SSE|SSE PLC|GBX|eu|stock|10|stoxx600-top300|97
+LSE:TSCO|TESCO PLC|GBX|eu|stock|10|stoxx600-top300|98
+EPA:ORA|ORANGE SA|EUR|eu|stock|10|stoxx600-top300|99
+XETRA:MBG|Mercedes-Benz Group|EUR|eu|stock|10|stoxx600-top300|100
+XETRA:ADS|Adidas|EUR|eu|stock|10|stoxx600-top300|101
+BRU:UCB|UCB SA|EUR|eu|stock|10|stoxx600-top300|102
+AMS:AD|Ahold Delhaize|EUR|eu|stock|10|stoxx600-top300|103
+STO:ASSA-B|ASSA ABLOY B|SEK|eu|stock|10|stoxx600-top300|104
+BME:FER|FERROVIAL NV|EUR|eu|stock|10|stoxx600-top300|105
+SIX:ALC|ALCON AG|CHF|eu|stock|10|stoxx600-top300|106
+LSE:PRU|PRUDENTIAL PLC|GBX|eu|stock|10|stoxx600-top300|107
+CPH:DANSKE|DANSKE BANK|DKK|eu|stock|10|stoxx600-top300|108
+SIX:SIKA|SIKA AG|CHF|eu|stock|10|stoxx600-top300|109
+STO:SWED-A|SWEDBANK|SEK|eu|stock|10|stoxx600-top300|110
+STO:ERIC-B|ERICSSON B|SEK|eu|stock|10|stoxx600-top300|111
+SIX:GIVN|GIVAUDAN SA|CHF|eu|stock|10|stoxx600-top300|112
+LSE:III|3i|GBX|eu|stock|10|stoxx600-top300|113
+SIX:SLHN|SWISS LIFE HOLDING AG|CHF|eu|stock|10|stoxx600-top300|114
+STO:SEB-A|SKANDINAVISKA ENSKILDA BANKEN|SEK|eu|stock|10|stoxx600-top300|115
+BME:ACS|ACS ACTIVIDADES DE CONSTRUCCION Y|EUR|eu|stock|10|stoxx600-top300|116
+LSE:EXPN|EXPERIAN PLC|GBX|eu|stock|10|stoxx600-top300|117
+BRU:KBC|KBC GROEP|EUR|eu|stock|10|stoxx600-top300|118
+AMS:ADYEN|Adyen|EUR|eu|stock|10|stoxx600-top300|119
+EPA:VIE|VEOLIA ENVIRON. SA|EUR|eu|stock|10|stoxx600-top300|120
+BIT:BMPS|BANCA MONTE DEI PASCHI DI SIENA SP|EUR|eu|stock|10|stoxx600-top300|121
+LSE:IMB|IMPERIAL BRANDS PLC|GBX|eu|stock|10|stoxx600-top300|122
+AMS:MT|ARCELORMITTAL SA|EUR|eu|stock|10|stoxx600-top300|123
+EPA:ML|MICHELIN|EUR|eu|stock|10|stoxx600-top300|124
+BME:REP|REPSOL SA|EUR|eu|stock|10|stoxx600-top300|125
+LSE:VOD|VODAFONE GROUP PLC|GBX|eu|stock|10|stoxx600-top300|126
+XETRA:HEI|Heidelberg Materials|EUR|eu|stock|10|stoxx600-top300|127
+AMS:ABN|ABN AMRO BANK NV|EUR|eu|stock|10|stoxx600-top300|128
+OSL:EQNR|EQUINOR|NOK|eu|stock|10|stoxx600-top300|129
+HEL:SAMPO|SAMPO CLASS A|EUR|eu|stock|10|stoxx600-top300|130
+BME:AMS|AMADEUS IT GROUP SA|EUR|eu|stock|10|stoxx600-top300|131
+LSE:IHG|INTERCONTINENTAL HOTELS GROUP PLC|GBX|eu|stock|10|stoxx600-top300|132
+CPH:VWS|VESTAS WIND SYSTEMS|DKK|eu|stock|10|stoxx600-top300|133
+LSE:AV|Aviva|GBX|eu|stock|10|stoxx600-top300|134
+ISE:RYA|RYANAIR HOLDINGS PLC|EUR|eu|stock|10|stoxx600-top300|135
+XETRA:DTG|Daimler Truck|EUR|eu|stock|10|stoxx600-top300|136
+OSL:DNB|DNB BANK|NOK|eu|stock|10|stoxx600-top300|137
+ISE:A5G|AIB GROUP PLC|EUR|eu|stock|10|stoxx600-top300|138
+AMS:BESI|BE SEMICONDUCTOR INDUSTRIES NV|EUR|eu|stock|10|stoxx600-top300|139
+EPA:HO|THALES SA|EUR|eu|stock|10|stoxx600-top300|140
+WSE:PKO|POWSZECHNA KASA OSZCZEDNOSCI BANK|PLN|eu|stock|10|stoxx600-top300|141
+EPA:PUB|PUBLICIS GROUPE SA|EUR|eu|stock|10|stoxx600-top300|142
+AMS:HEIA|HEINEKEN NV|EUR|eu|stock|10|stoxx600-top300|143
+BIT:BPE|BPER BANCA|EUR|eu|stock|10|stoxx600-top300|144
+STO:EQT|EQT|SEK|eu|stock|10|stoxx600-top300|145
+SIX:GEBN|GEBERIT AG|CHF|eu|stock|10|stoxx600-top300|146
+AMS:UMG|UNIVERSAL MUSIC GROUP NV|EUR|eu|stock|10|stoxx600-top300|147
+BME:AENA|AENA SME SA|EUR|eu|stock|10|stoxx600-top300|148
+XETRA:CBK|Commerzbank|EUR|eu|stock|10|stoxx600-top300|149
+XETRA:MTX|MTU Aero Engines|EUR|eu|stock|10|stoxx600-top300|150
+LSE:NXT|NEXT PLC|GBX|eu|stock|10|stoxx600-top300|151
+AMS:NN|NN GROUP NV|EUR|eu|stock|10|stoxx600-top300|152
+STO:SHB-A|SVENSKA HANDELSBANKEN-A SHS|SEK|eu|stock|10|stoxx600-top300|153
+HEL:KNEBV|KONE|EUR|eu|stock|10|stoxx600-top300|154
+SIX:VACN|VAT GROUP AG|CHF|eu|stock|10|stoxx600-top300|155
+EPA:ACA|CREDIT AGRICOLE SA|EUR|eu|stock|10|stoxx600-top300|156
+XETRA:MRK|Merck|EUR|eu|stock|10|stoxx600-top300|157
+CPH:NSIS-B|NOVOZYMES B|DKK|eu|stock|10|stoxx600-top300|158
+EPA:KER|KERING SA|EUR|eu|stock|10|stoxx600-top300|159
+LSE:LGEN|LEGAL AND GENERAL GROUP PLC|GBX|eu|stock|10|stoxx600-top300|160
+AMS:PHIA|KONINKLIJKE PHILIPS NV|EUR|eu|stock|10|stoxx600-top300|161
+BIT:LDO|LEONARDO FINMECCANICA SPA|EUR|eu|stock|10|stoxx600-top300|162
+SIX:SCMN|SWISSCOM AG|CHF|eu|stock|10|stoxx600-top300|163
+SIX:HBAN|HELVETIA BALOISE HOLDING N AG|CHF|eu|stock|10|stoxx600-top300|164
+LSE:HLMA|HALMA PLC|GBX|eu|stock|10|stoxx600-top300|165
+BIT:BAMI|BANCO BPM|EUR|eu|stock|10|stoxx600-top300|166
+WSE:PKN|ORLEN SA|PLN|eu|stock|10|stoxx600-top300|167
+LSE:ANTO|Antofagasta plc|GBX|eu|stock|10|stoxx600-top300|168
+SIX:SGSN|SGS SA|CHF|eu|stock|10|stoxx600-top300|169
+XETRA:BMW|BMW|EUR|eu|stock|10|stoxx600-top300|170
+AMS:KPN|KONINKLIJKE KPN NV|EUR|eu|stock|10|stoxx600-top300|171
+XETRA:FRE|Fresenius|EUR|eu|stock|10|stoxx600-top300|172
+ISE:BIRG|BANK OF IRELAND GROUP PLC|EUR|eu|stock|10|stoxx600-top300|173
+SIX:PGHN|PARTNERS GROUP HOLDING AG|CHF|eu|stock|10|stoxx600-top300|174
+XETRA:VOW3|Volkswagen Group|EUR|eu|stock|10|stoxx600-top300|175
+HEL:WRT1V|WARTSILA|EUR|eu|stock|10|stoxx600-top300|176
+STO:HEXA-B|HEXAGON CLASS B|SEK|eu|stock|10|stoxx600-top300|177
+BME:SAB|BANCO DE SABADELL|EUR|eu|stock|10|stoxx600-top300|178
+XETRA:VNA|Vonovia|EUR|eu|stock|10|stoxx600-top300|179
+SIX:BAER|JULIUS BAER GRUPPE AG|CHF|eu|stock|10|stoxx600-top300|180
+EPA:CAP|CAPGEMINI|EUR|eu|stock|10|stoxx600-top300|181
+STO:EPI-A|EPIROC CLASS A|SEK|eu|stock|10|stoxx600-top300|182
+STO:ALFA|ALFA LAVAL|SEK|eu|stock|10|stoxx600-top300|183
+CPH:GMAB|GENMAB|DKK|eu|stock|10|stoxx600-top300|184
+BIT:TRN|TERNA RETE ELETTRICA NAZIONALE|EUR|eu|stock|10|stoxx600-top300|185
+STO:SAAB-B|SAAB CLASS B|SEK|eu|stock|10|stoxx600-top300|186
+LSE:BT-A|BT GROUP PLC|GBX|eu|stock|10|stoxx600-top300|187
+STO:ESSITY-B|ESSITY CLASS B|SEK|eu|stock|10|stoxx600-top300|188
+XETRA:HNR1|Hannover Re|EUR|eu|stock|10|stoxx600-top300|189
+SIX:STMN|STRAUMANN HOLDING AG|CHF|eu|stock|10|stoxx600-top300|190
+STO:BOL|BOLIDEN|SEK|eu|stock|10|stoxx600-top300|191
+BME:TEF|TELEFONICA SA|EUR|eu|stock|10|stoxx600-top300|192
+LSE:IAG|INTERNATIONAL AIRLINES GROUP SA|GBX|eu|stock|10|stoxx600-top300|193
+BME:CLNX|CELLNEX TELECOM|EUR|eu|stock|10|stoxx600-top300|194
+AMS:DSFIR|DSM FIRMENICH AG|EUR|eu|stock|10|stoxx600-top300|195
+BIT:TIT|TELECOM ITALIA|EUR|eu|stock|10|stoxx600-top300|196
+LSE:INF|INFORMA PLC|GBX|eu|stock|10|stoxx600-top300|197
+BIT:FBK|FINECOBANK BANCA FINECO|EUR|eu|stock|10|stoxx600-top300|198
+EPA:EN|BOUYGUES SA|EUR|eu|stock|10|stoxx600-top300|199
+LIS:EDP|EDP ENERGIAS DE PORTUGAL SA|EUR|eu|stock|10|stoxx600-top300|200
+VIE:BG|BAWAG GROUP AG|EUR|eu|stock|10|stoxx600-top300|201
+EPA:DSY|DASSAULT SYSTEMES|EUR|eu|stock|10|stoxx600-top300|202
+EPA:RI|PERNOD RICARD SA|EUR|eu|stock|10|stoxx600-top300|203
+BIT:PST|POSTE ITALIANE|EUR|eu|stock|10|stoxx600-top300|204
+XETRA:SHL|Siemens Healthineers|EUR|eu|stock|10|stoxx600-top300|205
+BIT:SRG|SNAM|EUR|eu|stock|10|stoxx600-top300|206
+AMS:WKL|Wolters Kluwer|EUR|eu|stock|10|stoxx600-top300|207
+ISE:KRZ|KERRY GROUP PLC|EUR|eu|stock|10|stoxx600-top300|208
+ISE:KRX|KINGSPAN GROUP PLC|EUR|eu|stock|10|stoxx600-top300|209
+LSE:SGRO|SEGRO REIT PLC|GBX|eu|stock|10|stoxx600-top300|210
+EPA:FGR|EIFFAGE SA|EUR|eu|stock|10|stoxx600-top300|211
+BME:ELE|ENDESA SA|EUR|eu|stock|10|stoxx600-top300|212
+SIX:LOGN|LOGITECH INTERNATIONAL SA|CHF|eu|stock|10|stoxx600-top300|213
+LSE:RTO|RENTOKIL INITIAL PLC|GBX|eu|stock|10|stoxx600-top300|214
+HEL:UPM|UPM-KYMMENE|EUR|eu|stock|10|stoxx600-top300|215
+SIX:SCHP|SCHINDLER HOLDING PAR AG|CHF|eu|stock|10|stoxx600-top300|216
+LSE:CCH|COCA COLA HBC AG|GBX|eu|stock|10|stoxx600-top300|217
+XETRA:SY1|Symrise|EUR|eu|stock|10|stoxx600-top300|218
+SIX:SPSN|SWISS PRIME SITE AG|CHF|eu|stock|10|stoxx600-top300|219
+HEL:NESTE|NESTE|EUR|eu|stock|10|stoxx600-top300|220
+LSE:SN|SMITH AND NEPHEW PLC|GBX|eu|stock|10|stoxx600-top300|221
+SIX:KNIN|KUEHNE UND NAGEL INTERNATIONAL AG|CHF|eu|stock|10|stoxx600-top300|222
+BIT:MONC|MONCLER|EUR|eu|stock|10|stoxx600-top300|223
+OSL:KOG|KONGSBERG GRUPPEN|NOK|eu|stock|10|stoxx600-top300|224
+EPA:URW|UNIBAIL RODAMCO WE STAPLED UNITS|EUR|eu|stock|10|stoxx600-top300|225
+XETRA:HEN3|Henkel|EUR|eu|stock|10|stoxx600-top300|226
+LSE:DPLM|DIPLOMA PLC|GBX|eu|stock|10|stoxx600-top300|227
+WSE:KGH|KGHM POLSKA MIEDZ SA|PLN|eu|stock|10|stoxx600-top300|228
+CPH:CARL-B|CARLSBERG AS CL B|DKK|eu|stock|10|stoxx600-top300|229
+EPA:ENX|EURONEXT NV|EUR|eu|stock|10|stoxx600-top300|230
+BRU:AGS|AGEAS SA|EUR|eu|stock|10|stoxx600-top300|231
+SIX:SOON|SONOVA HOLDING AG|CHF|eu|stock|10|stoxx600-top300|232
+LSE:ITRK|INTERTEK GROUP PLC|GBX|eu|stock|10|stoxx600-top300|233
+OSL:NHY|NORSK HYDRO|NOK|eu|stock|10|stoxx600-top300|234
+EPA:AC|ACCOR SA|EUR|eu|stock|10|stoxx600-top300|235
+BIT:STLAM|STELLANTIS NV|EUR|eu|stock|10|stoxx600-top300|236
+EPA:CA|CARREFOUR SA|EUR|eu|stock|10|stoxx600-top300|237
+SIX:LISP|CHOCOLADEFABRIKEN LINDT & SPRUENGL|CHF|eu|stock|10|stoxx600-top300|238
+AMS:AKZA|AKZO NOBEL NV|EUR|eu|stock|10|stoxx600-top300|239
+STO:TELIA|TELIA COMPANY|SEK|eu|stock|10|stoxx600-top300|240
+LSE:ADM|Admiral Group|GBX|eu|stock|10|stoxx600-top300|241
+LSE:UU|UNITED UTILITIES GROUP PLC|GBX|eu|stock|10|stoxx600-top300|242
+STO:SOBI|SWEDISH ORPHAN BIOVITRUM|SEK|eu|stock|10|stoxx600-top300|243
+BME:NTGY|NATURGY ENERGY GROUP SA|EUR|eu|stock|10|stoxx600-top300|244
+LSE:BNZL|BUNZL|GBX|eu|stock|10|stoxx600-top300|245
+LSE:SMIN|SMITHS GROUP PLC|GBX|eu|stock|10|stoxx600-top300|246
+WSE:PEO|BANK PEKAO SA|PLN|eu|stock|10|stoxx600-top300|247
+HEL:METSO|METSO CORPORATION|EUR|eu|stock|10|stoxx600-top300|248
+SIX:BEAN|BELIMO N AG|CHF|eu|stock|10|stoxx600-top300|249
+LSE:CNA|CENTRICA PLC|GBX|eu|stock|10|stoxx600-top300|250
+BIT:UNI|UNIPOL ASSICURAZIONI SPA|EUR|eu|stock|10|stoxx600-top300|251
+AMS:ASRNL|ASR NEDERLAND NV|EUR|eu|stock|10|stoxx600-top300|252
+CPH:ORSTED|ORSTED A/S|DKK|eu|stock|10|stoxx600-top300|253
+EPA:BVI|BUREAU VERITAS SA|EUR|eu|stock|10|stoxx600-top300|254
+LIS:BCP|BANCO COMERCIAL PORTUGUES SA|EUR|eu|stock|10|stoxx600-top300|255
+AMS:AGN|AEGON LTD|EUR|eu|stock|10|stoxx600-top300|256
+BME:BKT|BANKINTER SA|EUR|eu|stock|10|stoxx600-top300|257
+XETRA:HOT|HOCHTIEF AG|EUR|eu|stock|10|stoxx600-top300|258
+LSE:BEZ|BEAZLEY PLC|GBX|eu|stock|10|stoxx600-top300|259
+XETRA:G1A|GEA Group|EUR|eu|stock|10|stoxx600-top300|260
+LSE:MNG|M&G PLC|GBX|eu|stock|10|stoxx600-top300|261
+LSE:IMI|IMI PLC|GBX|eu|stock|10|stoxx600-top300|262
+HEL:FORTUM|FORTUM|EUR|eu|stock|10|stoxx600-top300|263
+LSE:SVT|SEVERN TRENT PLC|GBX|eu|stock|10|stoxx600-top300|264
+LSE:MKS|MARKS AND SPENCER GROUP PLC|GBX|eu|stock|10|stoxx600-top300|265
+LSE:SGE|THE SAGE GROUP PLC|GBX|eu|stock|10|stoxx600-top300|266
+EPA:SPIE|SPIE SA|EUR|eu|stock|10|stoxx600-top300|267
+WSE:PZU|PZU SA|PLN|eu|stock|10|stoxx600-top300|268
+SIX:ACLN|ACCELLERON N AG|CHF|eu|stock|10|stoxx600-top300|269
+STO:TEL2-B|TELE2 B|SEK|eu|stock|10|stoxx600-top300|270
+LSE:PSON|PEARSON PLC|GBX|eu|stock|10|stoxx600-top300|271
+WSE:ALE|ALLEGRO SA|PLN|eu|stock|10|stoxx600-top300|272
+OSL:AKRBP|AKER BP|NOK|eu|stock|10|stoxx600-top300|273
+STO:INDU-C|INDUSTRIVARDEN SERIES|SEK|eu|stock|10|stoxx600-top300|274
+XETRA:CON|Continental|EUR|eu|stock|10|stoxx600-top300|275
+EPA:RXL|REXEL SA|EUR|eu|stock|10|stoxx600-top300|276
+LSE:GAW|GAMES WORKSHOP GROUP PLC|GBX|eu|stock|10|stoxx600-top300|277
+STO:SKA-B|SKANSKA B|SEK|eu|stock|10|stoxx600-top300|278
+EPA:LI|KLEPIERRE REIT SA|EUR|eu|stock|10|stoxx600-top300|279
+VIE:OMV|OMV AG|EUR|eu|stock|10|stoxx600-top300|280
+LSE:WISE|WISE PLC CLASS A|GBX|eu|stock|10|stoxx600-top300|281
+XETRA:FME|Fresenius Medical Care|EUR|eu|stock|10|stoxx600-top300|282
+STO:EVO|EVOLUTION|SEK|eu|stock|10|stoxx600-top300|283
+LSE:SDLF|STANDARD LIFE PLC|GBX|eu|stock|10|stoxx600-top300|284
+HEL:ORNBV|ORION CLASS B|EUR|eu|stock|10|stoxx600-top300|285
+EPA:ERF|EUROFINS SCIENTIFIC|EUR|eu|stock|10|stoxx600-top300|286
+OSL:TEL|TELENOR|NOK|eu|stock|10|stoxx600-top300|287
+BIT:TEN|TENARIS SA|EUR|eu|stock|10|stoxx600-top300|288
+STO:SKF-B|SKF B|SEK|eu|stock|10|stoxx600-top300|289
+CPH:COLO-B|COLOPLAST B|DKK|eu|stock|10|stoxx600-top300|290
+STO:ADDT-B|ADDTECH CLASS B|SEK|eu|stock|10|stoxx600-top300|291
+AMS:HEIO|HEINEKEN HOLDING NV|EUR|eu|stock|10|stoxx600-top300|292
+AMS:MICC|MAGNUM ICE CREAM NV|EUR|eu|stock|10|stoxx600-top300|293
+OSL:MOWI|MOWI|NOK|eu|stock|10|stoxx600-top300|294
+CPH:MAERSK-B|A P MOLLER MAERSK B|DKK|eu|stock|10|stoxx600-top300|295
+LSE:WEIR|WEIR GROUP PLC|GBX|eu|stock|10|stoxx600-top300|296
+LSE:HSX|HISCOX LTD|GBX|eu|stock|10|stoxx600-top300|297
+LSE:IGG|IG GROUP HOLDINGS PLC|GBX|eu|stock|10|stoxx600-top300|298
+STO:TREL-B|TRELLEBORG B|SEK|eu|stock|10|stoxx600-top300|299
+VIE:RBI|RAIFFEISEN BANK INTERNATIONAL AG|EUR|eu|stock|10|stoxx600-top300|300
+SGX:D05|DBS Group Holdings|SGD|sg|stock|10|sti30|1
+SGX:O39|OCBC Bank|SGD|sg|stock|10|sti30|2
+SGX:U11|United Overseas Bank|SGD|sg|stock|10|sti30|3
+SGX:Z74|Singtel|SGD|sg|stock|10|sti30|4
+SGX:J36|Jardine Matheson Holdings Limited|SGD|sg|stock|10|sti30|5
+SGX:F34|Wilmar International|SGD|sg|stock|10|sti30|6
+SGX:BN4|Keppel Corporation|SGD|sg|stock|10|sti30|7
+SGX:S63|Singapore Technologies Engineering|SGD|sg|stock|10|sti30|8
+SGX:C6L|Singapore Airlines|SGD|sg|stock|10|sti30|9
+SGX:U96|Sembcorp Industries|SGD|sg|stock|10|sti30|10
+SGX:5E2|Seatrium Limited|SGD|sg|stock|10|sti30|11
+SGX:9CI|CapitaLand Investment|SGD|sg|stock|10|sti30|12
+SGX:A17U|CapitaLand Ascendas REIT|SGD|sg|stock|10|sti30|13
+SGX:AJBU|Keppel DC Reit|SGD|sg|stock|10|sti30|14
+SGX:BS6|Yangzijiang Shipbuilding Holdings|SGD|sg|stock|10|sti30|15
+SGX:BUOU|Frasers Logistics & Commercial Trust|SGD|sg|stock|10|sti30|16
+SGX:C09|City Developments Limited|SGD|sg|stock|10|sti30|17
+SGX:C38U|CapitaLand Integrated Commercial Trust|SGD|sg|stock|10|sti30|18
+SGX:D01|DFI Retail Group Holdings Limited|SGD|sg|stock|10|sti30|19
+SGX:G13|Genting Singapore PLC|SGD|sg|stock|10|sti30|20
+SGX:H78|Hongkong Land Holdings|SGD|sg|stock|10|sti30|21
+SGX:J69U|Frasers Centrepoint Trust|SGD|sg|stock|10|sti30|22
+SGX:M44U|Mapletree Logistics Trust|SGD|sg|stock|10|sti30|23
+SGX:ME8U|Mapletree Industrial Trust|SGD|sg|stock|10|sti30|24
+SGX:N2IU|Mapletree Pan Asia Commercial Trust|SGD|sg|stock|10|sti30|25
+SGX:S58|SATS|SGD|sg|stock|10|sti30|26
+SGX:S68|Singapore Exchange|SGD|sg|stock|10|sti30|27
+SGX:U14|UOL Group|SGD|sg|stock|10|sti30|28
+SGX:V03|Venture Corporation|SGD|sg|stock|10|sti30|29
+SGX:Y92|Thai Beverages|SGD|sg|stock|10|sti30|30
+
+# Currency units quoted directly in RSC (RSC is treated as USD).
+FX:EUR|Euro|USD|forex|forex|5|forex-major|1
+FX:GBP|British Pound|USD|forex|forex|5|forex-major|2
+FX:JPY|Japanese Yen|USD|forex|forex|5|forex-major|3
+FX:CHF|Swiss Franc|USD|forex|forex|5|forex-major|4
+FX:CAD|Canadian Dollar|USD|forex|forex|5|forex-major|5
+FX:AUD|Australian Dollar|USD|forex|forex|5|forex-major|6
+FX:NZD|New Zealand Dollar|USD|forex|forex|5|forex-major|7
+FX:CNY|Chinese Yuan|USD|forex|forex|5|forex-major|8
+FX:HKD|Hong Kong Dollar|USD|forex|forex|5|forex-major|9
+FX:SGD|Singapore Dollar|USD|forex|forex|5|forex-major|10
+FX:INR|Indian Rupee|USD|forex|forex|5|forex-major|11
+FX:KRW|South Korean Won|USD|forex|forex|5|forex-major|12
+
+# Existing US-listed index ETFs remain US securities.
+AMEX:SPY|SPDR S&P 500 ETF Trust|USD|us|etf|5|us-index-etf|501
+NASDAQ:QQQ|Invesco QQQ Trust|USD|us|etf|5|us-index-etf|502
+
+# Cash indices follow their underlying local-market sessions.
+INDEX:SPX|S&P 500|USD|indices|index|5|cash-index|1
+INDEX:NDX|Nasdaq 100|USD|indices|index|5|cash-index|2
+INDEX:DJI|Dow Jones Industrial Average|USD|indices|index|5|cash-index|3
+INDEX:RUT|Russell 2000|USD|indices|index|5|cash-index|4
+INDEX:CSI300|CSI 300|CNY|indices|index|5|cash-index|5
+INDEX:HSI|Hang Seng Index|HKD|indices|index|5|cash-index|6
+INDEX:N225|Nikkei 225|JPY|indices|index|5|cash-index|7
+INDEX:DAX|DAX|EUR|indices|index|5|cash-index|8
+INDEX:FTSE100|FTSE 100|GBP|indices|index|5|cash-index|9
+INDEX:CAC40|CAC 40|EUR|indices|index|5|cash-index|10
+INDEX:STOXX50|Euro Stoxx 50|EUR|indices|index|5|cash-index|11
+INDEX:ASX200|S&P/ASX 200|AUD|indices|index|5|cash-index|12
+INDEX:KOSPI|KOSPI Composite|KRW|indices|index|5|cash-index|13
+INDEX:STI|Straits Times Index|SGD|indices|index|5|cash-index|14
+INDEX:TSX|S&P/TSX Composite|CAD|indices|index|5|cash-index|15
+INDEX:NIFTY50|Nifty 50|INR|indices|index|5|cash-index|16
+
+# Physically backed or metal-linked ETFs avoid futures rollover.
+AMEX:GLD|Gold (GLD)|USD|metals|metal|5|metal-proxy|1
+AMEX:SLV|Silver (SLV)|USD|metals|metal|5|metal-proxy|2
+AMEX:PPLT|Platinum (PPLT)|USD|metals|metal|5|metal-proxy|3
+AMEX:PALL|Palladium (PALL)|USD|metals|metal|5|metal-proxy|4
+
+CRYPTO:BTC/USD|Bitcoin|USD|crypto|crypto|10||
+CRYPTO:ETH/USD|Ethereum|USD|crypto|crypto|10||
+CRYPTO:BNB/USD|BNB|USD|crypto|crypto|10||
+CRYPTO:XRP/USD|XRP|USD|crypto|crypto|10||
+CRYPTO:SOL/USD|Solana|USD|crypto|crypto|10||
+CRYPTO:DOGE/USD|Dogecoin|USD|crypto|crypto|10||
+CRYPTO:ADA/USD|Cardano|USD|crypto|crypto|10||
+CRYPTO:TRX/USD|TRON|USD|crypto|crypto|10||
+CRYPTO:AVAX/USD|Avalanche|USD|crypto|crypto|10||
+CRYPTO:LINK/USD|Chainlink|USD|crypto|crypto|10||
+CRYPTO:XLM/USD|Stellar|USD|crypto|crypto|10||
+CRYPTO:SUI/USD|Sui|USD|crypto|crypto|10||
+CRYPTO:HBAR/USD|Hedera|USD|crypto|crypto|10||
+CRYPTO:BCH/USD|Bitcoin Cash|USD|crypto|crypto|10||
+CRYPTO:LTC/USD|Litecoin|USD|crypto|crypto|10||
+CRYPTO:DOT/USD|Polkadot|USD|crypto|crypto|10||
+CRYPTO:UNI/USD|Uniswap|USD|crypto|crypto|10||
+CRYPTO:AAVE/USD|Aave|USD|crypto|crypto|10||
+CRYPTO:NEAR/USD|NEAR Protocol|USD|crypto|crypto|10||
+CRYPTO:APT/USD|Aptos|USD|crypto|crypto|10||
+CRYPTO:ETC/USD|Ethereum Classic|USD|crypto|crypto|10||
+CRYPTO:FIL/USD|Filecoin|USD|crypto|crypto|10||
+CRYPTO:ICP/USD|Internet Computer|USD|crypto|crypto|10||
+CRYPTO:XMR/USD|Monero|USD|crypto|crypto|10||
+CRYPTO:SHIB/USD|Shiba Inu|USD|crypto|crypto|10||

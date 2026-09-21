@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const source = fs.readFileSync(new URL('../assets/javascripts/discourse/lib/rsc-format.js', import.meta.url), 'utf8');
+const { formatAmount, formatWallet, formatPrice, formatPercent } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+assert.equal(formatAmount('1234.567891234567891234'), '1,234.5678');
+assert.equal(formatAmount('-502.23863241551068868'), '-502.2386');
+assert.equal(formatAmount('999999999999999999.999999999999999999'), '999,999,999,999,999,999.9999');
+assert.equal(formatAmount('1.99999'), '1.9999');
+assert.equal(formatAmount('-1.99999'), '-1.9999');
+assert.equal(formatAmount('0.000000000000000001'), '<0.0001');
+assert.equal(formatAmount('-0.000000000000000001'), '>-0.0001');
+assert.equal(formatAmount('-0.0000'), '0');
+assert.equal(formatWallet('103.309403901331570553'), '103.3');
+assert.equal(formatPrice('0.000001234567891234'), '0.0000012345');
+assert.equal(formatPercent(null), '—');
+assert.equal(formatPercent('382.269'), '382.26%');
+console.log('12 display precision checks passed');
