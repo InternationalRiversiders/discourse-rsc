@@ -1252,6 +1252,9 @@
     scrollbar-width: thin;
   }
   .rsc-position {
+    // A closing form must never squeeze the metrics into a narrow flex item.
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     padding: 22px 0;
     gap: 15px;
   }
@@ -1261,12 +1264,14 @@
   }
   .rsc-position-title {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
     margin-bottom: 16px;
   }
   .rsc-position-title > strong {
     font-size: 16px;
+    overflow-wrap: anywhere;
   }
   .rsc-direction {
     font-size: 11px;
@@ -1284,6 +1289,25 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
     margin: 0;
+  }
+  .rsc-position-metrics + .rsc-position-metrics {
+    margin-top: 16px;
+  }
+  .rsc-position-metrics > div {
+    min-width: 0;
+  }
+  .rsc-position > form {
+    min-width: 0;
+    width: 100%;
+    margin: 0;
+  }
+  .rsc-partial-close {
+    padding-top: 12px;
+    border-top: 1px solid var(--rsc-line);
+  }
+  .rsc-partial-close .btn {
+    flex-shrink: 0;
+    min-height: 44px;
   }
   .rsc-position-metrics dt {
     font-size: 11px;
@@ -1708,3 +1732,41 @@
 
 // Keep the same navigation visible on wallet, market, ranking and admin pages.
 .rsc-app > .rsc-tabs { flex-wrap: wrap; }
+
+@media (max-width: 700px) {
+  // Scope pull-to-refresh suppression to RSC; ordinary scrolling stays native.
+  html:has(.rsc-app) {
+    overscroll-behavior-y: none;
+  }
+
+  .rsc-app {
+    min-width: 0;
+    width: 100%;
+
+    > .rsc-tabs {
+      position: sticky;
+      top: var(--header-offset, 60px);
+      z-index: 2;
+      overflow: visible;
+      background: var(--secondary);
+      box-shadow: 0 4px 8px color-mix(in srgb, var(--primary) 6%, transparent);
+
+      a {
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 6px;
+        min-height: 44px;
+        white-space: normal;
+        text-align: center;
+      }
+    }
+
+    :target,
+    #rsc-positions,
+    #rsc-orders {
+      scroll-margin-top: calc(var(--header-offset, 60px) + 7rem);
+    }
+  }
+}

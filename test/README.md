@@ -73,3 +73,9 @@ The manual public-provider probes now require `RSC_PROBE_REDIS_URL` pointing to 
 the same shared pacing/cooldown as the plugin; never point a standalone probe at
 production Redis. Provider-failure tests use simulated HTTP responses with real
 isolated Redis/processes instead of sending traffic to provoke provider bans.
+
+## 手机持仓与导航回归（2026-09-21）
+
+`mobile-layout.cjs` 由浏览器流程在已有合成持仓后调用，覆盖 320–1440 像素的九种宽度，包括旧版会将指标挤到 5–10 像素宽的中间尺寸。验证持仓可读、页面无横向溢出、手机导航不被论坛页头遮挡，以及滚到底部后使用实际屏幕坐标切换股市/赛事，无整页重载。独立验证同时加载了线上公开的主题样式，并覆盖管理员的五个导航入口。
+
+修复只涉及布局：持仓信息、平仓和风控表单分行；手机导航在论坛页头下方吸顶，自动换行；RSC 页面使用 CSS 抑制浏览器越界下拉刷新，不拦截正常触摸滚动。浏览器自动化使用 Chromium；iOS Safari 和 App 外层 WebView 的原生刷新行为仍需真机确认。

@@ -162,6 +162,7 @@ const { chromium } = require(process.env.RSC_PLAYWRIGHT || "playwright");
     await page.locator(".rsc-market-board").waitFor();
     console.log("Mobile list, detail and return navigation passed");
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), "Market page must not overflow on mobile");
+    await require("./mobile-layout.cjs")(page, output);
     await page.goto(`http://rsc.test:3000${credentials.topic_path}`, { waitUntil: "domcontentloaded" });
     await page.locator(".rsc-tip-button").first().waitFor();
     assert.equal(await page.locator(".rsc-tip-button").count(), 1);
