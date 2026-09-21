@@ -170,7 +170,7 @@ module DiscourseRsc
       age = case purpose
       when :trade then q['source'] == 'coinbase_ws' ? 3 : 20
       when :fast then 15
-      when :background then 60
+      when :background then 15 # The poll runs once/minute; allow its previous batch to finish late.
       when :idle then 15 * 60
       else TradingRules.delayed?(instrument) ? 90 : 120
       end

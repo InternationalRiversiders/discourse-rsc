@@ -98,7 +98,7 @@ class RequestReviewTest < FinalReviewTest
     item.update!(quote: quote('100').merge('received_at' => 40.seconds.ago.iso8601))
     refute R::MarketData.refresh_due?(item)
     assert R::MarketData.refresh_due?(item, purpose: :trade)
-    refute R::MarketData.refresh_due?(item, purpose: :background)
+    assert R::MarketData.refresh_due?(item, purpose: :background)
     item.update!(quote: quote('100').merge('received_at' => 100.seconds.ago.iso8601))
     refute R::MarketData.refresh_due?(item)
     item.update!(quote: item.quote.merge('delay_seconds' => 600))
