@@ -7,9 +7,12 @@ test "${DISCOURSE_DB_NAME:-}" = rsc_discourse_smoke
 test ! -e /tmp/rsc-forum-prepared
 touch /tmp/rsc-forum-prepared
 
+rsc_initdb=$(printf '%s\n' /usr/lib/postgresql/*/bin/initdb | sort -V | tail -1)
+test -x "$rsc_initdb"
+rsc_pg_bin=${rsc_initdb%/initdb}
 install -d -o postgres -g postgres /tmp/rsc-pg /tmp/rsc-pg-socket
-runuser -u postgres -- /usr/lib/postgresql/15/bin/initdb -D /tmp/rsc-pg -A trust >/tmp/rsc-initdb.log
-runuser -u postgres -- /usr/lib/postgresql/15/bin/pg_ctl -D /tmp/rsc-pg -l /tmp/rsc-pg/server.log -o '-h 127.0.0.1 -k /tmp/rsc-pg-socket' -w start
+runuser -u postgres -- "$rsc_pg_bin/initdb" -D /tmp/rsc-pg -A trust >/tmp/rsc-initdb.log
+runuser -u postgres -- "$rsc_pg_bin/pg_ctl" -D /tmp/rsc-pg -l /tmp/rsc-pg/server.log -o '-h 127.0.0.1 -k /tmp/rsc-pg-socket' -w start
 redis-server --bind 127.0.0.1 --save '' --appendonly no --daemonize yes
 createdb -h 127.0.0.1 -U postgres rsc_discourse_smoke
 
@@ -23,6 +26,9 @@ if [[ "${RSC_KEEP_BUNDLED_PLUGINS:-0}" != 1 ]]; then
 fi
 mkdir -p plugins/discourse-rsc
 cp -a /rsc/. plugins/discourse-rsc/
+if [[ -d /tmp/rsc-original-plugins/discourse-rsc/gems ]]; then
+  cp -a /tmp/rsc-original-plugins/discourse-rsc/gems plugins/discourse-rsc/
+fi
 psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d rsc_discourse_smoke -f db/structure.sql >/tmp/rsc-schema.log
 bundle exec rake db:migrate >/tmp/rsc-migrate.log 2>&1 || { tail -50 /tmp/rsc-migrate.log; exit 1; }
 bundle exec rake db:seed >/tmp/rsc-seed.log 2>&1 || { tail -50 /tmp/rsc-seed.log; exit 1; }

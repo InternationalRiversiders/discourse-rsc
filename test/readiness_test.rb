@@ -46,7 +46,11 @@ class ReadinessTest < NativeBusinessTest
     assert_raises(Discourse::InvalidParameters) { @alice.destroy! }
     assert User.exists?(@alice.id)
     assert_equal "1000", R::Account.wallet(@alice.id).balance
-    assert_raises(ActiveRecord::InvalidForeignKey) { User.where(id: @alice.id).delete_all }
+    error = assert_raises(ActiveRecord::StatementInvalid) { User.where(id: @alice.id).delete_all }
+    # PostgreSQL 18 uses restrict_violation for ON DELETE RESTRICT; older
+    # versions report foreign_key_violation. Both must retain the original user.
+    assert_includes %w[23503 23001], error.cause.result.error_field(PG::Result::PG_DIAG_SQLSTATE)
+    assert User.exists?(@alice.id)
     assert_raises(ActiveRecord::InvalidForeignKey) { R::Account.wallet(999999999) }
   end
 

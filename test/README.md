@@ -16,7 +16,7 @@ bash test/run-isolated.sh
 
 - `migration_features_test.rb` 加入高风险模式与冷却、组合限额、追加保证金、管理审计及权限、真实数据源响应、加时赛果、历史归属，以及钱包/持仓/预测/红包的导入回滚和对账。
 
-`prepare_disposable_forum.sh` 仅供全新临时容器使用：它初始化容器内 PostgreSQL/Redis 和测试论坛，替换容器内插件目录，运行基础与业务集成测试。不要在现有论坛容器或宿主机执行。完整镜像需要 PostgreSQL 15、pgvector、Redis、已安装 Ruby 依赖及 Discourse `db/structure.sql`。
+`prepare_disposable_forum.sh` 仅供全新临时容器使用：它初始化容器内 PostgreSQL/Redis 和测试论坛，替换容器内插件目录，运行基础与业务集成测试。不要在现有论坛容器或宿主机执行。完整镜像需要 PostgreSQL、pgvector、Redis、已安装 Ruby 依赖及 Discourse `db/structure.sql`。测试脚本自动选择镜像内的 PostgreSQL 服务端版本，并保留已安装的 RSC WebSocket gem，以便完全断网运行。
 
 2026-09-20：账本 17 个测试 / 70 项断言，Discourse 集成 44 个测试 / 252 项断言，合计 **61 个后端测试 / 322 项断言通过**。新增缺失账号预检、批量历史、防重记录、演练子集保护，以及跨批次期初入账的精度和整批回滚检查。
 
