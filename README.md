@@ -1,13 +1,10 @@
 # Discourse RSC
 
-最新状态：[正式接管前再次复核](docs/final-review-2026-09-21.md)，此前完整数据演练见 [验收记录](docs/completion-2026-09-21.md)。目前部署范围仍为私有测试入口。
-RiversideCoin 的原生 Discourse 插件重构：Ruby/Rails 后端、论坛 PostgreSQL、原生前端路由、后台任务和站内通知。棋牌游戏明确不迁移；保留钱包、打赏、红包、活跃奖励、股市和赛事预测。
+已正式上线于 [河畔 RSC](https://river-side.cc/rsc)，见 [上线、对账及运行验证记录](docs/production-cutover-2026-09-21.md)。
 
-当前是可在隔离论坛运行的原生试用版，默认关闭，并默认开启 `rsc_read_only`。本轮已补入数据源适配、交易风控、管理后台、图表/排行榜及资产导入工具；完整生产资产迁入和长期行情验收尚未完成。不会调用原 Express 后端或嵌入 Next.js 页面。详细边界见 [实现状态](docs/implementation-status.md)。
+RiversideCoin 的原生 Discourse 重构：Ruby/Rails 后端、论坛 PostgreSQL、原生页面、后台任务和站内通知。保留钱包、打赏、红包、每日活跃奖励、股市和赛事预测；棋牌游戏按约定不迁移。原代码与数据库备份保留，新版独立运行。
 
-已执行一次[真实数据迁入演练](docs/real-data-rehearsal.md)：可核实账号的真实数据已在隔离库提交、逐条对账并恢复备份。另有一个缺失论坛身份的钱包（1 RSC）单独保留，完整生产迁入及线上切换尚未完成。
-
-最新进度（2026-09-21）：已修补旧交易规则、原生打赏与通知、流水/红包/赛事/后台细节，并更新私有测试入口；生产尚未切换。见 [本轮适配、验收与剩余事项](docs/native-adaptation-2026-09-21.md)。
+插件安装默认关闭、只读。现有论坛迁移需要停旧写入、校验导出、导入、对账后再启用；具体流程与兼容边界见上线记录。普通用户以论坛账户和用户组权限使用，无需旧 JWT 或原 Express/Next.js 服务。
 
 ## 原生页面
 
@@ -51,7 +48,7 @@ bash test/run-isolated.sh
 
 脚本创建独立数据库和论坛容器，结束后清理。浏览器测试及截图说明见 [test/README.md](test/README.md)。
 
-仅在测试论坛启用 `rsc_enabled` 和 `rsc_native_trial_enabled`，通过 `rsc_allowed_groups` 指定使用者；`rsc_admin_groups` 指定管理员，站点管理员自动获得管理权限。每日奖励单独由 `rsc_daily_rewards_enabled` 控制，默认关闭。
+先在隔离论坛验证 `rsc_enabled` 和 `rsc_native_trial_enabled`，通过 `rsc_allowed_groups` 指定使用者；`rsc_admin_groups` 指定管理员，站点管理员自动获得管理权限。每日奖励单独由 `rsc_daily_rewards_enabled` 控制，默认关闭。
 
 请求使用 Discourse 登录和 CSRF；金额为字符串；`request_id` 为 8–100 位字母、数字、下划线或连字符。同一请求编号重放相同内容返回原结果，内容不同返回 409。发送人、成交价格、结算结果均不接受客户端指定。
 
@@ -60,3 +57,5 @@ bash test/run-isolated.sh
 最新行情限流、休市规则与统一顶部入口核对见 [复核记录](docs/request-and-navigation-review-2026-09-21.md)。
 
 实时行情由 Sidekiq 维护共享的 Coinbase WebSocket 订阅，需启用 `rsc_crypto_stream_enabled`；订单和风控每 15 秒检查一次。HTTP 行情在独立后台队列获取，Yahoo 跨进程共用每秒一次的限流。安装时自动安装插件声明的 WebSocket Ruby 依赖。
+
+最新上线修复包含系统账号奖励排除、批量奖励资格核对及已发记录跳过。当前完整业务与账本验证合计 134 项测试、801 项断言。
