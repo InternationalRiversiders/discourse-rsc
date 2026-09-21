@@ -1,6 +1,7 @@
 en:
   js:
     discourse_rsc:
+      navigation_title: RS Coin
       notifications:
         transfer: sent you %{amount} RSC
         post_tip: tipped your post %{amount} RSC

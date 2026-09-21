@@ -1,8 +1,7 @@
 import { apiInitializer } from "discourse/lib/api";
 import { i18n } from "discourse-i18n";
+
 export default apiInitializer((api) => {
-  // The shared Campus Life section owns application links when installed.
-  if (api.container.lookup("service:site-settings").alumni_map_enabled) { return; }
   const user = api.getCurrentUser();
   const settings = api.container.lookup("service:site-settings");
   if (
@@ -12,57 +11,67 @@ export default apiInitializer((api) => {
   ) {
     return;
   }
-  api.addSidebarSection((BaseSection, BaseLink) => {
-    const routes = user.rsc_member
-      ? [
-          ["wallet", "rsc.index"],
-          ["market", "rsc.market"],
-          ["sports", "rsc.sports"],
-          ["leaderboard", "rsc.leaderboard"],
-        ]
-      : [];
-    if (user.rsc_admin) {
-      routes.push(["administration", "rsc.admin"]);
-    }
-    const links = routes.map(
-      ([key, route]) =>
-        new (class extends BaseLink {
-          get name() {
-            return `rsc-${key}`;
-          }
-          get route() {
-            return route;
-          }
-          get text() {
-            return i18n(`discourse_rsc.ui.${key}`);
-          }
-          get title() {
-            return this.text;
-          }
-          get prefixType() {
-            return "icon";
-          }
-          get prefixValue() {
-            return "coins";
-          }
-        })()
-    );
-    return class extends BaseSection {
+
+  api.addCommunitySectionLink((BaseLink) => {
+    return class extends BaseLink {
       get name() {
         return "rsc";
       }
-      get title() {
-        return "RSC";
+
+      get route() {
+        return this.currentUser.rsc_member ? "rsc.index" : "rsc.admin";
       }
+
+      get currentWhen() {
+        return "rsc";
+      }
+
       get text() {
-        return "RSC";
+        return i18n("discourse_rsc.navigation_title");
       }
-      get links() {
-        return links;
+
+      get title() {
+        return this.text;
       }
-      get displaySection() {
-        return true;
+
+      get defaultPrefixValue() {
+        return "coins";
       }
     };
   });
+
+  // Core appends API links after the configured community links. Reorder the
+  // link model before rendering so desktop and mobile share the same order.
+  api.modifyClass(
+    "component:sidebar/common/custom-section",
+    (Superclass) =>
+      class extends Superclass {
+        get initialSection() {
+          const section = super.initialSection;
+          if (this.args.sectionData.section_type !== "community") {
+            return section;
+          }
+
+          const coin = section.links.find((link) => link.name === "rsc");
+          if (!coin) {
+            return section;
+          }
+
+          const links = section.links.filter((link) => link !== coin);
+          const messagesIndex = links.findIndex(
+            (link) => link.name === "my-messages"
+          );
+          const postsIndex = links.findIndex((link) => link.name === "my-posts");
+          const position =
+            messagesIndex >= 0
+              ? messagesIndex
+              : postsIndex >= 0
+                ? postsIndex + 1
+                : links.length;
+          links.splice(position, 0, coin);
+          section.links = links;
+          return section;
+        }
+      }
+  );
 });

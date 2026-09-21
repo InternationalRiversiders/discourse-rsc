@@ -1,6 +1,7 @@
 zh_CN:
   js:
     discourse_rsc:
+      navigation_title: RS Coin
       notifications:
         transfer: 向你转账了 %{amount} RSC
         post_tip: 打赏了你的帖子 %{amount} RSC
