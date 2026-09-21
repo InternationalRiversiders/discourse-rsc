@@ -18,7 +18,7 @@ module DiscourseRsc
     end
 
     def history
-      data=WalletHistory.page(current_user, category: params.fetch(:category,"all"), cursor: params[:cursor])
+      data=WalletHistory.page(current_user, category: params.fetch(:category,"all"), cursor: params[:cursor], per_page: params[:per_page].to_s == "20" ? 20 : 50)
       if params[:journal_id].present?
         entry=Entry.includes(:journal).find_by!(account_id:Account.wallet_snapshot(current_user.id).id,journal_id:positive_id(:journal_id))
         data[:focused_entry]=WalletHistory.native_entry(entry,current_user)

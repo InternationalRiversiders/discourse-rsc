@@ -172,13 +172,13 @@ export default class extends Component {
           class="alert alert-error"
           role="alert"
         >{{this.error}}</p>{{/if}}
-      <section class="rsc-card"><form class="rsc-ranking-search" {{on "submit" this.search}}><label>按用户名查找<input value={{this.query}} maxlength="60" {{on "input" this.queryChanged}} /></label><button type="submit" class="btn" disabled={{this.busy}}>查询</button></form><label>{{uiText "sort"}}<select
+      <section class="rsc-card"><form class="rsc-filter-bar rsc-ranking-search" {{on "submit" this.search}}><label>按用户名查找<input value={{this.query}} maxlength="60" {{on "input" this.queryChanged}} /></label><button type="submit" class="btn" disabled={{this.busy}}>查询</button><label>{{uiText "sort"}}<select
             disabled={{this.busy}}
             {{on "change" this.sort}}
           >{{#each sorts as |sort|}}<option
                 value={{sort}}
                 selected={{eq sort this.sortKey}}
-              >{{uiText sort}}</option>{{/each}}</select></label>
+              >{{uiText sort}}</option>{{/each}}</select></label></form>
         <div class="rsc-table"><table><thead><tr><th>{{uiText "rank"}}</th><th
                 >{{uiText "username"}}</th><th>{{uiText "equity"}}</th><th
                 >{{uiText "portfolio_equity"}}</th><th>{{uiText "realized_pnl"}}</th><th>{{uiText "pnl"}}</th><th

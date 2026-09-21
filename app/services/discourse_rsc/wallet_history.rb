@@ -2,7 +2,8 @@
 require "base64"
 module DiscourseRsc
   class WalletHistory
-    def self.page(user, category: "all", cursor: nil)
+    def self.page(user, category: "all", cursor: nil, per_page: 50)
+      raise Error.new("invalid_page") unless [20, 50].include?(per_page)
       raise Error.new("invalid_section") unless %w[all payout activity].include?(category)
       wallet=Account.wallet_snapshot(user.id)
       native=Entry.where(account_id:wallet.id).joins(:journal).includes(:journal).where.not(discourse_rsc_journals:{operation:"legacy_opening"})
@@ -18,11 +19,11 @@ module DiscourseRsc
         native=native.where("(discourse_rsc_entries.created_at,1,discourse_rsc_entries.id) < (?,?,?)",at,origin,id)
         legacy=legacy.where("((data ->> 'created_at')::timestamptz,0,id) < (?,?,?)",at,origin,id)
       end
-      candidates=native.order("discourse_rsc_entries.created_at DESC, discourse_rsc_entries.id DESC").limit(51).map { |r| [r.created_at,1,r.id,r] }
-      candidates+=legacy.order(Arel.sql("(data ->> 'created_at')::timestamptz DESC, id DESC")).limit(51).map { |r| [Time.iso8601(r.data.fetch('created_at')),0,r.id,r] }
+      candidates=native.order("discourse_rsc_entries.created_at DESC, discourse_rsc_entries.id DESC").limit(per_page + 1).map { |r| [r.created_at,1,r.id,r] }
+      candidates+=legacy.order(Arel.sql("(data ->> 'created_at')::timestamptz DESC, id DESC")).limit(per_page + 1).map { |r| [Time.iso8601(r.data.fetch('created_at')),0,r.id,r] }
       candidates.sort_by! { |at,origin,id,_| [at,origin,id] };candidates.reverse!
-      selected=candidates.first(50)
-      next_cursor=candidates.size>50 && Base64.urlsafe_encode64(JSON.generate([selected.last[0].iso8601(6),selected.last[1],selected.last[2]]),padding:false)
+      selected=candidates.first(per_page)
+      next_cursor=candidates.size>per_page && Base64.urlsafe_encode64(JSON.generate([selected.last[0].iso8601(6),selected.last[1],selected.last[2]]),padding:false)
       {entries:selected.map { |_,origin,_,record| origin==1 ? native_entry(record,user) : legacy_entry(record,user) },next_cursor:next_cursor || nil}
     rescue JSON::ParserError,ArgumentError,TypeError
       raise Error.new("invalid_page")

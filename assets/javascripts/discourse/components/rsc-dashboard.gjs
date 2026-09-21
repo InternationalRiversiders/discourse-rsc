@@ -11,6 +11,7 @@ import { ajax } from "discourse/lib/ajax";
 import { extractError } from "discourse/lib/ajax-error";
 import RscPackets from "./rsc-packets";
 import RscLedger from "./rsc-ledger";
+import RscOrders from "./rsc-orders";
 import RscHistory from "./rsc-history";
 import RscDiscovery from "./rsc-discovery";
 import RscMarketList from "./rsc-market-list";
@@ -111,6 +112,9 @@ export default class RscDashboard extends Component {
   }
   get data() {
     return this.snapshot || this.args.model;
+  }
+  get ledgerRevision() {
+    return this.data.entries[0]?.id;
   }
   get selected() {
     return (
@@ -522,24 +526,7 @@ export default class RscDashboard extends Component {
             </form></section>
         </div>
         <RscPackets />
-        <section class="rsc-card"><h2>{{uiText "history"}}</h2><div
-            class="rsc-scroll"
-          ><table><thead><tr><th>{{uiText "time"}}</th><th>{{uiText
-                      "operation"
-                    }}</th><th>{{uiText "amount"}}</th><th>{{uiText
-                      "balance"
-                    }}</th></tr></thead><tbody>{{#each
-                  this.data.entries
-                  as |entry|
-                }}<tr><td>{{when entry.created_at}}</td><td>{{uiText
-                        entry.operation
-                      }}</td><td>{{formatAmount entry.amount}}</td><td
-                    >{{formatAmount entry.balance}}</td></tr>{{else}}<tr><td
-                      colspan="4"
-                    >{{uiText
-                        "empty"
-                      }}</td></tr>{{/each}}</tbody></table></div></section>
-        <RscLedger @journalId={{this.args.model.focus.journal_id}} />
+        <RscLedger @journalId={{this.args.model.focus.journal_id}} @revision={{this.ledgerRevision}} />
       {{else if (eq @section "market")}}
         <div
           class="rsc-market-summary"
@@ -712,50 +699,17 @@ export default class RscDashboard extends Component {
               class="rsc-muted"
             >{{uiText "no_positions"}}</p>{{/each}}</section>
         <p class="rsc-muted">持仓名义金额 {{formatAmount this.data.portfolio.notional}} RSC · 委托占用 {{formatAmount this.data.portfolio.reserved}} RSC</p>
-        <section id="rsc-orders" class="rsc-card"><h2>{{uiText
-              "orders"
-            }}</h2><div class="rsc-scroll"><table><thead><tr><th>{{uiText
-                      "time"
-                    }}</th><th>{{uiText "instrument"}}</th><th>{{uiText
-                      "direction"
-                    }}</th><th>{{uiText "quantity"}}</th><th>{{uiText
-                      "status"
-                    }}</th><th></th></tr></thead><tbody>{{#each
-                  this.data.orders
-                  as |order|
-                }}<tr id="rsc-order-{{order.id}}"><td>{{when order.created_at}}</td><td
-                    >{{order.symbol}}</td><td>{{uiText order.side}}
-                      {{order.leverage}}×</td><td>{{formatQuantity
-                        order.quantity
-                      }}</td><td>{{uiText order.status}}{{#if order.details.reason}} · {{uiText order.details.reason}}{{/if}}
-                    {{#if order.details.price}}<div>成交 {{formatPrice order.details.price}} · 手续费 {{formatAmount order.details.fee}} RSC</div>{{/if}}
-                    {{#if order.details.gross}}<div>名义金额 {{formatAmount order.details.gross}} RSC</div>{{/if}}
-                    {{#if order.details.pnl}}<div>盈亏 {{formatAmount order.details.pnl}} · 返还 {{formatAmount order.details.payout}} RSC</div>{{/if}}
-                    {{#if order.details.error}}<div>{{order.error_message}}</div>{{/if}}
-                    {{#if (eq order.status "pending")}}<div>预占 {{formatAmount order.reserved}} RSC · 最早处理 {{when order.execute_at}}</div><small>{{#if order.cancel_at}}可撤单时间 {{when order.cancel_at}}{{else}}撤单截止 {{when order.cancel_until}}{{/if}} · 到期 {{when order.expires_at}}</small>{{/if}}</td><td>{{#if
-                        (eq order.status "pending")
-                      }}<button
-                          class="btn btn-small"
-                          type="button"
-                          disabled={{if this.busy true (not order.can_cancel)}}
-                          {{on "click" (fn this.cancel order)}}
-                        >{{uiText
-                            "cancel"
-                          }}</button>{{/if}}</td></tr>{{else}}<tr><td
-                      colspan="6"
-                    >{{uiText
-                        "empty"
-                      }}</td></tr>{{/each}}</tbody></table></div></section>
+        <RscOrders @orders={{this.data.orders}} @busy={{this.busy}} @cancel={{this.cancel}} />
       {{else if (eq @section "sports")}}
-        <div class="rsc-fields"><label>项目<select {{on "change" (fn this.set "sport")}}><option value="all">全部项目</option><option value="soccer">足球</option><option value="basketball">篮球</option></select></label><label>赛事筛选<select {{on "change" (fn this.set "matchFilter")}}><option value="open">可预测</option><option value="popular">热门</option><option value="closed">已截止</option><option value="unavailable">未开放</option><option value="mine">我的预测</option><option value="all">全部</option></select></label></div>
-        <label class="rsc-league-filter">{{uiText "league"}}<select
+        <div class="rsc-filter-bar rsc-sports-filters"><label>项目<select {{on "change" (fn this.set "sport")}}><option value="all">全部项目</option><option value="soccer">足球</option><option value="basketball">篮球</option></select></label><label>赛事筛选<select {{on "change" (fn this.set "matchFilter")}}><option value="open">可预测</option><option value="popular">热门</option><option value="closed">已截止</option><option value="unavailable">未开放</option><option value="mine">我的预测</option><option value="all">全部</option></select></label>
+        <label>{{uiText "league"}}<select
             {{on "change" (fn this.set "league")}}
           ><option value="all">{{uiText "category_all"}}</option>{{#each
               this.leagues
               as |league|
             }}<option
                 value={{league.id}}
-              >{{league.label}}</option>{{/each}}</select></label>
+              >{{league.label}}</option>{{/each}}</select></label></div>
         <div class="rsc-grid">{{#each this.matches as |match|}}<article
               class="rsc-card rsc-match" id="rsc-match-{{match.id}}"
             ><div class="rsc-match-meta"><span

@@ -40,3 +40,10 @@ export const valueTone = (value) =>
     : String(value).startsWith("-")
       ? "negative"
       : "positive";
+
+export function signedAmount(value) {
+  const formatted = formatAmount(value);
+  return valueTone(value) === "positive" && formatted !== "—" && !formatted.startsWith("<")
+    ? `+${formatted}`
+    : formatted;
+}

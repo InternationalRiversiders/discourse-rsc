@@ -127,11 +127,27 @@ class NativeAdaptationTest < NativeBusinessTest
     assert_equal 56,(first[:entries]+second[:entries]).map { |r| r[:id] }.uniq.size
     assert_nil second[:next_cursor];refute_includes first.to_json,'hidden'
     assert_empty R::WalletHistory.page(@bob)[:entries]
+    recent=R::WalletHistory.page(@alice,per_page:20)
+    assert_equal first[:entries].first(20),recent[:entries]
+    following=R::WalletHistory.page(@alice,per_page:20,cursor:recent[:next_cursor])
+    last=R::WalletHistory.page(@alice,per_page:20,cursor:following[:next_cursor])
+    assert_equal [20,20,16],[recent,following,last].map { |page| page[:entries].size }
+    assert_equal (first[:entries]+second[:entries]).map { |row| row[:id] },[recent,following,last].flat_map { |page| page[:entries].map { |row| row[:id] } }
+    assert_nil last[:next_cursor]
+    assert_code('invalid_page') { R::WalletHistory.page(@alice,per_page:10000) }
+    R::Commands.move(user_id:nil,action:'legacy_opening',request_id:'history-opening-check',settlement:true,
+      postings:{R::Account.wallet(@alice.id).id=>R::Amount.parse('1'),R::Account.issuance.id=>-R::Amount.parse('1')})
+    before=[R::Journal.count,R::Account.wallet(@alice.id).reload.balance_units]
+    refute_includes R::WalletHistory.page(@alice,per_page:20)[:entries].map { |row| row[:operation] },'legacy_opening'
+    assert_equal before,[R::Journal.count,R::Account.wallet(@alice.id).reload.balance_units]
     assert_code('invalid_page') { R::WalletHistory.page(@alice,cursor:'bad cursor') }
     journal=R::Wallet.issue(actor:@admin,recipient:@bob,amount:'1',reason:'other account',request_id:SecureRandom.uuid).journal
     key=ApiKey.create!(user_id:@alice.id,created_by_id:@admin.id,description:'isolated focus privacy')
     session=ActionDispatch::Integration::Session.new(Rails.application);session.host!('rsc.test');session.https!
     headers={'Api-Key'=>key.key,'Api-Username'=>@alice.username}
+    session.get '/rsc/history.json',params:{per_page:20},headers:headers
+    assert_equal 200,session.response.status
+    assert_equal 20,JSON.parse(session.response.body)['entries'].size
     session.get '/rsc/history.json',params:{journal_id:journal.id},headers:headers
     assert_equal 404,session.response.status
     own=R::Entry.where(account_id:R::Account.wallet(@alice.id).id).first

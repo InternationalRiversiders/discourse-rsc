@@ -79,3 +79,11 @@ isolated Redis/processes instead of sending traffic to provoke provider bans.
 `mobile-layout.cjs` 由浏览器流程在已有合成持仓后调用，覆盖 320–1440 像素的九种宽度，包括旧版会将指标挤到 5–10 像素宽的中间尺寸。验证持仓可读、页面无横向溢出、手机导航不被论坛页头遮挡，以及滚到底部后使用实际屏幕坐标切换股市/赛事，无整页重载。独立验证同时加载了线上公开的主题样式，并覆盖管理员的五个导航入口。
 
 修复只涉及布局：持仓信息、平仓和风控表单分行；手机导航在论坛页头下方吸顶，自动换行；RSC 页面使用 CSS 抑制浏览器越界下拉刷新，不拦截正常触摸滚动。浏览器自动化使用 Chromium；iOS Safari 和 App 外层 WebView 的原生刷新行为仍需真机确认。
+
+## 紧凑布局与最近流水回归（2026-09-22）
+
+`compact-browser.cjs` 覆盖浅色/深色下 1440、1024、768、390、320 像素宽度：桌面奖励四列、赛事三个筛选和排行榜查询排序保持同一行；页面无横向溢出；流水首屏 20 条、连续加载无重复、隐藏迁移期初项；平仓盈亏正负号与颜色、开仓不显示已实现盈亏、紧凑行高、折叠详情、筛选和查询功能，以及新转账完成后流水即时更新。
+
+只在 `prepare_disposable_forum.sh` 创建的隔离论坛中，先运行 `seed_browser.rb`，再运行 `seed_compact_browser.rb` 添加合成历史与盈亏记录。浏览器脚本使用与 `browser.cjs` 相同的 `RSC_PLAYWRIGHT`、`RSC_CHROMIUM`、`RSC_BROWSER_CREDENTIALS`、`RSC_BROWSER_OUTPUT` 环境变量及隔离网络命名空间。测试数据不来自生产用户。
+
+`native_adaptation_test.rb` 的统一流水测试同时验证 20 条和原有 50 条分页、跨新旧记录的游标连续性、权限，以及隐藏期初项不修改账本和余额；`format_test.mjs` 验证带正负号的金额仍以十进制字符串截断。

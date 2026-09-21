@@ -1770,3 +1770,101 @@
     }
   }
 }
+
+// Compact overview and toolbars: desktop stays in one row, mobile wraps fields.
+.rsc-app {
+  .rsc-reward-summary .rsc-market-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .rsc-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 16px;
+
+    > label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      margin: 0;
+      white-space: nowrap;
+      font-size: 13px;
+      color: var(--rsc-muted);
+    }
+
+    input,
+    select {
+      flex: 1;
+      min-width: 0;
+      width: auto;
+      margin: 0;
+      min-height: 40px;
+      box-sizing: border-box;
+    }
+
+    > .btn {
+      min-height: 40px;
+      margin: 0;
+    }
+  }
+
+  .rsc-sports-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .rsc-ranking-search {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 0.7fr);
+  }
+
+  .rsc-history-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 14px;
+
+    h2 { margin: 0; }
+  }
+
+  .rsc-compact-table {
+    th, td { padding: 9px 12px; vertical-align: middle; }
+    small { display: block; color: var(--rsc-muted); font-size: 11px; }
+    .rsc-number { text-align: right; font-variant-numeric: tabular-nums; }
+  }
+
+  .rsc-orders-table {
+    min-width: 780px;
+    font-size: 13px;
+    .rsc-order-pnl { font-size: 14px; }
+    .rsc-order-status { min-width: 100px; }
+    summary { color: var(--rsc-muted); cursor: pointer; font-size: 11px; }
+    .rsc-order-details { white-space: normal; max-width: 280px; font-size: 12px; }
+    .rsc-order-details p { margin: 6px 0; }
+  }
+
+  .rsc-wallet-history > .btn { margin-top: 12px; }
+
+  @media (max-width: 700px) {
+    .rsc-reward-summary .rsc-market-summary {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      row-gap: 16px;
+      > div:nth-child(odd) { padding-left: 0; }
+      > div:nth-child(even) { border-right: 0; }
+    }
+    .rsc-sports-filters {
+      grid-template-columns: minmax(0, 1fr);
+      label { justify-content: space-between; }
+      select { flex: 0 1 72%; }
+    }
+    .rsc-ranking-search {
+      grid-template-columns: minmax(0, 1fr) auto;
+      > label:last-child { grid-column: 1 / -1; }
+    }
+    .rsc-filter-bar input, .rsc-filter-bar select { font-size: 16px; }
+  }
+}
