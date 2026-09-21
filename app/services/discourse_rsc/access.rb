@@ -10,7 +10,7 @@ module DiscourseRsc
     end
 
     def self.member?(user)
-      user && user.active? && !user.suspended? && user.groups.where(id: SiteSetting.rsc_allowed_groups.to_s.split("|").map(&:to_i)).exists?
+      user && user.id&.positive? && user.active? && !user.suspended? && user.groups.where(id: SiteSetting.rsc_allowed_groups.to_s.split("|").map(&:to_i)).exists?
     end
 
     def self.admin?(user)

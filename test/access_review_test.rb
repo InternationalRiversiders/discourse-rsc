@@ -100,4 +100,40 @@ class AccessReviewTest < NativeBusinessTest
   ensure
     @alice.update_columns(original) if original
   end
+
+  def test_system_group_members_do_not_interrupt_member_daily_rewards
+    date = ((Time.current.utc + 8.hours).to_date - 1).iso8601
+    system = User.find(-1)
+    @group.add(system)
+    [system, @alice].each { |user| UserVisit.find_or_create_by!(user_id: user.id, visited_at: date) }
+    refute R::Access.member?(system)
+    rows = R::Rewards.preview(date)
+    refute rows.any? { |row| row[:user_id] <= 0 }
+    assert rows.any? { |row| row[:user_id] == @alice.id }
+    R::Rewards.pay(date)
+    assert_equal "1", R::Account.wallet(@alice.id).balance
+    refute R::Account.exists?(user_id: system.id)
+    before = [R::Journal.count, R::Entry.count, R::Event.count]
+    R::Rewards.pay(date)
+    assert_equal before, [R::Journal.count, R::Entry.count, R::Event.count]
+  ensure
+    @group.remove(system) if system
+    UserVisit.where(user_id: system.id, visited_at: date).delete_all if system
+  end
+
+  def test_batched_reward_preview_preserves_imported_paid_and_frozen_status
+    date = ((Time.current.utc + 8.hours).to_date - 1).iso8601
+    [@alice, @bob].each { |user| UserVisit.find_or_create_by!(user_id: user.id, visited_at: date) }
+    R::Command.create!(key: "daily_reward:#{@alice.id}:daily-#{date}",
+      fingerprint: Digest::SHA256.hexdigest(JSON.generate([date])), result: {date: date, imported: true}, created_at: Time.current)
+    R::Account.wallet(@bob.id).update!(status: "frozen")
+    rows = R::Rewards.preview(date).index_by { |row| row[:user_id] }
+    assert rows.fetch(@alice.id)[:paid]
+    assert rows.fetch(@bob.id)[:frozen]
+    R::Rewards.pay(date)
+    assert_equal 0, R::Account.wallet_snapshot(@alice.id).balance_units
+    assert_equal 0, R::Account.wallet_snapshot(@bob.id).balance_units
+    refute R::Event.where(kind: 'daily_reward').exists?
+    assert_equal 0, R::Entry.sum(:units)
+  end
 end

@@ -23,8 +23,9 @@ module Jobs
     def safely(label)
       yield
     rescue => error
-      Rails.logger.warn("RSC business tick failed for #{label}: #{error.class}")
-      DiscourseRsc::Audit.create!(action: "business_tick_failed", details: { item: label, error: error.class.name }, created_at: Time.current)
+      code = error.respond_to?(:code) ? error.code : nil
+      Rails.logger.warn("RSC business tick failed for #{label}: #{error.class} #{code}")
+      DiscourseRsc::Audit.create!(action: "business_tick_failed", details: { item: label, error: error.class.name, code: code }, created_at: Time.current)
     end
   end
 end
