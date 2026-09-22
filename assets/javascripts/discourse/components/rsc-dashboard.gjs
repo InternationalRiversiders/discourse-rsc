@@ -61,6 +61,7 @@ export default class RscDashboard extends Component {
   @tracked error = "";
   @tracked selectedId = "";
   @tracked marketDetailOpen = false;
+  @tracked orderTicketOpen = false;
   @tracked quoteClock = Date.now();
   @tracked recipient = "";
   @tracked amount = "";
@@ -93,13 +94,6 @@ export default class RscDashboard extends Component {
     super(...arguments);
     const requested = this.args.model.focus?.instrument_id;
     if (requested && this.args.model.instruments.some((item) => String(item.id) === requested)) { this.selectMarket(requested); }
-    if (!requested && this.selected) {
-      const position = this.data.positions.find((item) => item.instrument_id === this.selected.id);
-      this.quantity = this.selected.minimum || "1";
-      this.leverage = String(position?.leverage || 1);
-      this.side = position?.side || "long";
-      this.highRisk = Number(this.leverage) > 10;
-    }
     if (this.args.model.focus?.match_id) { this.matchFilter = "all"; }
     this.clockTimer = setInterval(() => {
       if (this.args.section === "market" && !document.hidden) { this.quoteClock = Date.now(); }
@@ -127,9 +121,10 @@ export default class RscDashboard extends Component {
     return (
       this.data.instruments.find(
         (item) => String(item.id) === this.selectedId
-      ) || this.data.instruments[0]
+      )
     );
   }
+  get marketDetailVisible() { return this.marketDetailOpen && !!this.selected; }
   get selectedMarket() {
     return this.selected && marketView(this.selected, this.quoteClock);
   }
@@ -146,6 +141,7 @@ export default class RscDashboard extends Component {
   @action selectMarket(id) {
     this.selectedId = String(id);
     this.marketDetailOpen = true;
+    this.orderTicketOpen = false;
     this.quantity = this.selected?.minimum || "1";
     const position = this.data.positions.find((item) => String(item.instrument_id) === String(id));
     this.leverage = String(position?.leverage || 1);
@@ -172,9 +168,19 @@ export default class RscDashboard extends Component {
   @action quickTrade(id, side) {
     this.selectMarket(id);
     this.side = side;
-    requestAnimationFrame(() =>
-      document.querySelector(".rsc-order-ticket input")?.focus()
-    );
+    this.openOrderTicket();
+  }
+  @action openOrderTicket() {
+    if (!this.selected) { return; }
+    this.orderTicketOpen = true;
+    requestAnimationFrame(() => {
+      const ticket = document.querySelector(".rsc-order-ticket");
+      ticket?.scrollIntoView({ block: "nearest" });
+      ticket?.querySelector("input")?.focus({ preventScroll: true });
+    });
+  }
+  @action closeOrderTicket() {
+    this.orderTicketOpen = false;
   }
   @action toggleHighRisk(event) {
     this.highRisk = event.target.checked;
@@ -229,11 +235,15 @@ export default class RscDashboard extends Component {
   }
   @action backToMarkets() {
     this.marketDetailOpen = false;
+    this.orderTicketOpen = false;
+    this.selectedId = "";
     requestAnimationFrame(() => document.querySelector("#rsc-markets")?.scrollIntoView({ block: "start" }));
   }
   @action showPositions(event) {
     event.preventDefault();
     this.marketDetailOpen = false;
+    this.orderTicketOpen = false;
+    this.selectedId = "";
     requestAnimationFrame(() => document.querySelector("#rsc-positions")?.scrollIntoView({ block: "start" }));
   }
   get leagues() {
@@ -581,7 +591,7 @@ export default class RscDashboard extends Component {
             href="#rsc-orders"
           >{{uiText "orders"}}
             <span>{{this.data.orders.length}}</span></a></div>
-        <div class="rsc-workbench {{if this.marketDetailOpen 'detail-open'}}">
+        <div class="rsc-workbench {{if this.marketDetailVisible 'detail-open'}}">
           <div class="rsc-market-main">
         <section id="rsc-positions" class="rsc-card rsc-positions-card"><h2>{{uiText
               "positions"
@@ -639,7 +649,7 @@ export default class RscDashboard extends Component {
             @onTrade={{this.quickTrade}}
             @readOnly={{this.data.read_only}}
           /></div>
-          {{#if this.selected}}
+          {{#if this.marketDetailVisible}}
             <div class="rsc-market-layout"><section class="rsc-card rsc-chart">
                 <button
                   type="button"
@@ -668,9 +678,9 @@ export default class RscDashboard extends Component {
                 >{{uiText "quote_time"}}
                   {{when this.selected.quote.source_time}}
                   ·
-                  {{uiText "auto_refresh"}}</p></section>
-              <section class="rsc-card rsc-order-ticket">
-                <div class="rsc-ticket-heading"><h2>{{uiText "order"}}</h2><span>{{this.selected.symbol}}</span></div>
+                  {{uiText "auto_refresh"}}</p>{{#unless this.orderTicketOpen}}<button class="btn btn-primary rsc-open-order" type="button" disabled={{this.writeDisabled}} {{on "click" this.openOrderTicket}}>交易此品种</button>{{/unless}}</section>
+              {{#if this.orderTicketOpen}}<section class="rsc-card rsc-order-ticket">
+                <div class="rsc-ticket-heading"><h2>{{uiText "order"}}</h2><span>{{this.selected.symbol}}</span><button class="btn btn-flat rsc-close-order" type="button" {{on "click" this.closeOrderTicket}}>收起下单</button></div>
                 <form {{on "submit" this.trade}}>
                   <label>{{uiText "direction"}}<select {{on "change" (fn this.set "side")}}><option value="long" selected={{eq this.side "long"}}>{{uiText "long"}}</option><option value="short" selected={{eq this.side "short"}}>{{uiText "short"}}</option></select></label>
                   <div class="rsc-fields rsc-ticket-inputs">
@@ -689,9 +699,9 @@ export default class RscDashboard extends Component {
                   <button class="btn btn-primary" type="submit" disabled={{this.tradingDisabled}}>{{uiText "submit_order"}}</button>
                   <details class="rsc-trading-help"><summary>交易规则 · 数量步进 {{formatQuantity this.selected.step}}</summary><p class="rsc-muted">{{#if (eq this.selected.execution_mode "immediate")}}按当前可用行情成交。{{else if (eq this.selected.execution_mode "crypto_confirmation")}}开仓等待 30–90 秒报价确认，初始两分钟不可撤单；手动平仓至少持有五分钟。{{else}}等待后续报价确认；提交后 10 秒内可撤单，成交后至少持有两分钟。{{/if}}</p><p class="rsc-muted">最小数量 {{formatQuantity this.selected.minimum}}。四档比例按可用余额估算，包含手续费及预占空间；仍受单仓和组合限额约束。</p></details>
                 </form>
-              </section>
+              </section>{{/if}}
 </div>
-          {{else}}<p class="rsc-empty">{{uiText "no_quotes"}}</p>{{/if}}
+          {{else}}{{#unless this.data.instruments.length}}<p class="rsc-empty">{{uiText "no_quotes"}}</p>{{/unless}}{{/if}}
         </div>
         <RscDiscovery />
         <p class="rsc-muted">持仓名义金额 {{formatAmount this.data.portfolio.notional}} RSC · 委托占用 {{formatAmount this.data.portfolio.reserved}} RSC</p>

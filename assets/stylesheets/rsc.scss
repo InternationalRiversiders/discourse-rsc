@@ -2041,3 +2041,16 @@
   .avatar { width: 24px; height: 24px; flex: 0 0 24px; border-radius: 50%; }
   > span { min-width: 0; overflow-wrap: anywhere; }
 }
+
+// Give data-heavy RSC pages the available desktop space, within the sidebar layout.
+#main-outlet-wrapper:has(.rsc-app) { max-width: 1920px; }
+// Horizon also caps direct outlet children at 1000px with a highly specific rule.
+#main-outlet .rsc-app { max-width: none !important; width: 100%; box-sizing: border-box; }
+.rsc-app[data-section="market"] {
+  .rsc-workbench:not(.detail-open) { grid-template-columns: minmax(0, 1fr); }
+  .rsc-back { display: inline-flex; }
+  .rsc-ticket-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .rsc-ticket-heading h2 { margin: 0; }
+  .rsc-ticket-heading .rsc-close-order { margin-inline-start: auto; font-size: 12px; }
+  .rsc-ticket-heading { margin-bottom: 12px; }
+}

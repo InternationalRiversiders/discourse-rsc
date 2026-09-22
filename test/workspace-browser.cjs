@@ -41,7 +41,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
     await page.waitForResponse(r=>r.url().includes('/rsc/state.json')&&r.status()===200);
    }
    await position.locator('summary').click();
-   // Selecting a holding opens the existing quote/order panel, no navigation away.
+   // Selecting a holding opens the quote panel, no navigation away.
    await position.locator('.rsc-position-link').click();await page.locator('.rsc-detail-heading').getByText('河畔科技',{exact:true}).waitFor();
    await page.locator('.rsc-interactive-chart').waitFor();
    const chart=page.locator('.rsc-interactive-chart');
@@ -69,6 +69,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
    assert.match(await page.locator('.rsc-market-board .rsc-pagination').innerText(),/2 \/ 3/);
    await page.locator('.rsc-market-board input[type=search]').fill('DEMO-C');
    await page.locator('.rsc-quote-row').first().click();
+   assert.equal(await page.locator('.rsc-order-ticket').count(),0);await page.locator('.rsc-open-order').click();
    assert.equal(await page.locator('.rsc-quote-stats dt').count(),2);
    assert.match(await page.locator('.rsc-quote-stats').innerText(),/24h 最高/);
    assert(!/昨收|前收|今开/.test(await page.locator('.rsc-change-basis').innerText()));
@@ -87,6 +88,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
    await ticket.getByLabel('杠杆倍数',{exact:true}).fill('10');
    assert.equal(await ticket.getByLabel('杠杆滑块',{exact:true}).inputValue(),'10');
    await page.locator('.rsc-market-board input[type=search]').fill('DEMO-OTHER-COIN');await page.locator('.rsc-quote-row').first().click();
+   assert.equal(await page.locator('.rsc-order-ticket').count(),0);await page.locator('.rsc-open-order').click();
    await ticket.locator('input[type=checkbox]').check();await ticket.getByLabel('杠杆倍数',{exact:true}).fill('100');
    assert(await ticket.locator('button[type=submit]').isDisabled(),'other high-risk instrument blocked');
    // Return to the stock for viewport checks and screenshots.
@@ -98,6 +100,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
     if(width<1100){await page.locator('.rsc-back').click();await position.locator('.rsc-position-link').click();}
     await page.evaluate(()=>window.scrollTo(0,0));
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow ${width}`);
+    if(!(await page.locator('.rsc-order-ticket').count()))await page.locator('.rsc-open-order').click();
     await page.locator('.rsc-order-ticket').scrollIntoViewIfNeeded();
     assert(await page.locator('.rsc-order-ticket button[type=submit]').count());
     if(width===1440||width===390){await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:`${output}/workspace-${scheme}-${width}.png`,fullPage:true});}

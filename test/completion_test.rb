@@ -54,7 +54,9 @@ class CompletionTest < NativeBusinessTest
     session.get "/rsc/packet/#{packet.token}/public.json"
     assert_equal 200,session.response.status,session.response.body
     body=JSON.parse(session.response.body)
-    assert_equal %w[claimed_count count expires_at message preview sender status token total],body.keys.sort
+    assert_equal %w[claimed_count count expires_at message preview sender sender_user status token total],body.keys.sort
+    assert_equal %w[avatar_template id username],body['sender_user'].keys.sort
+    assert_equal @alice.id,body['sender_user']['id']
     assert_equal 'expired',body['status']
     assert_equal before,[R::Journal.count,R::Account.wallet(@alice.id).balance]
     assert_equal 'open',packet.reload.status
