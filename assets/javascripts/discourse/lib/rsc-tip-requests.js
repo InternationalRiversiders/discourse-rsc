@@ -1,7 +1,7 @@
 // Reading a long topic must not spend the forum's request budget one post at a
 // time. Keep one request in flight and batch posts across rendering frames.
 export default class TipRequests {
-  constructor({ request, now = Date.now, setTimer = setTimeout, clearTimer = clearTimeout }) {
+  constructor({ request, now = Date.now, setTimer = (fn, delay) => setTimeout(fn, delay), clearTimer = (timer) => clearTimeout(timer) }) {
     Object.assign(this, { request, now, setTimer, clearTimer });
     this.pending = new Map();
     this.inFlight = new Map();
