@@ -189,7 +189,7 @@ export default class extends Component {
                       type="button"
                       title={{if (eq this.activeTraderId row.user_id) "收起持仓" "查看持仓"}}
                       aria-label={{if (eq this.activeTraderId row.user_id) "收起持仓" "查看持仓"}}
-                      aria-expanded={{eq this.activeTraderId row.user_id}}
+                      aria-expanded={{if (eq this.activeTraderId row.user_id) "true" "false"}}
                       disabled={{this.busy}}
                       {{on "click" (fn this.openTrader row.user_id)}}
                     >{{dIcon "magnifying-glass"}}</button></span></td><td
@@ -208,7 +208,7 @@ export default class extends Component {
                     }}</td><td>{{row.trade_count}}</td></tr>
       {{#if (eq this.activeTraderId row.user_id)}}<tr class="rsc-trader-expanded"><td colspan="9"><section
           class="rsc-trader-detail"
-          aria-busy={{this.detailBusy}}
+          aria-busy={{if this.detailBusy "true" "false"}}
           aria-label={{uiText "trader_detail"}}
         ><div class="rsc-trader-heading"><h2><ForumUser @user={{row.forum_user}} @name={{row.username}} /> · {{uiText "trader_detail"}}</h2><button type="button" class="btn btn-flat" {{on "click" this.closeTrader}}>收起</button></div>
           {{#if this.detailError}}<p role="alert" class="alert alert-error">{{this.detailError}}</p>{{/if}}
@@ -256,7 +256,7 @@ export default class extends Component {
           <div class="rsc-performance">
             <div class="rsc-performance-heading"><h3>{{uiText "historical_performance"}}</h3>
               <div class="rsc-performance-ranges" role="group" aria-label="收益图时间范围">
-                {{#each ranges as |range|}}<button type="button" class="btn {{if (eq range.days this.performanceDays) 'btn-primary'}}" aria-pressed={{eq range.days this.performanceDays}} {{on "click" (fn this.performanceRange range.days)}}>{{range.label}}</button>{{/each}}
+                {{#each ranges as |range|}}<button type="button" class="btn {{if (eq range.days this.performanceDays) 'btn-primary'}}" aria-pressed={{if (eq range.days this.performanceDays) "true" "false"}} {{on "click" (fn this.performanceRange range.days)}}>{{range.label}}</button>{{/each}}
               </div>
             </div>
             {{#if this.performance}}
