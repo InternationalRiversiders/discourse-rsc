@@ -64,8 +64,7 @@ module DiscourseRsc
         Commands.run(user_id: user_id, action: "daily_reward", request_id: "daily-#{date}", input: [date]) do
           units = score * Amount::UNIT
           Commands.move(user_id: user_id, action: "daily_reward", request_id: "daily-#{date}",
-                        postings: { Account.issuance.id => -units, Account.wallet(user_id).id => units }, metadata: { date: date, score: score },
-                        event: Commands.event(user_id, "daily_reward", { "amount" => score.to_s }))
+                        postings: { Account.issuance.id => -units, Account.wallet(user_id).id => units }, metadata: { date: date, score: score })
           { score: score, date: date }
         end
       end

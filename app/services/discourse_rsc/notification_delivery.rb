@@ -31,6 +31,12 @@ module DiscourseRsc
       Safety.ensure_writable!
       event.with_lock do
         return if event.delivered_at
+        # Consume pending rewards from older releases without notifying the user.
+        # New payouts only create ledger entries, not notification events.
+        if event.kind == "daily_reward"
+          event.update!(delivered_at: Time.current, last_error: nil)
+          return
+        end
         raise Error.new("unknown_event") unless KINDS.include?(event.kind)
         recipient = User.find_by(id: event.recipient_user_id)
         raise Error.new("recipient_not_found") unless recipient

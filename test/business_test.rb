@@ -183,7 +183,30 @@ class NativeBusinessTest < DiscourseSmokeTest
     assert_equal "1", first
     R::Rewards.pay(day.iso8601)
     assert_equal first, R::Account.wallet(@alice.id).balance
-    assert_equal 1, R::Event.where(kind: "daily_reward", recipient_user_id: @alice.id).count
+    assert_equal 0, R::Event.where(kind: "daily_reward", recipient_user_id: @alice.id).count
+    assert_equal 1, R::Journal.where(operation: "daily_reward", actor_user_id: @alice.id).count
+    journal = R::Journal.find_by!(operation: "daily_reward", actor_user_id: @alice.id)
+    assert_equal 1, R::Entry.where(journal_id: journal.id, account_id: R::Account.wallet(@alice.id).id).count
+  end
+
+  def test_pending_daily_reward_notification_is_consumed_silently
+    day = (Time.current.utc + 8.hours).to_date - 1
+    UserVisit.find_or_create_by!(user_id: @alice.id, visited_at: day) { |visit| visit.posts_read = 1; visit.time_read = 10 }
+    R::Rewards.pay(day.iso8601)
+    journal = R::Journal.find_by!(operation: "daily_reward", actor_user_id: @alice.id)
+    event = R::Event.create!(journal_id: journal.id, recipient_user_id: @alice.id,
+      kind: "daily_reward", payload: { "amount" => "1" }, attempts: 2,
+      next_attempt_at: Time.current, last_error: "OldRetry")
+    count = Notification.count
+    R::NotificationDelivery.attempt(event)
+    assert event.reload.delivered_at
+    assert_nil event.notification_id
+    assert_nil event.last_error
+    refute R::Event.due.exists?(id: event.id)
+    R::NotificationDelivery.attempt(event)
+    assert_equal count, Notification.count
+    assert_equal "1", R::Account.wallet(@alice.id).balance
+    assert_equal 1, R::Journal.where(operation: "daily_reward", actor_user_id: @alice.id).count
   end
 
   def test_http_state_hides_other_users_financial_records
