@@ -1,7 +1,8 @@
-import { formatDateTime, formatDate } from "../lib/campus-time";
+import { formatDateTime } from "../lib/campus-time";
 import RscNavigation from "./rsc-navigation";
 import RscPagination from "./rsc-pagination";
 import ForumUser from "./rsc-user";
+import { performanceChart } from "../lib/rsc-performance";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
@@ -28,6 +29,7 @@ const sorts = [
   "pnl",
   "trade_count",
 ];
+const ranges = [{ days: 3, label: "近3天" }, { days: 7, label: "近一周" }, { days: 30, label: "近一月" }, { days: 0, label: "全部" }];
 const sections = ["positions", "orders", "predictions"];
 const display = formatAmount;
 const when = formatDateTime;
@@ -36,6 +38,11 @@ export default class extends Component {
   @tracked result;
   @tracked sortKey = "equity";
   @tracked detail;
+  @tracked activeTraderId = null;
+  @tracked detailBusy = false;
+  @tracked detailError = "";
+  @tracked performanceDays = 0;
+  detailGeneration = 0;
   @tracked error = "";
   @tracked busy = false;
   generation = 0;
@@ -48,6 +55,7 @@ export default class extends Component {
     await this.load(1);
   }
   @action async load(page) {
+    this.closeTrader();
     this.busy = true;
     const generation = ++this.generation;
     try {
@@ -92,28 +100,40 @@ export default class extends Component {
     }));
   }
   @action async trader(id, section = "positions", page = 1) {
-    this.busy = true;
+    const generation = ++this.detailGeneration;
+    this.detailBusy = true;
+    this.detailError = "";
     try {
-      const detail = await ajax(`/rsc/traders/${id}.json`, {
-        data: { section, page },
-      });
-      if (!this.isDestroying) {
-        this.detail = detail;
-        this.error = "";
+      const detail = await ajax(`/rsc/traders/${id}.json`, { data: { section, page } });
+      if (generation === this.detailGeneration && !this.isDestroying) {
+        // Paginated responses omit the series; retain it for the same user.
+        this.detail = { ...detail, performance: detail.performance ?? this.detail?.performance };
       }
     } catch (error) {
-      if (!this.isDestroying) {
-        this.error = extractError(error);
+      if (generation === this.detailGeneration && !this.isDestroying) {
+        this.detailError = extractError(error);
       }
     } finally {
-      if (!this.isDestroying) {
-        this.busy = false;
+      if (generation === this.detailGeneration && !this.isDestroying) {
+        this.detailBusy = false;
       }
     }
   }
+  @action closeTrader() {
+    this.detailGeneration++;
+    this.activeTraderId = null;
+    this.detail = null;
+    this.detailBusy = false;
+    this.detailError = "";
+  }
   @action openTrader(id) {
+    if (this.activeTraderId === id) { return this.closeTrader(); }
+    this.closeTrader();
+    this.activeTraderId = id;
+    this.performanceDays = 0;
     return this.trader(id);
   }
+  @action performanceRange(days) { this.performanceDays = days; }
   @action section(value) {
     return this.trader(this.detail.summary.user_id, value);
   }
@@ -139,28 +159,7 @@ export default class extends Component {
     return this.detail.pagination.page >= this.detail.pagination.pages;
   }
   get performance() {
-    const rows = this.detail?.performance?.points || [];
-    // Do not connect across an unmeasurable zero-capital segment.
-    const points = rows.filter((p) => p.return_pct !== null);
-    if (points.length < 2) {
-      return null;
-    }
-    const values = points.map((p) => Number(p.return_pct));
-    const min = Math.min(...values),
-      span = Math.max(...values) - min || 1;
-    const start = Date.parse(points[0].at),
-      end = Date.parse(points.at(-1).at);
-    return {
-      points: points
-        .map(
-          (p, i) =>
-            `${20 + (560 * (Date.parse(p.at) - start)) / (end - start || 1)},${160 - (140 * (values[i] - min)) / span}`
-        )
-        .join(" "),
-      start: formatDate(start),
-      end: formatDate(end),
-      last: points.at(-1).return_pct,
-    };
+    return performanceChart(this.detail?.performance?.points, this.performanceDays);
   }
   <template>
     <main class="rsc-app rsc-ranking-page" aria-busy={{this.busy}}>
@@ -177,19 +176,20 @@ export default class extends Component {
                 value={{sort}}
                 selected={{eq sort this.sortKey}}
               >{{uiText sort}}</option>{{/each}}</select></label></form>
-        <div class="rsc-table"><table><thead><tr><th>{{uiText "rank"}}</th><th
+        <div class="rsc-table rsc-ranking-table"><table><thead><tr><th>{{uiText "rank"}}</th><th
                 >{{uiText "username"}}</th><th>{{uiText "equity"}}</th><th
                 >{{uiText "portfolio_equity"}}</th><th>{{uiText "realized_pnl"}}</th><th>{{uiText "pnl"}}</th><th
                 >{{uiText "total_pnl"}}</th><th>{{uiText "return_pct"}}</th><th
                 >{{uiText "trade_count"}}</th></tr></thead><tbody>
-              {{#each this.rankedRows as |row|}}<tr><td><span
+              {{#each this.rankedRows key="user_id" as |row|}}<tr><td><span
                       class="rsc-rank"
                       data-rank={{row.rank}}
                     >{{row.rank}}</span></td><td><span class="rsc-ranked-user"><ForumUser @user={{row.forum_user}} @name={{row.username}} /><button
                       class="btn btn-flat btn-icon rsc-trader-link"
                       type="button"
-                      title="查看持仓"
-                      aria-label="查看持仓"
+                      title={{if (eq this.activeTraderId row.user_id) "收起持仓" "查看持仓"}}
+                      aria-label={{if (eq this.activeTraderId row.user_id) "收起持仓" "查看持仓"}}
+                      aria-expanded={{eq this.activeTraderId row.user_id}}
                       disabled={{this.busy}}
                       {{on "click" (fn this.openTrader row.user_id)}}
                     >{{dIcon "magnifying-glass"}}</button></span></td><td
@@ -206,14 +206,14 @@ export default class extends Component {
                   >{{display row.total_pnl}}</td><td>{{formatPercent
                       row.return_pct
                     }}</td><td>{{row.trade_count}}</td></tr>
-              {{else}}<tr><td colspan="9">{{uiText "empty"}}</td></tr>{{/each}}
-            </tbody></table></div>
-        <RscPagination @page={{this.result.pagination}} @change={{this.load}} @busy={{this.busy}} />
-      </section>
-      {{#if this.detail}}<section
-          class="rsc-card rsc-trader-detail"
+      {{#if (eq this.activeTraderId row.user_id)}}<tr class="rsc-trader-expanded"><td colspan="9"><section
+          class="rsc-trader-detail"
+          aria-busy={{this.detailBusy}}
           aria-label={{uiText "trader_detail"}}
-        ><h2><ForumUser @user={{this.detail.summary.forum_user}} @name={{this.detail.summary.username}} /> · {{uiText "trader_detail"}}</h2>
+        ><div class="rsc-trader-heading"><h2><ForumUser @user={{row.forum_user}} @name={{row.username}} /> · {{uiText "trader_detail"}}</h2><button type="button" class="btn btn-flat" {{on "click" this.closeTrader}}>收起</button></div>
+          {{#if this.detailError}}<p role="alert" class="alert alert-error">{{this.detailError}}</p>{{/if}}
+          {{#if this.detailBusy}}<p role="status" class="rsc-muted">正在加载…</p>{{/if}}
+          {{#if this.detail}}
           <div class="rsc-market-summary"><div>{{uiText "equity"}}<strong
               >{{display this.detail.summary.equity}}</strong></div><div
             >{{uiText "total_pnl"}}<strong>{{display
@@ -224,7 +224,7 @@ export default class extends Component {
                 type="button"
                 class="btn
                   {{if (eq section this.detail.section) 'btn-primary'}}"
-                disabled={{this.busy}}
+                disabled={{this.detailBusy}}
                 {{on "click" (fn this.section section)}}
               >{{if
                   (eq section "positions")
@@ -252,27 +252,27 @@ export default class extends Component {
                   ><td colspan="4">{{uiText
                         "empty"
                       }}</td></tr>{{/each}}</tbody></table></div>
-          <RscPagination @page={{this.detail.pagination}} @change={{this.detailPage}} @busy={{this.busy}} />
-          {{#if this.performance}}<div class="rsc-history"><h3>{{uiText
-                  "historical_performance"
-                }}</h3><p class="rsc-muted">{{uiText
-                  "performance_hint"
-                }}</p><svg
-                viewBox="0 0 600 180"
-                role="img"
-                aria-label={{uiText "historical_performance"}}
-              ><polyline
-                  points={{this.performance.points}}
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                /></svg><div class="rsc-chart-axis"><span
-                >{{this.performance.start}}
-                  →
-                  {{this.performance.end}}</span><span>{{formatPercent
-                    this.performance.last
-                  }}</span></div></div>{{/if}}
-        </section>{{/if}}
+          <RscPagination @page={{this.detail.pagination}} @change={{this.detailPage}} @busy={{this.detailBusy}} />
+          <div class="rsc-performance">
+            <div class="rsc-performance-heading"><h3>{{uiText "historical_performance"}}</h3>
+              <div class="rsc-performance-ranges" role="group" aria-label="收益图时间范围">
+                {{#each ranges as |range|}}<button type="button" class="btn {{if (eq range.days this.performanceDays) 'btn-primary'}}" aria-pressed={{eq range.days this.performanceDays}} {{on "click" (fn this.performanceRange range.days)}}>{{range.label}}</button>{{/each}}
+              </div>
+            </div>
+            {{#if this.performance}}
+              <svg viewBox="0 0 600 160" preserveAspectRatio="none" role="img" aria-label={{uiText "historical_performance"}}>
+                {{#each this.performance.segments as |segment|}}<polyline points={{segment}} fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" />{{/each}}
+              </svg>
+              <div class="rsc-chart-axis"><span>{{when this.performance.start}} → {{when this.performance.end}}</span><span>累计 {{formatPercent this.performance.last}}</span></div>
+            {{else}}<p class="rsc-performance-empty">该时段没有足够的收益记录</p>{{/if}}
+            <p class="rsc-muted rsc-performance-note">{{uiText "performance_hint"}}</p>
+          </div>
+          {{/if}}
+        </section></td></tr>{{/if}}
+              {{else}}<tr><td colspan="9">{{uiText "empty"}}</td></tr>{{/each}}
+            </tbody></table></div>
+        <RscPagination @page={{this.result.pagination}} @change={{this.load}} @busy={{this.busy}} />
+      </section>
     </main>
   </template>
 }
