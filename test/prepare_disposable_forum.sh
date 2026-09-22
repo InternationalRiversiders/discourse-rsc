@@ -35,3 +35,5 @@ bundle exec rake db:seed >/tmp/rsc-seed.log 2>&1 || { tail -50 /tmp/rsc-seed.log
 bundle exec rails runner /rsc/test/native_adaptation_test.rb
 bundle exec rails runner /rsc/test/sports_presentation_test.rb -n '/test_sports_presentation/'
 bundle exec rails runner /rsc/test/packet_sharing_test.rb -n '/test_packet_sharing/'
+
+bundle exec rails runner /rsc/test/trading_workspace_test.rb -n "/test_workspace/"

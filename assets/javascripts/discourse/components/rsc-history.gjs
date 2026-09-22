@@ -158,10 +158,13 @@ export default class extends Component {
           Number(p.close) >= Number(p.open || p.close)
             ? "positive"
             : "negative",
+        at: p.at ? formatDateTime(p.at) : "—",
+        open: formatPrice(p.open), high: formatPrice(p.high), low: formatPrice(p.low), close: formatPrice(p.close),
         title: `${p.at ? formatDateTime(p.at) : ""} · 开 ${formatPrice(p.open)} 高 ${formatPrice(p.high)} 低 ${formatPrice(p.low)} 收 ${formatPrice(p.close)}`,
       })),
     };
   }
+  get readout() { return this.hover || this.chart?.candles.at(-1); }
   <template>
     <div class="rsc-history" aria-busy={{this.loading}}>
       <div class="rsc-chart-controls">{{#each ranges as |range|}}<button
@@ -239,7 +242,7 @@ export default class extends Component {
                   height={{candle.height}}
                   fill="currentColor"
                 /></g>{{/each}}{{/if}}
-        </svg>{{#if this.hover}}<p class="rsc-chart-tooltip" role="status">{{this.hover.title}}</p>{{/if}}<div class="rsc-chart-axis"><span
+        </svg><div class="rsc-chart-readout"><time>{{this.readout.at}}</time><dl><div><dt>开</dt><dd title={{this.readout.open}}>{{this.readout.open}}</dd></div><div><dt>高</dt><dd title={{this.readout.high}}>{{this.readout.high}}</dd></div><div><dt>低</dt><dd title={{this.readout.low}}>{{this.readout.low}}</dd></div><div><dt>收</dt><dd title={{this.readout.close}}>{{this.readout.close}}</dd></div></dl></div><div class="rsc-chart-axis"><span
           >{{this.chart.low}}–{{this.chart.high}}
             {{this.data.currency}}</span><span>{{this.chart.start}}
             →

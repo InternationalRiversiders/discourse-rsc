@@ -1,5 +1,6 @@
 import { formatDateTime, formatDate } from "../lib/campus-time";
 import RscNavigation from "./rsc-navigation";
+import RscPagination from "./rsc-pagination";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -44,7 +45,7 @@ export default class extends Component {
     this.sortKey = event.target.value;
     await this.load(1);
   }
-  async load(page) {
+  @action async load(page) {
     this.busy = true;
     const generation = ++this.generation;
     try {
@@ -114,6 +115,7 @@ export default class extends Component {
   @action section(value) {
     return this.trader(this.detail.summary.user_id, value);
   }
+  @action detailPage(page) { return this.trader(this.detail.summary.user_id, this.detail.section, page); }
   @action detailPrevious() {
     return this.trader(
       this.detail.summary.user_id,
@@ -214,20 +216,7 @@ export default class extends Component {
                     }}</td><td>{{row.trade_count}}</td></tr>
               {{else}}<tr><td colspan="9">{{uiText "empty"}}</td></tr>{{/each}}
             </tbody></table></div>
-        <div class="rsc-list-footer"><span>{{this.result.pagination.total}}
-            {{uiText "participants"}}</span><div><button
-              type="button"
-              aria-label={{uiText "previous_page"}}
-              disabled={{if this.busy true this.first}}
-              {{on "click" this.previous}}
-            >‹</button><span>{{this.result.pagination.page}}
-              /
-              {{this.result.pagination.pages}}</span><button
-              type="button"
-              aria-label={{uiText "next_page"}}
-              disabled={{if this.busy true this.last}}
-              {{on "click" this.next}}
-            >›</button></div></div>
+        <RscPagination @page={{this.result.pagination}} @change={{this.load}} @busy={{this.busy}} />
       </section>
       {{#if this.detail}}<section
           class="rsc-card rsc-trader-detail"
@@ -271,20 +260,7 @@ export default class extends Component {
                   ><td colspan="4">{{uiText
                         "empty"
                       }}</td></tr>{{/each}}</tbody></table></div>
-          <div class="rsc-list-footer"><span
-            >{{this.detail.pagination.total}}</span><div><button
-                type="button"
-                aria-label={{uiText "previous_page"}}
-                disabled={{if this.busy true this.detailFirst}}
-                {{on "click" this.detailPrevious}}
-              >‹</button><span>{{this.detail.pagination.page}}
-                /
-                {{this.detail.pagination.pages}}</span><button
-                type="button"
-                aria-label={{uiText "next_page"}}
-                disabled={{if this.busy true this.detailLast}}
-                {{on "click" this.detailNext}}
-              >›</button></div></div>
+          <RscPagination @page={{this.detail.pagination}} @change={{this.detailPage}} @busy={{this.busy}} />
           {{#if this.performance}}<div class="rsc-history"><h3>{{uiText
                   "historical_performance"
                 }}</h3><p class="rsc-muted">{{uiText

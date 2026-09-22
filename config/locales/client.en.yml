@@ -191,7 +191,7 @@ en:
         gainers: Top gainers
         losers: Top losers
         latest_price: Last / RSC
-        daily_change: Daily change
+        daily_change: Change
         no_quote: No quote
         stale_quote: Stale quote
         session_closed: Closed

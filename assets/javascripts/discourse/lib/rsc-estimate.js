@@ -28,3 +28,13 @@ export function payout(stake, odds) {
   const amount = atomic(stake), rate = atomic(odds);
   return amount !== null && rate !== null ? decimal(amount * rate / U) : null;
 }
+
+// Allocate a fraction of available cash, rounding down to the instrument step.
+// Independent of the quantity draft, so shortcuts work after clearing the field.
+export function quantityForFraction(instrument, leverage, balance, quarters) {
+  const available = atomic(balance);
+  if (available === null || ![1, 2, 3, 4].includes(quarters)) { return null; }
+  const budget = decimal(available * BigInt(quarters) / 4n);
+  const result = estimate(instrument, instrument?.minimum || instrument?.step || "1", leverage, budget);
+  return result?.maximum ?? null;
+}

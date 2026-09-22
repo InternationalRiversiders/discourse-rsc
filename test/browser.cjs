@@ -27,7 +27,8 @@ const { chromium } = require(process.env.RSC_PLAYWRIGHT || "playwright");
     await page.screenshot({ path: `${output}/${name}.png`, fullPage: true });
   }
   try {
-    await page.goto("http://rsc.test:3000/login", { waitUntil: "domcontentloaded" });
+    await page.goto("http://rsc.test:3000/", { waitUntil: "domcontentloaded" });
+    await page.locator("#main-outlet").waitFor();
     const login = await page.evaluate(async ({ username, password }) => {
       const csrf = await (await fetch("/session/csrf.json")).json();
       const response = await fetch("/session.json", { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf.csrf, "X-Requested-With": "XMLHttpRequest" }, body: JSON.stringify({ login: username, password }) });
@@ -60,6 +61,7 @@ const { chromium } = require(process.env.RSC_PLAYWRIGHT || "playwright");
     await page.getByRole("button", { name: "收回剩余红包", exact: true }).click();
     await page.getByText("已收回", { exact: false }).waitFor();
     console.log("Native packet created and remainder refunded");
+    await page.locator(".rsc-packet-nav a").click();
     await page.locator(".rsc-tabs").getByRole("link", { name: "股市", exact: true }).click();
     const board = page.locator(".rsc-market-board");
     await board.getByRole("button", { name: "DEMO-A", exact: true }).waitFor();
@@ -96,7 +98,7 @@ const { chromium } = require(process.env.RSC_PLAYWRIGHT || "playwright");
     await page.getByRole("button", { name: "更早行情", exact: true }).click();
     await page.getByRole("button", { name: "重置视图", exact: true }).click();
     assert.equal(await page.locator(".rsc-history polyline").getAttribute("points"), originalPoints);
-    await page.getByLabel("杠杆", { exact: true }).fill("5");
+    await page.getByLabel("杠杆倍数", { exact: true }).fill("5");
     await page.getByRole("button", { name: "提交委托", exact: true }).click();
     await page.getByRole("status").filter({ hasText: "操作成功" }).waitFor();
     await page.locator(".rsc-position").waitFor({ timeout: 65000 });
@@ -110,6 +112,7 @@ const { chromium } = require(process.env.RSC_PLAYWRIGHT || "playwright");
     await page.getByRole("button", { name: "折线 / K 线", exact: true }).click();
     await page.locator(".rsc-history svg rect").first().waitFor();
     await page.getByRole("button", { name: "折线 / K 线", exact: true }).click();
+    await page.locator(".rsc-position-details summary").click();
     await page.locator(".rsc-position").getByLabel("追加保证金", { exact: true }).fill("5");
     await page.locator(".rsc-position").getByRole("button", { name: "追加保证金", exact: true }).click();
     await page.getByRole("status").filter({ hasText: "操作成功" }).waitFor();
@@ -124,7 +127,7 @@ const { chromium } = require(process.env.RSC_PLAYWRIGHT || "playwright");
     assert.equal(await page.locator('.rsc-tabs a.active').innerText(), '排行榜');
     assert.equal(await page.locator('.rsc-tabs a[href="/rsc/admin"]').count(), 0);
     await page.locator('.rsc-tabs').getByRole('link', { name: '股市', exact: true }).click();
-    await page.getByRole('heading', { name: 'RSC 交易所', exact: true }).waitFor();
+    await page.locator('.rsc-trading-summary').waitFor();
     await page.locator('.rsc-tabs').getByRole('link', { name: '排行榜', exact: true }).click();
     await page.getByRole('heading', { name: '排行榜', exact: true }).waitFor();
     await capture("leaderboard-desktop");
@@ -178,7 +181,8 @@ const { chromium } = require(process.env.RSC_PLAYWRIGHT || "playwright");
     assert.equal(denied, 403, "Non-admin API access is denied");
     }
     await context.clearCookies();
-    await page.goto("http://rsc.test:3000/login", { waitUntil: "domcontentloaded" });
+    await page.goto("http://rsc.test:3000/", { waitUntil: "domcontentloaded" });
+    await page.locator("#main-outlet").waitFor();
     const adminLogin = await page.evaluate(async ({ username, password }) => {
       const csrf = await (await fetch("/session/csrf.json")).json();
       const response = await fetch("/session.json", { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf.csrf, "X-Requested-With": "XMLHttpRequest" }, body: JSON.stringify({ login: username, password }) });

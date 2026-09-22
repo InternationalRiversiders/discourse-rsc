@@ -23,7 +23,7 @@ module DiscourseRsc
       orders.unshift(focused) if focused && orders.none? { |o| o.id==focused.id }
       entries = Entry.where(account_id: wallet.id).includes(:journal).order(id: :desc).limit(30)
       render_json_dump(
-        market_data_enabled: SiteSetting.rsc_market_data_enabled,
+        market_data_enabled: SiteSetting.rsc_market_data_enabled, high_risk: Risk.high_risk_status(current_user.id),
         read_only: Safety.read_only?, reward: Rewards.today(current_user.id), demo: instruments.present? && instruments.all? { |item| item.quote["demo"] }, admin: Access.admin?(current_user), high_risk_enabled: SiteSetting.rsc_high_risk_enabled, trial: true, odds_max_age_hours: SiteSetting.rsc_odds_max_age_hours, wallet: { balance: wallet.balance, status: wallet.status, status_reason: wallet.status_reason, reserved: Amount.format(pending.sum(:reserved_units)) },
         instruments: MarketListing.rows(instruments),
         positions: positions,

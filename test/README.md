@@ -103,3 +103,7 @@ isolated Redis/processes instead of sending traffic to provoke provider bans.
 `packet_sharing_test.rb` 随隔离后端测试执行，验证原生与旧域名红包链接无需外网即可生成 Onebox，文本转义、公开元数据、未知红包 404，以及生成卡片不修改账本、领取记录或暴露领取明细。
 
 `packet-time-browser.cjs` 需在同时安装六个校园插件的隔离论坛中运行，使用合成账户和各插件示例内容；最后运行 `seed_packet_browser.rb`，将生成的 `/tmp/campus-packet-browser.json` 作为 `RSC_BROWSER_CREDENTIALS`。验证三种浏览器时区、320/390/1440 像素和两种配色下的紧凑红包页、实际领取、各插件时间展示，以及帖子内新旧两类链接的真实 Onebox。树洞和觅电保留相对时间，悬停提示显示本地绝对时间。不要对生产数据库运行种子脚本。
+
+## 股市工作台（2026-09-22）
+
+`trading_workspace_test.rb` 已加入默认隔离后端流程。`workspace-browser.cjs` 在基础 `seed_browser.rb` 后使用 `seed_workspace_browser.rb` 与 `seed_workspace_ranking.rb`，并启动 `demo_tick.rb` 保持合成行情有效。脚本测试真实逐字输入、自动刷新和资金操作，不伪造股市 API。可用 `RSC_BROWSER_THEME` 指向公开主题 CSS 文件，在隔离站追加验证线上样式。完整改动、字段口径和验证范围见 [工作台记录](../docs/trading-workspace-2026-09-22.md)。

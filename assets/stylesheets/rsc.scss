@@ -1923,3 +1923,110 @@
 .onebox.rsc-packet-onebox h3 {
   margin-top: 0;
 }
+
+// Trading workspace: compact account + positions first, persistent desktop ticket.
+.rsc-app[data-section="market"] {
+  .rsc-trading-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 16px 0;
+    margin-top: 0;
+    strong { font-size: 20px; }
+  }
+  .rsc-market-main { min-width: 0; }
+  .rsc-workbench { grid-template-columns: minmax(0, 1.15fr) minmax(330px, 1fr); }
+  .rsc-workbench .rsc-market-layout {
+    position: sticky;
+    top: calc(var(--header-offset, 60px) + 12px);
+    max-height: calc(100dvh - var(--header-offset, 60px) - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+    padding-right: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-margin-top: calc(var(--header-offset, 60px) + 6rem);
+  }
+  .rsc-chart, .rsc-order-ticket, .rsc-positions-card { padding: 18px; border-radius: 12px; }
+  .rsc-positions-card h2 { margin-bottom: 4px; }
+  .rsc-position { padding: 14px 0; gap: 8px; }
+  .rsc-position-title { margin-bottom: 10px; gap: 8px; }
+  .rsc-position-link {
+    min-width: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--primary);
+    text-align: left;
+    cursor: pointer;
+    strong { display: block; font-size: 14px; overflow-wrap: anywhere; }
+    small { display: block; color: var(--primary-medium); font-size: 10px; }
+    &:hover strong { color: var(--tertiary); text-decoration: underline; }
+  }
+  .rsc-position-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .rsc-position-metrics dd { font-size: 13px; }
+  .rsc-position-details {
+    min-width: 0;
+    summary { font-size: 12px; color: var(--tertiary); cursor: pointer; padding: 4px 0; }
+    > dl { margin-top: 12px; }
+    > form { margin-top: 12px; }
+  }
+  .rsc-quote-hero { margin-top: 12px; gap: 8px; flex-wrap: wrap; }
+  .rsc-quote-hero .rsc-price { font-size: 26px; }
+  .rsc-change-basis { margin: 4px 0 12px; }
+  .rsc-quote-stats {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px;
+    > div { min-width: 0; }
+    dt { font-size: 11px; color: var(--primary-medium); }
+    dd { margin: 4px 0 0; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  }
+  .rsc-chart-controls { gap: 4px; margin: 8px 0; }
+  .rsc-chart-controls .btn { padding: 5px 8px; font-size: 11px; }
+  .rsc-chart-readout {
+    padding: 8px 10px; border-radius: 6px; background: var(--primary-very-low); font-size: 11px; font-variant-numeric: tabular-nums;
+    time { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 18px; line-height: 18px; }
+    dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 6px 0 0; }
+    dl > div { min-width: 0; }
+    dt { color: var(--primary-medium); line-height: 16px; }
+    dd { margin: 0; height: 18px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  }
+  .rsc-chart-axis { display: grid; grid-template-columns: 1fr; gap: 2px; margin-top: 6px; }
+  .rsc-chart-axis span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rsc-ticket-heading h2 { margin-bottom: 12px; }
+  .rsc-ticket-inputs { gap: 12px; }
+  .rsc-allocation-buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-top: 8px; }
+  .rsc-allocation-buttons .btn { padding: 6px 0; font-size: 11px; min-width: 0; }
+  .rsc-order-ticket .rsc-leverage-range { height: 28px; min-height: 28px; padding: 0; accent-color: var(--tertiary); }
+  .rsc-order-ticket output { float: right; color: var(--tertiary); font-variant-numeric: tabular-nums; }
+  .rsc-order-estimate { font-size: 12px; padding: 10px; }
+  .rsc-risk-status { display: grid; gap: 3px; margin: 8px 0 12px; padding: 10px; font-size: 11px; border-inline-start: 2px solid var(--tertiary); background: var(--primary-very-low); }
+  .rsc-risk-status b { font-variant-numeric: tabular-nums; }
+  .rsc-trading-help { margin-top: 12px; font-size: 12px; summary { cursor: pointer; color: var(--primary-medium); } }
+}
+.rsc-app .rsc-pagination {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; font-size: 11px;
+  .rsc-page-buttons { display: flex; gap: 4px; }
+  .btn { font-size: 11px; padding: 6px 8px; }
+  .rsc-page-jump { display: flex; align-items: center; gap: 4px; margin: 0; }
+  .rsc-page-jump label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 11px; }
+  .rsc-page-jump input { width: 58px; min-height: 30px; height: 30px; padding: 4px 6px; margin: 0; font-size: 12px; }
+}
+@media (max-width: 1099px) {
+  .rsc-app[data-section="market"] {
+    .rsc-workbench { display: block; }
+    .rsc-workbench .rsc-market-layout { display: none; position: static; max-height: none; overflow: visible; padding: 0; }
+    .rsc-workbench.detail-open .rsc-market-main { display: none; }
+    .rsc-workbench.detail-open .rsc-market-layout { display: flex; }
+    .rsc-back { display: block; }
+  }
+}
+@media (max-width: 600px) {
+  .rsc-app[data-section="market"] {
+    .rsc-trading-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 0; padding: 12px 0; strong { font-size: 18px; } }
+    .rsc-position-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .rsc-chart, .rsc-order-ticket, .rsc-positions-card { padding: 14px; }
+    .rsc-card .rsc-ticket-inputs { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+  }
+  .rsc-app .rsc-page-jump input { font-size: 16px; }
+}

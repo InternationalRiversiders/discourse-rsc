@@ -20,7 +20,7 @@ module.exports = async function checkMobileLayout(page, output) {
         return {
           overflow: document.documentElement.scrollWidth > innerWidth + 1,
           overview: position.querySelector(".rsc-position-overview").clientWidth,
-          metrics: [...position.querySelectorAll("dd")].map((el) => ({
+          metrics: [...position.querySelectorAll(".rsc-position-overview dd")].map((el) => ({
             width: el.clientWidth,
             height: el.clientHeight,
           })),

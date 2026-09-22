@@ -51,10 +51,11 @@ module DiscourseRsc
       return unless source <= received_at + 5 && source >= received_at - 120
       data = { 'price' => MarketData.decimal(message.fetch('price')), 'source_time' => source.utc.iso8601(6),
         'received_at' => received_at.utc.iso8601(6), 'source' => 'coinbase_ws', 'delay_seconds' => 0,
-        'local_currency' => 'USD', 'local_price' => MarketData.decimal(message.fetch('price')) }
+        'change_basis' => '24h', 'local_currency' => 'USD', 'local_price' => MarketData.decimal(message.fetch('price')) }
       {'best_bid'=>'bid','best_ask'=>'ask','open_24h'=>'previous_close'}.each do |field, key|
         data[key] = MarketData.decimal(message[field]) if message[field].present?
       end
+      {'high_24h'=>'high','low_24h'=>'low'}.each { |field, key| data[key] = MarketData.optional_price(message[field]) }
       data
     rescue Error, KeyError, ArgumentError
       nil

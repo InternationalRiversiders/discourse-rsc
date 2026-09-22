@@ -28,7 +28,7 @@ module DiscourseRsc
         raise Error.new("high_risk_disabled", status: 403) unless SiteSetting.rsc_high_risk_enabled
         raise Error.new("high_risk_position_limit", status: 409) if (crypto + crypto_orders).any? { |p| p.leverage > 10 && p.instrument_id != instrument.id }
         unless crypto.any? { |p| p.instrument_id == instrument.id && p.leverage > 10 }
-          recent = Order.where(user_id: user_id, side: "close", status: "filled").where("leverage > 10 AND updated_at > ?", 30.minutes.ago).exists?
+          recent = high_risk_cooldown_until(user_id)
           raise Error.new("high_risk_cooldown", status: 429) if recent
         end
       end
@@ -41,6 +41,22 @@ module DiscourseRsc
         weighted(value, p.leverage)
       end + weighted(margin, leverage)
       raise Error.new("portfolio_risk_limit", status: 409) if risk > equity
+    end
+
+    # Read-only status for the order ticket; execution still checks under lock.
+    def self.high_risk_cooldown_until(user_id)
+      closed_at = Order.where(user_id: user_id, side: "close", status: "filled")
+        .where("leverage > 10 AND updated_at > ?", 30.minutes.ago).maximum(:updated_at)
+      closed_at && closed_at + 30.minutes
+    end
+
+    def self.high_risk_status(user_id)
+      positions = Position.where(user_id: user_id).where("leverage > 10").includes(:instrument).select { |p| p.instrument.category == "crypto" }
+      pending = Order.where(user_id: user_id, status: "pending").where.not(side: "close")
+        .where("leverage > 10").includes(:instrument).select { |p| p.instrument.category == "crypto" }
+      { cooldown_until: high_risk_cooldown_until(user_id),
+        positions: positions.map { |p| { instrument_id: p.instrument_id, symbol: p.instrument.symbol, hold_until: p.hold_until } },
+        pending: pending.map { |p| { instrument_id: p.instrument_id, symbol: p.instrument.symbol } } }
     end
 
     def self.weighted(margin, leverage)

@@ -11,6 +11,28 @@ module DiscourseRsc
       raise Error.new("provider_invalid_price", status: 503)
     end
 
+    # Optional display fields must not invalidate an otherwise usable quote.
+    def self.optional_price(value, rate = 1)
+      decimal(BigDecimal(decimal(value)) * rate) if value.present?
+    rescue Error, ArgumentError
+      nil
+    end
+
+    def self.session_stats(chart, source)
+      meta = chart.fetch("meta")
+      zone = ActiveSupport::TimeZone[meta["exchangeTimezoneName"].to_s] || ActiveSupport::TimeZone["UTC"]
+      day = source.in_time_zone(zone).to_date
+      indexes = Array(chart["timestamp"]).each_index.select do |i|
+        next false unless chart["timestamp"][i].is_a?(Numeric)
+        at = Time.at(chart["timestamp"][i]).utc
+        at <= source && at.in_time_zone(zone).to_date == day
+      end
+      quotes = chart.dig("indicators", "quote", 0) || {}
+      { "open" => meta["regularMarketOpen"] || (indexes.first && Array(quotes["open"])[indexes.first]),
+        "high" => meta["regularMarketDayHigh"] || indexes.filter_map { |i| optional_price(Array(quotes["high"])[i]) }.max_by { |v| BigDecimal(v) },
+        "low" => meta["regularMarketDayLow"] || indexes.filter_map { |i| optional_price(Array(quotes["low"])[i]) }.min_by { |v| BigDecimal(v) } }
+    end
+
     def self.symbol(value)
       value = value.to_s.strip.upcase
       raise Error.new("invalid_symbol") unless /\A[A-Z0-9^][A-Z0-9.^=:\/-]{0,39}\z/.match?(value)
@@ -42,7 +64,8 @@ module DiscourseRsc
         raise Error.new("invalid_symbol") unless /\A[A-Z0-9]+-USD\z/.match?(code)
         ticker = ProviderHttp.get("api.exchange.coinbase.com", "/products/#{code}/ticker")
         stats = ProviderHttp.get("api.exchange.coinbase.com", "/products/#{code}/stats")
-        { "price" => decimal(ticker.fetch("price")), "previous_close" => decimal(stats.fetch("open")),
+        { "price" => decimal(ticker.fetch("price")), "previous_close" => decimal(stats.fetch("open")), "change_basis" => "24h",
+          "high" => optional_price(stats["high"]), "low" => optional_price(stats["low"]),
           "bid" => decimal(ticker.fetch("bid")), "ask" => decimal(ticker.fetch("ask")),
           "source_time" => Time.iso8601(ticker.fetch("time")).iso8601(6), "delay_seconds" => 0,
           "local_price" => decimal(ticker.fetch("price")), "local_currency" => "USD", "source" => "coinbase" }
@@ -53,7 +76,8 @@ module DiscourseRsc
         ticker = data.fetch("result").values.first
         trades = ProviderHttp.get("api.kraken.com", "/0/public/Trades", pair: code, count: 1).fetch("result").reject { |key, _| key == "last" }.values.first
         source_time = Time.at(BigDecimal(trades.last.fetch(2).to_s)).utc
-        { "price" => decimal(ticker.fetch("c").first), "previous_close" => decimal(ticker.fetch("o")), "bid" => decimal(ticker.fetch("b").first), "ask" => decimal(ticker.fetch("a").first),
+        { "price" => decimal(ticker.fetch("c").first), "previous_close" => decimal(ticker.fetch("o")), "change_basis" => "utc_open",
+          "high" => optional_price(ticker.dig("h", 1)), "low" => optional_price(ticker.dig("l", 1)), "bid" => decimal(ticker.fetch("b").first), "ask" => decimal(ticker.fetch("a").first),
           "source_time" => source_time.iso8601(6), "delay_seconds" => 0, "source" => "kraken", "local_currency" => "USD", "local_price" => decimal(ticker.fetch("c").first) }
       when "okx"
         raise Error.new("invalid_symbol") unless /\A[A-Z0-9]+-USDT-SWAP\z/.match?(code)
@@ -61,17 +85,20 @@ module DiscourseRsc
         raise Error.new("provider_no_data") unless data["code"] == "0"
         ticker = data.fetch("data").first
         # Preserve the old virtual-market USDT accounting convention explicitly.
-        { "price" => decimal(ticker.fetch("last")), "previous_close" => decimal(ticker.fetch("open24h")), "bid" => decimal(ticker.fetch("bidPx")), "ask" => decimal(ticker.fetch("askPx")),
+        { "price" => decimal(ticker.fetch("last")), "previous_close" => decimal(ticker.fetch("open24h")), "change_basis" => "24h",
+          "high" => optional_price(ticker["high24h"]), "low" => optional_price(ticker["low24h"]), "bid" => decimal(ticker.fetch("bidPx")), "ask" => decimal(ticker.fetch("askPx")),
           "source_time" => Time.at(BigDecimal(ticker.fetch("ts")) / 1000).utc.iso8601(6), "delay_seconds" => 0, "source" => "okx", "local_currency" => "USDT", "local_price" => decimal(ticker.fetch("last")) }
       when "yahoo", "twelve_data"
         # Yahoo supplies the authoritative exchange session boundaries for both adapters.
-        meta = yahoo_chart(code).fetch("meta")
+        chart = yahoo_chart(code)
+        meta = chart.fetch("meta")
         session = meta.dig("currentTradingPeriod", "regular") || {}
         currency = meta.fetch("currency", instrument.currency)
         raw = meta.fetch("regularMarketPrice")
         previous = meta["chartPreviousClose"] || meta["previousClose"]
         source = Time.at(meta.fetch("regularMarketTime")).utc
         delay = Integer(meta.fetch("exchangeDataDelayedBy", 0)) * 60
+        stats = session_stats(chart, source)
         if instrument.provider == "twelve_data"
           key = SiteSetting.rsc_twelve_data_api_key
           raise Error.new("provider_key_required", status: 503) if key.blank?
@@ -79,6 +106,7 @@ module DiscourseRsc
           raise Error.new("provider_no_data", status: 503) unless td["close"] && td["timestamp"]
           raw, previous, currency = td["close"], td["previous_close"], td.fetch("currency", currency)
           source = Time.at(Integer(td["timestamp"])).utc
+          stats = td.slice("open", "high", "low")
           # Never silently reinterpret delayed account data as real-time.
           delay = [delay, SiteSetting.rsc_twelve_data_delay_seconds].max
         end
@@ -86,6 +114,7 @@ module DiscourseRsc
         { "price" => decimal(BigDecimal(decimal(raw)) * rate),
           "previous_close" => previous && decimal(BigDecimal(decimal(previous)) * rate),
           "local_price" => decimal(raw), "local_currency" => currency, "fx_rate" => rate.to_s("F"),
+          "open" => optional_price(stats["open"], rate), "high" => optional_price(stats["high"], rate), "low" => optional_price(stats["low"], rate), "change_basis" => "previous_close",
           "source_time" => source.iso8601, "delay_seconds" => delay,
           "delay_reported" => instrument.provider != 'yahoo' || !meta['exchangeDataDelayedBy'].nil?,
           "session_start" => session["start"] && Time.at(session["start"]).utc.iso8601,

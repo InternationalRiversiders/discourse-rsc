@@ -1,3 +1,4 @@
+import RscPagination from "./rsc-pagination";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -103,6 +104,11 @@ export default class extends Component {
       this.currentPage * 20
     );
   }
+  get pagination() { return { scope: `${this.search}/${this.category}/${this.sort}`, total: this.filtered.length, page: this.currentPage, pages: this.pageCount }; }
+  @action changePage(page) {
+    this.page = page; this.remember();
+    requestAnimationFrame(() => document.querySelector("#rsc-markets")?.scrollIntoView({ block: "start" }));
+  }
   get firstPage() {
     return this.currentPage === 1;
   }
@@ -141,7 +147,7 @@ export default class extends Component {
     this.remember();
   }
   <template>
-    <section class="rsc-market-board" aria-label={{uiText "market_quotes"}}>
+    <section id="rsc-markets" class="rsc-market-board" aria-label={{uiText "market_quotes"}}>
       <div class="rsc-board-heading"><div><p class="rsc-eyebrow">MARKETS</p><h2
           >{{uiText "market_quotes"}}</h2></div><span
           class="rsc-count"
@@ -183,7 +189,7 @@ export default class extends Component {
           }}</span><span>{{uiText "latest_price"}}</span><span>{{uiText
             "daily_change"
           }}</span></div>
-      <div class="rsc-quote-list">{{#each this.rows as |item|}}
+      <div class="rsc-quote-list">{{#each this.rows key="id" as |item|}}
           <div class="rsc-quote-item"><button
               type="button"
               class="rsc-quote-row {{if (eq @selectedId item.id) 'selected'}}"
@@ -200,7 +206,7 @@ export default class extends Component {
                   title={{item.quote.price}}
                 >{{formatPrice item.quote.price}}</strong><small
                 >{{item.localPrice}}</small></span>
-              <span class="rsc-quote-change {{item.tone}}"><strong
+              <span class="rsc-quote-change {{item.tone}}"><strong title={{item.changeLabel}}
                 >{{item.changeText}}</strong><svg
                   viewBox="0 0 600 150"
                   aria-hidden="true"
@@ -224,20 +230,7 @@ export default class extends Component {
         {{else}}<div class="rsc-empty"><strong>{{uiText
                 "no_results"
               }}</strong><p>{{uiText "search_hint"}}</p></div>{{/each}}</div>
-      <div class="rsc-list-footer"><span>{{uiText "auto_refresh"}}</span><div
-        ><button
-            type="button"
-            aria-label={{uiText "previous_page"}}
-            disabled={{this.firstPage}}
-            {{on "click" this.previous}}
-          >‹</button><span>{{this.currentPage}}
-            /
-            {{this.pageCount}}</span><button
-            type="button"
-            aria-label={{uiText "next_page"}}
-            disabled={{this.lastPage}}
-            {{on "click" this.next}}
-          >›</button></div></div>
+      <RscPagination @page={{this.pagination}} @change={{this.changePage}} />
     </section>
   </template>
 }

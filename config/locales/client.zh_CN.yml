@@ -185,7 +185,7 @@ zh_CN:
         gainers: 涨幅优先
         losers: 跌幅优先
         latest_price: 最新价 / RSC
-        daily_change: 日涨跌
+        daily_change: 涨跌幅
         no_quote: 暂无报价
         stale_quote: 报价已过期
         session_closed: 休市

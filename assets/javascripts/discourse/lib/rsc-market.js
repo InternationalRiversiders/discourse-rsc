@@ -39,6 +39,7 @@ export function marketView(item, now = Date.now()) {
     status,
     tradable: available && fresh && open,
     change,
+    changeLabel: item.category === "crypto" ? (quote.change_basis === "utc_open" || quote.source === "kraken" ? "今日涨跌（UTC）" : (quote.change_basis === "24h" || ["coinbase", "coinbase_ws", "okx"].includes(quote.source) ? "24h 涨跌" : "参考涨跌")) : "较前收",
     changeText:
       change === null ? "—" : `${change > 0 ? "+" : ""}${change.toFixed(2)}%`,
     tone:
