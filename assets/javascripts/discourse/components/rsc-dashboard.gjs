@@ -443,34 +443,8 @@ export default class RscDashboard extends Component {
         <RscNavigation />
       {{/if}}
       {{#if this.data.wallet.status_reason}}<p class="alert alert-info">账户已冻结：{{this.data.wallet.status_reason}}</p>{{/if}}
-      {{#unless this.compactHeader}}
-      <header class="rsc-heading">
-        <div class="rsc-heading-copy"><p class="rsc-eyebrow"><span
-              class="rsc-brand-mark"
-              aria-hidden="true"
-            >R</span>RIVERSIDE COIN</p>
-          <h1>{{#if (eq @section "market")}}{{uiText "exchange_title"}}{{else if
-              (eq @section "sports")
-            }}{{uiText "sports"}}{{else}}{{uiText "title"}}{{/if}}</h1>
-          <p class="rsc-heading-description">{{#if
-              (eq @section "market")
-            }}{{uiText "market_intro"}}{{else if
-              (eq @section "sports")
-            }}{{uiText "sports_intro"}}{{else}}{{uiText
-                "wallet_intro"
-              }}{{/if}}</p>
-        </div>
-        <div class="rsc-balance"><span>{{uiText "available"}}<span
-              class="rsc-balance-dot"
-              aria-hidden="true"
-            ></span></span><strong
-            title={{this.data.wallet.balance}}
-          >{{displayAmount this.data.wallet.balance}}
-            <small>RSC</small></strong><span
-            class="rsc-balance-caption"
-          >RIVERSIDE / WALLET</span></div>
-      </header>
-      {{/unless}}
+      <h1 class="sr-only">{{#if (eq @section "market")}}{{uiText "exchange_title"}}{{else if (eq @section "sports")}}{{uiText "sports"}}{{else}}{{uiText "title"}}{{/if}}</h1>
+      {{#unless this.compactHeader}}<p class="rsc-wallet-balance">{{uiText "available"}} <strong title={{this.data.wallet.balance}}>{{displayAmount this.data.wallet.balance}} RSC</strong></p>{{/unless}}
       {{#if this.data.demo}}<p class="rsc-trial">{{uiText "trial"}}</p>{{/if}}
 
       {{#if this.error}}<div

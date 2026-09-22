@@ -2030,3 +2030,6 @@
   }
   .rsc-app .rsc-page-jump input { font-size: 16px; }
 }
+
+.rsc-app .rsc-wallet-balance { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5em; margin: 0 0 16px; color: var(--primary-medium); }
+.rsc-app .rsc-wallet-balance strong { color: var(--primary); font-variant-numeric: tabular-nums; }

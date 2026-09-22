@@ -219,12 +219,7 @@ export default class extends Component {
     );
   }
   <template>
-    <main class="rsc-app rsc-admin-page"><RscNavigation />{{#unless this.currentUser.rsc_member}}<div class="rsc-breadcrumb"><LinkTo @route="discovery.latest">← {{uiText "back_to_forum"}}</LinkTo></div>{{/unless}}<header class="rsc-heading"><div><p
-            class="rsc-eyebrow"
-          ><span class="rsc-brand-mark" aria-hidden="true">R</span>RIVERSIDE /
-            ADMINISTRATION</p><h1>{{uiText "administration"}}</h1><p
-            class="rsc-heading-description"
-          >{{uiText "admin_intro"}}</p></div></header>
+    <main class="rsc-app rsc-admin-page"><RscNavigation />{{#unless this.currentUser.rsc_member}}<div class="rsc-breadcrumb"><LinkTo @route="discovery.latest">← {{uiText "back_to_forum"}}</LinkTo></div>{{/unless}}<h1 class="sr-only">{{uiText "administration"}}</h1>
       {{#unless this.currentUser.rsc_member}}<div class="alert alert-info" role="status">{{uiText "admin_without_membership"}}</div>{{/unless}}
       {{#if this.error}}<div
           class="alert alert-error"

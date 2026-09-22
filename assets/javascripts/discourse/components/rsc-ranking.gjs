@@ -163,14 +163,7 @@ export default class extends Component {
   <template>
     <main class="rsc-app rsc-ranking-page" aria-busy={{this.busy}}>
       <RscNavigation />
-      <header class="rsc-heading"><div><p class="rsc-eyebrow"><span
-              class="rsc-brand-mark"
-              aria-hidden="true"
-            >R</span>RIVERSIDE / LEADERBOARD</p><h1>{{uiText
-              "leaderboard"
-            }}</h1><p class="rsc-heading-description">{{uiText
-              "ranking_hint"
-            }}</p></div></header>
+      <h1 class="sr-only">{{uiText "leaderboard"}}</h1>
       {{#if this.error}}<p
           class="alert alert-error"
           role="alert"
