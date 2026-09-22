@@ -2,6 +2,7 @@ import Component from "@glimmer/component";
 import { service } from "@ember/service";
 import { LinkTo } from "@ember/routing";
 import { formatAmount } from "../lib/rsc-format";
+import { formatDateTime } from "../lib/campus-time";
 import { i18n } from "discourse-i18n";
 const text = (key) => i18n(`discourse_rsc.ui.${key}`);
 export default class extends Component {
@@ -11,6 +12,7 @@ export default class extends Component {
       <p>{{@model.sender}} · {{text "packet"}}</p><h1>{{@model.message}}</h1>
       <p class="rsc-price">{{formatAmount @model.total}} RSC</p>
       <p>{{@model.claimed_count}} / {{@model.count}} · {{text @model.status}}</p>
+      <p>{{text "expires_at"}} <time datetime={{@model.expires_at}}>{{formatDateTime @model.expires_at}}</time></p>
       {{#if this.currentUser}}<p>{{text "packet_membership_required"}}</p>
       {{else}}<p>{{text "packet_login_required"}}</p><LinkTo @route="login" class="btn btn-primary">{{text "login"}}</LinkTo>{{/if}}
       <p><LinkTo @route="discovery.latest">{{text "back_to_forum"}}</LinkTo></p>

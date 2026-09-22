@@ -1,0 +1,9 @@
+<% content_for :title, @packet_title %>
+<% content_for :head do %>
+  <%= raw crawlable_meta_data(title: @packet_title, description: @description_meta, url: @canonical_url) %>
+<% end %>
+<noscript>
+  <h1><%= @packet_title %></h1>
+  <p><%= @description_meta %></p>
+  <p>请启用 JavaScript 后打开红包。</p>
+</noscript>

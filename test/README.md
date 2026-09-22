@@ -95,3 +95,11 @@ isolated Redis/processes instead of sending traffic to provoke provider bans.
 `sports-browser.cjs` 在隔离论坛运行：先执行 `seed_browser.rb` 和 `seed_sports_browser.rb`。验证图片成功/失败占位、中文与英文原名、未知队名，以及两种配色下 320/390/768/1440 像素的布局。仅外部图片请求用固定图片和故障响应替代；论坛 API 为真实请求。实际 ESPN 队徽另作只读 HTTP 检查。
 
 中文名称表位于 `config/sports_names.zh_CN.json`，不调用翻译服务。新增球队可补充该表；未收录名称保留原文。数据源原始队名不改，中文展示跟随论坛当前语言。
+
+## 红包分享与浏览器时区（2026-09-22）
+
+`node test/campus-time-test.mjs` 检查六个独立插件内的日期工具保持一致，覆盖上海、纽约夏令时/冬令时、UTC、缺失或无效时区、缺失 Intl、无偏移的历史时间和纯日期。展示跟随浏览器时区，无法识别时回退 UTC+8；每日奖励和 RS Date 定时发布的业务时区不变。
+
+`packet_sharing_test.rb` 随隔离后端测试执行，验证原生与旧域名红包链接无需外网即可生成 Onebox，文本转义、公开元数据、未知红包 404，以及生成卡片不修改账本、领取记录或暴露领取明细。
+
+`packet-time-browser.cjs` 需在同时安装六个校园插件的隔离论坛中运行，使用合成账户和各插件示例内容；最后运行 `seed_packet_browser.rb`，将生成的 `/tmp/campus-packet-browser.json` 作为 `RSC_BROWSER_CREDENTIALS`。验证三种浏览器时区、320/390/1440 像素和两种配色下的紧凑红包页、实际领取、各插件时间展示，以及帖子内新旧两类链接的真实 Onebox。树洞和觅电保留相对时间，悬停提示显示本地绝对时间。不要对生产数据库运行种子脚本。

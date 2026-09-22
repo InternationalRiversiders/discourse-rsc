@@ -47,6 +47,7 @@ after_initialize do
     app/services/discourse_rsc/wallet
     app/services/discourse_rsc/commands
     app/services/discourse_rsc/red_packets
+    app/services/discourse_rsc/packet_sharing
     app/services/discourse_rsc/sports
     app/services/discourse_rsc/market_sessions
     app/services/discourse_rsc/trading_rules
@@ -83,6 +84,16 @@ after_initialize do
     app/jobs/scheduled/discourse_rsc_trading_tick
     app/jobs/scheduled/discourse_rsc_deliver_notifications
   ].each { |path| require_relative path }
+
+  Oneboxer.singleton_class.prepend(DiscourseRsc::LegacyPacketOnebox)
+  InlineOneboxer.singleton_class.prepend(DiscourseRsc::LegacyPacketInlineOnebox)
+  Oneboxer.register_local_handler("discourse_rsc/public_packets") do |_url, route|
+    DiscourseRsc::PacketSharing.html(DiscourseRsc::PacketSharing.local_packet(route))
+  end
+  InlineOneboxer.register_local_handler("discourse_rsc/public_packets") do |_url, route|
+    packet = DiscourseRsc::PacketSharing.local_packet(route)
+    { url: DiscourseRsc::PacketSharing.url(packet), title: DiscourseRsc::PacketSharing.title(packet) } if packet
+  end
 
   # These guards remain effective even while the plugin is disabled for cutover.
   UserMerger.prepend(DiscourseRsc::Safety::MergeGuard)

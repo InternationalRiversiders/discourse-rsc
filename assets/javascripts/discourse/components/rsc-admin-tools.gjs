@@ -1,3 +1,4 @@
+import { formatDateTime } from "../lib/campus-time";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -8,7 +9,7 @@ import { ajax } from "discourse/lib/ajax";
 import { extractError } from "discourse/lib/ajax-error";
 import { formatAmount } from "../lib/rsc-format";
 import RscPagination from "./rsc-pagination";
-const when = (value) => value ? new Date(value).toLocaleString() : "—";
+const when = formatDateTime;
 const kinds = [{value:"all",label:"全部"},{value:"transfer",label:"转账"},{value:"post_tip",label:"帖子打赏"},{value:"red_packet",label:"红包"},{value:"issuance",label:"发行"},{value:"admin_adjustment",label:"资产调整"}];
 const states = ["all","success","failed","pending","open","exhausted","closed","expired"];
 export default class extends Component {

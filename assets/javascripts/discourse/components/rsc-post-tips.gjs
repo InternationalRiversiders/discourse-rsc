@@ -1,9 +1,10 @@
+import { formatDateTime } from "../lib/campus-time";
 import { formatAmount } from "../lib/rsc-format";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { service } from "@ember/service";
 import { i18n } from "discourse-i18n";
-const when = (value) => value ? new Date(value).toLocaleString() : "";
+const when = formatDateTime;
 export default class extends Component {
   @service rscTips;
   @tracked data;

@@ -1,3 +1,4 @@
+import { formatDateTime, formatDate } from "../lib/campus-time";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -141,8 +142,8 @@ export default class extends Component {
     return {
       high: formatPrice(String(max)),
       low: formatPrice(String(min)),
-      start: rows[0].at ? new Date(rows[0].at).toLocaleDateString() : "—",
-      end: rows.at(-1).at ? new Date(rows.at(-1).at).toLocaleDateString() : "—",
+      start: rows[0].at ? formatDate(rows[0].at) : "—",
+      end: rows.at(-1).at ? formatDate(rows.at(-1).at) : "—",
       points: rows
         .map((p, i) => `${20 + (i * 560) / (rows.length - 1)},${y(p.close)}`)
         .join(" "),
@@ -157,7 +158,7 @@ export default class extends Component {
           Number(p.close) >= Number(p.open || p.close)
             ? "positive"
             : "negative",
-        title: `${p.at ? new Date(p.at).toLocaleString() : ""} · 开 ${formatPrice(p.open)} 高 ${formatPrice(p.high)} 低 ${formatPrice(p.low)} 收 ${formatPrice(p.close)}`,
+        title: `${p.at ? formatDateTime(p.at) : ""} · 开 ${formatPrice(p.open)} 高 ${formatPrice(p.high)} 低 ${formatPrice(p.low)} 收 ${formatPrice(p.close)}`,
       })),
     };
   }

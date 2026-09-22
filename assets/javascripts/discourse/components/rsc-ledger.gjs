@@ -1,3 +1,4 @@
+import { formatDateTime } from "../lib/campus-time";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -7,7 +8,7 @@ import { ajax } from "discourse/lib/ajax";
 import { extractError } from "discourse/lib/ajax-error";
 import { i18n } from "discourse-i18n";
 import { formatAmount, signedAmount, valueTone } from "../lib/rsc-format";
-const when = (value) => value ? new Date(value).toLocaleString() : "—";
+const when = formatDateTime;
 const uiText = (key) => i18n(`discourse_rsc.ui.${key}`, { defaultValue: key });
 export default class extends Component {
   @tracked entries = [];

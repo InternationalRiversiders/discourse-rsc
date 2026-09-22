@@ -1,3 +1,4 @@
+import { formatDateTime, formatDate, formatTime } from "../lib/campus-time";
 import Component from "@glimmer/component";
 import { on } from "@ember/modifier";
 import { fn } from "@ember/helper";
@@ -5,9 +6,9 @@ import { eq, not } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
 import { formatAmount, formatPrice, formatQuantity, signedAmount, valueTone } from "../lib/rsc-format";
 const uiText = (key) => i18n(`discourse_rsc.ui.${key}`);
-const dateLabel = (value) => new Date(value).toLocaleDateString();
-const timeLabel = (value) => new Date(value).toLocaleTimeString();
-const when = (value) => value ? new Date(value).toLocaleString() : "—";
+const dateLabel = (value) => formatDate(value);
+const timeLabel = (value) => formatTime(value);
+const when = formatDateTime;
 export default class RscOrders extends Component {
   <template>
     <section id="rsc-orders" class="rsc-card">

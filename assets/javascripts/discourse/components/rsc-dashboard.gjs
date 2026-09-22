@@ -1,3 +1,4 @@
+import { formatDateTime } from "../lib/campus-time";
 import RscNavigation from "./rsc-navigation";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
@@ -31,7 +32,7 @@ const pretty = formatAmount;
 const displayAmount = formatWallet;
 const tone = (value) =>
   Number(value) > 0 ? "positive" : Number(value) < 0 ? "negative" : "neutral";
-const when = (value) => (value ? new Date(value).toLocaleString() : "—");
+const when = formatDateTime;
 // Numbers are used only for the chart's pixels. Monetary requests remain strings.
 const points = (history) => {
   const values = (history || [])
@@ -385,8 +386,13 @@ export default class RscDashboard extends Component {
         role="status"
       >{{uiText "read_only"}}</p>{{/if}}
     <main class="rsc-app" data-section={{@section}}>
-      <RscNavigation />
+      {{#if (eq @section "packet")}}
+        <nav class="rsc-packet-nav" aria-label="红包导航"><LinkTo @route="rsc.index">← RS Coin</LinkTo><span>{{uiText "available"}} {{displayAmount this.data.wallet.balance}} RSC</span></nav>
+      {{else}}
+        <RscNavigation />
+      {{/if}}
       {{#if this.data.wallet.status_reason}}<p class="alert alert-info">账户已冻结：{{this.data.wallet.status_reason}}</p>{{/if}}
+      {{#unless (eq @section "packet")}}
       <header class="rsc-heading">
         <div class="rsc-heading-copy"><p class="rsc-eyebrow"><span
               class="rsc-brand-mark"
@@ -413,6 +419,7 @@ export default class RscDashboard extends Component {
             class="rsc-balance-caption"
           >RIVERSIDE / WALLET</span></div>
       </header>
+      {{/unless}}
       {{#if this.data.demo}}<p class="rsc-trial">{{uiText "trial"}}</p>{{/if}}
 
       {{#if this.error}}<div
@@ -791,7 +798,7 @@ export default class RscDashboard extends Component {
       {{else if (eq @section "packet")}}
         <section class="rsc-card rsc-packet"><p>{{this.data.packet.sender}}
             ·
-            {{uiText "packet"}}</p><h2>{{this.data.packet.message}}</h2><strong
+            {{uiText "packet"}}</p><h1>{{this.data.packet.message}}</h1><strong
             class="rsc-price"
           >{{formatAmount this.data.packet.total}} RSC</strong>
           {{#if this.data.packet.my_amount}}<p class="rsc-price">你已领取 {{formatAmount this.data.packet.my_amount}} RSC</p>{{/if}}
@@ -819,12 +826,12 @@ export default class RscDashboard extends Component {
               >{{uiText "claim_packet"}}</button>{{/if}}{{/if}}<p>{{uiText
               "expires_at"
             }}
-            {{when this.data.packet.expires_at}}</p></section>
+            <time datetime={{this.data.packet.expires_at}}>{{when this.data.packet.expires_at}}</time></p></section>
         <section class="rsc-card"><h2>{{uiText "packet_claims"}}</h2><div
             class="rsc-table"
           ><table><tbody>{{#each this.data.packet.claims as |claim|}}<tr><td
                     >{{claim.username}}</td><td>{{formatAmount claim.amount}}
-                      RSC</td><td>{{when claim.at}}</td></tr>{{else}}<tr><td
+                      RSC</td><td><time datetime={{claim.at}}>{{when claim.at}}</time></td></tr>{{else}}<tr><td
                     >{{uiText
                         "empty"
                       }}</td></tr>{{/each}}</tbody></table></div></section>

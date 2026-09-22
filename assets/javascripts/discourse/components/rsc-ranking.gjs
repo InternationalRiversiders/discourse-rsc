@@ -1,3 +1,4 @@
+import { formatDateTime, formatDate } from "../lib/campus-time";
 import RscNavigation from "./rsc-navigation";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
@@ -26,7 +27,7 @@ const sorts = [
 ];
 const sections = ["positions", "orders", "predictions"];
 const display = formatAmount;
-const when = (value) => (value ? new Date(value).toLocaleString() : "");
+const when = formatDateTime;
 export default class extends Component {
   @tracked query = "";
   @tracked result;
@@ -152,8 +153,8 @@ export default class extends Component {
             `${20 + (560 * (Date.parse(p.at) - start)) / (end - start || 1)},${160 - (140 * (values[i] - min)) / span}`
         )
         .join(" "),
-      start: new Date(start).toLocaleDateString(),
-      end: new Date(end).toLocaleDateString(),
+      start: formatDate(start),
+      end: formatDate(end),
       last: points.at(-1).return_pct,
     };
   }

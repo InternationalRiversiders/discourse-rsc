@@ -1888,3 +1888,38 @@
     .rsc-filter-bar input, .rsc-filter-bar select { font-size: 16px; }
   }
 }
+.rsc-app .rsc-packet-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 0;
+  font-size: var(--font-down-1);
+}
+.rsc-app .rsc-packet-nav span {
+  color: var(--primary-medium);
+}
+.rsc-app[data-section="packet"] .rsc-packet h1 {
+  margin: 8px 0 16px;
+  font-size: var(--font-up-3);
+  overflow-wrap: anywhere;
+}
+.onebox.rsc-packet-onebox .rsc-envelope {
+  float: left;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 76px;
+  margin: 0 16px 8px 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, #de493f 12%, var(--secondary));
+  font-size: 36px;
+}
+.onebox.rsc-packet-onebox .onebox-body {
+  display: flow-root;
+  overflow-wrap: anywhere;
+}
+.onebox.rsc-packet-onebox h3 {
+  margin-top: 0;
+}
