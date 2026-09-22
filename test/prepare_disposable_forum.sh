@@ -33,3 +33,4 @@ psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d rsc_discourse_smoke -f db
 bundle exec rake db:migrate >/tmp/rsc-migrate.log 2>&1 || { tail -50 /tmp/rsc-migrate.log; exit 1; }
 bundle exec rake db:seed >/tmp/rsc-seed.log 2>&1 || { tail -50 /tmp/rsc-seed.log; exit 1; }
 bundle exec rails runner /rsc/test/native_adaptation_test.rb
+bundle exec rails runner /rsc/test/sports_presentation_test.rb -n '/test_sports_presentation/'

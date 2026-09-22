@@ -144,9 +144,11 @@ module DiscourseRsc
         fields = { sport: sport, league: league, home: home.dig("team", "displayName"), away: away.dig("team", "displayName"),
                    starts_at: DateTime.iso8601(event.fetch("date")).to_time, status: state, allow_draw: sport == "soccer", result: result,
                    score: { home: scores[0], away: scores[1], regulation: result_scores }, source: "espn",
-                   provider_data: { stage: competition['altGameNote'] || competition.dig("notes", 0, "headline") || match.provider_data["stage"] || event['shortName'],
+                   provider_data: match.provider_data.merge({ stage: competition['altGameNote'] || competition.dig("notes", 0, "headline") || match.provider_data["stage"] || event['shortName'],
                      venue: competition.dig('venue', 'fullName'), status_detail: status['shortDetail'] || status['detail'] || status['description'],
-                     status_name: name, synced_at: Time.current.iso8601, result_pending_review: state == "finished" && result.nil? } }
+                     status_name: name, synced_at: Time.current.iso8601, result_pending_review: state == "finished" && result.nil? }.stringify_keys)
+                     .merge(SportsPresentation.provider_team(home.fetch("team")).transform_keys { |key| "home_#{key}" })
+                     .merge(SportsPresentation.provider_team(away.fetch("team")).transform_keys { |key| "away_#{key}" }) }
         fields[:confirmed_at] = Time.current if changed || match.confirmed_at.nil?
         fields.merge!(odds: odds, odds_at: Time.current) if odds.present? && state == "scheduled"
         match.update!(fields)

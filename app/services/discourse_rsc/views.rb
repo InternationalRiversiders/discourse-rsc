@@ -16,7 +16,7 @@ module DiscourseRsc
     end
 
     def self.prediction(item)
-      {id:item.id,match_id:item.sport_match_id,match_name:"#{item.sport_match.home} — #{item.sport_match.away}",pick:item.pick,stake:Amount.format(item.stake_units),odds:item.odds,status:item.status,payout:Amount.format(item.payout_units),potential_payout:Amount.format(item.stake_units.to_i*Amount.parse(item.odds)/Amount::UNIT),created_at:item.created_at,settled_at:item.settled_at}
+      {id:item.id,match_id:item.sport_match_id,match_name:"#{SportsPresentation.team(item.sport_match.home)} — #{SportsPresentation.team(item.sport_match.away)}",pick:item.pick,stake:Amount.format(item.stake_units),odds:item.odds,status:item.status,payout:Amount.format(item.payout_units),potential_payout:Amount.format(item.stake_units.to_i*Amount.parse(item.odds)/Amount::UNIT),created_at:item.created_at,settled_at:item.settled_at}
     end
 
     def self.matches(user_id, focus: nil)
@@ -29,7 +29,7 @@ module DiscourseRsc
       matches.map do |item|
         reason=if item.status!='scheduled' || item.starts_at<=Time.current; 'match_locked'
           elsif !item.odds_at || item.odds_at<SiteSetting.rsc_odds_max_age_hours.hours.ago || item.odds.empty?; 'odds_unavailable'; end
-        {id:item.id,sport:item.sport,league:item.league,league_name:I18n.t("discourse_rsc.leagues.#{item.league.tr('.', '_')}",default:item.league),stage:item.provider_data['stage'],venue:item.provider_data['venue'],status_detail:item.provider_data['status_detail'],home:item.home,away:item.away,starts_at:item.starts_at,status:item.status,allow_draw:item.allow_draw,odds:item.odds,odds_at:item.odds_at,score:item.score,participants:counts.fetch(item.id,0),locked_reason:reason,prediction:own[item.id] && prediction(own[item.id])}
+        {id:item.id,sport:item.sport,league:item.league,league_name:I18n.t("discourse_rsc.leagues.#{item.league.tr('.', '_')}",default:item.league),stage:SportsPresentation.stage(item.provider_data['stage']),venue:item.provider_data['venue'],status_detail:SportsPresentation.status_detail(item.provider_data['status_detail']),home:item.home,away:item.away,home_name:SportsPresentation.team(item.home),away_name:SportsPresentation.team(item.away),home_logo:SportsPresentation.logo(item.provider_data,'home',item.home),away_logo:SportsPresentation.logo(item.provider_data,'away',item.away),starts_at:item.starts_at,status:item.status,allow_draw:item.allow_draw,odds:item.odds,odds_at:item.odds_at,score:item.score,participants:counts.fetch(item.id,0),locked_reason:reason,prediction:own[item.id] && prediction(own[item.id])}
       end
     end
 

@@ -162,7 +162,8 @@ module DiscourseRsc
         @matches[row.fetch("id")] = SportMatch.create!(external_id: row.fetch("external_id"), sport: row.fetch("sport_key", "soccer"), league: row.fetch("league_slug", "fifa.world"),
           home: row.fetch("home_team"), away: row.fetch("away_team"), starts_at: row.fetch("starts_at"), status: row.fetch("status"), allow_draw: row.fetch("allow_draw", 1) != 0,
           odds: { home: row["odds_home"], draw: row["odds_draw"], away: row["odds_away"] }.compact, odds_at: row["odds_updated_at"],
-          score: { home: row["home_score"], away: row["away_score"] }, result: row["result_pick"], confirmed_at: nil, source: row.fetch("source", "espn"), provider_data: { stage: row["stage"] })
+          score: { home: row["home_score"], away: row["away_score"] }, result: row["result_pick"], confirmed_at: nil, source: row.fetch("source", "espn"),
+          provider_data: { stage: row["stage"], home_logo: SportsPresentation.safe_logo(row["home_logo"]), away_logo: SportsPresentation.safe_logo(row["away_logo"]), home_abbr: row["home_abbr"], away_abbr: row["away_abbr"] }.compact)
       end
       rows("world_cup_predictions").each do |row|
         prediction = Prediction.create!(user_id: user(row.fetch("discourse_user_id")), sport_match_id: @matches.fetch(row.fetch("match_id")).id,

@@ -1401,6 +1401,26 @@
     color: color-mix(in srgb, #a7774c 65%, var(--primary));
     background: color-mix(in srgb, #a7774c 7%, var(--secondary));
   }
+  .rsc-team-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+  }
+  .rsc-team-symbol:has(.rsc-team-logo) {
+    background: #f7f8fa;
+    border-color: #dce1e8;
+  }
+  .rsc-team-name {
+    min-width: 0;
+    line-height: 1.4;
+  }
+  .rsc-team-name small {
+    display: block;
+    margin-top: 3px;
+    color: var(--rsc-muted);
+    font-size: 11px;
+    font-weight: 400;
+  }
   .rsc-versus {
     color: var(--rsc-muted);
     font-size: 11px;

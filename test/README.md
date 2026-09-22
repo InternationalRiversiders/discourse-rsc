@@ -87,3 +87,11 @@ isolated Redis/processes instead of sending traffic to provoke provider bans.
 只在 `prepare_disposable_forum.sh` 创建的隔离论坛中，先运行 `seed_browser.rb`，再运行 `seed_compact_browser.rb` 添加合成历史与盈亏记录。浏览器脚本使用与 `browser.cjs` 相同的 `RSC_PLAYWRIGHT`、`RSC_CHROMIUM`、`RSC_BROWSER_CREDENTIALS`、`RSC_BROWSER_OUTPUT` 环境变量及隔离网络命名空间。测试数据不来自生产用户。
 
 `native_adaptation_test.rb` 的统一流水测试同时验证 20 条和原有 50 条分页、跨新旧记录的游标连续性、权限，以及隐藏期初项不修改账本和余额；`format_test.mjs` 验证带正负号的金额仍以十进制字符串截断。
+
+## 赛事队徽与中文名称（2026-09-22）
+
+`sports_presentation_test.rb` 验证 ESPN 的 logo/logos 两种字段、缺图时保留上次队徽、图片域名限制、中文/英文显示及未知球队回退，以及从 LegacyRecord 恢复历史队徽的幂等性。恢复仅更新 provider_data，不调用赛事同步或结算，不改赔率、赛果、预测及账本。
+
+`sports-browser.cjs` 在隔离论坛运行：先执行 `seed_browser.rb` 和 `seed_sports_browser.rb`。验证图片成功/失败占位、中文与英文原名、未知队名，以及两种配色下 320/390/768/1440 像素的布局。仅外部图片请求用固定图片和故障响应替代；论坛 API 为真实请求。实际 ESPN 队徽另作只读 HTTP 检查。
+
+中文名称表位于 `config/sports_names.zh_CN.json`，不调用翻译服务。新增球队可补充该表；未收录名称保留原文。数据源原始队名不改，中文展示跟随论坛当前语言。

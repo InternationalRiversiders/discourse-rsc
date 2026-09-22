@@ -12,6 +12,7 @@ import { extractError } from "discourse/lib/ajax-error";
 import RscPackets from "./rsc-packets";
 import RscLedger from "./rsc-ledger";
 import RscOrders from "./rsc-orders";
+import RscTeam from "./rsc-team";
 import RscHistory from "./rsc-history";
 import RscDiscovery from "./rsc-discovery";
 import RscMarketList from "./rsc-market-list";
@@ -28,10 +29,6 @@ import { i18n } from "discourse-i18n";
 const uiText = (value) => i18n(`discourse_rsc.ui.${value}`);
 const pretty = formatAmount;
 const displayAmount = formatWallet;
-const initials = (value) =>
-  Array.from(value || "")
-    .slice(0, 2)
-    .join("");
 const tone = (value) =>
   Number(value) > 0 ? "positive" : Number(value) < 0 ? "negative" : "neutral";
 const when = (value) => (value ? new Date(value).toLocaleString() : "—");
@@ -719,17 +716,9 @@ export default class RscDashboard extends Component {
                   data-status={{match.status}}
                 >{{uiText match.status}}</span></div>
               {{#if match.stage}}<p class="rsc-muted">{{match.stage}}</p>{{/if}}
-              <h2 class="rsc-teams"><span class="rsc-team"><span
-                    class="rsc-team-symbol"
-                    aria-hidden="true"
-                  >{{initials match.home}}</span><span
-                  >{{match.home}}</span></span><span
+              <h2 class="rsc-teams"><RscTeam @name={{match.home_name}} @original={{match.home}} @logo={{match.home_logo}} /><span
                   class="rsc-versus"
-                >VS</span><span class="rsc-team"><span
-                    class="rsc-team-symbol away"
-                    aria-hidden="true"
-                  >{{initials match.away}}</span><span
-                  >{{match.away}}</span></span></h2>
+                >VS</span><RscTeam @name={{match.away_name}} @original={{match.away}} @logo={{match.away_logo}} @away={{true}} /></h2>
               <p class="rsc-match-time">{{when match.starts_at}} · {{match.participants}} 人参与</p>
               {{#if match.venue}}<p class="rsc-muted">{{match.venue}}</p>{{/if}}
               {{#if match.status_detail}}<p class="rsc-muted">{{match.status_detail}}</p>{{/if}}

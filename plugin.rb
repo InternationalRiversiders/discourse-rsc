@@ -55,6 +55,7 @@ after_initialize do
     app/services/discourse_rsc/provider_http
     app/services/discourse_rsc/market_data
     app/services/discourse_rsc/crypto_stream
+    app/services/discourse_rsc/sports_presentation
     app/services/discourse_rsc/sports_data
     app/services/discourse_rsc/risk
     app/services/discourse_rsc/valuation
