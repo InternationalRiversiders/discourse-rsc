@@ -1708,7 +1708,6 @@
 
 .rsc-quote-item { display: flex; align-items: center; border-bottom: 1px solid var(--primary-low); }
 .rsc-quote-item .rsc-quote-row { flex: 1; min-width: 0; border-bottom: 0; }
-.rsc-quote-actions { display: flex; flex-direction: column; gap: .35em; padding: .5em; }
 .rsc-ranked-user { display: inline-flex; align-items: center; gap: .35em; }
 .rsc-app.rsc-ranking-page button.rsc-trader-link {
   display: inline-flex; align-items: center; justify-content: center;
@@ -1747,7 +1746,6 @@
 .rsc-interactive-chart { touch-action: pan-y; cursor: grab; }
 .rsc-interactive-chart:active { cursor: grabbing; }
 .rsc-read-only { max-width: 1440px; margin: 1em auto; }
-@media (max-width: 600px) { .rsc-quote-actions { padding: .25em; } .rsc-quote-actions .btn { padding: .35em .5em; font-size: .8em; } }
 
 .rsc-trader-detail .rsc-market-summary > div { display: flex; flex-direction: column; gap: .4em; }
 
@@ -2086,4 +2084,46 @@
   .rsc-ticket-heading h2 { margin: 0; }
   .rsc-ticket-heading .rsc-close-order { margin-inline-start: auto; font-size: 12px; }
   .rsc-ticket-heading { margin-bottom: 12px; }
+}
+
+// Fit two quote columns only when the board itself has room, including sidebars.
+.rsc-app[data-section="market"] {
+  .rsc-market-board { container: rsc-quotes / inline-size; }
+  .rsc-quote-list, .rsc-quote-headers { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .rsc-quote-head[data-column="2"] { display: none; }
+  .rsc-quote-item { min-width: 0; }
+  .rsc-quote-item .rsc-quote-row { height: 100%; padding-block: 12px; }
+  .rsc-quote-list > .rsc-empty { grid-column: 1 / -1; }
+  @container rsc-quotes (min-width: 720px) {
+    .rsc-quote-list, .rsc-quote-headers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .rsc-quote-head[data-column="2"] { display: grid; }
+    .rsc-quote-item:nth-child(odd), .rsc-quote-head:first-child { border-inline-end: 1px solid var(--rsc-line); }
+  }
+  .rsc-detail-heading { align-items: flex-start; gap: 12px; }
+  .rsc-detail-heading > div:first-child { min-width: 0; }
+  .rsc-detail-heading .rsc-eyebrow { margin: 0 0 4px; font-size: 10px; line-height: 1.3; overflow-wrap: anywhere; }
+  .rsc-detail-heading h2 { margin: 0; font-size: 18px; line-height: 1.3; overflow-wrap: anywhere; }
+  .rsc-detail-tools { display: flex; align-items: flex-end; flex-direction: column; flex-shrink: 0; gap: 4px; }
+  .rsc-detail-tools .rsc-back {
+    display: inline-flex; align-items: center; gap: 4px;
+    min-height: 28px; padding: 3px 6px; font-size: 11px;
+    border: 0; border-radius: 4px; background: transparent; box-shadow: none; color: var(--primary-medium);
+    &:hover:not(:disabled) { border: 0; background: var(--primary-very-low); color: var(--primary); }
+  }
+  .rsc-detail-tools .rsc-back svg { width: 12px; height: 12px; margin: 0; }
+  .rsc-quote-hero { margin-top: 10px; line-height: 1.25; }
+}
+
+.rsc-app .rsc-ranking-table {
+  .rsc-trader-columns { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 12px; }
+  .rsc-trader-records, .rsc-performance { min-width: 0; }
+  .rsc-trader-columns .rsc-performance { margin-top: 0; max-width: none; }
+  .rsc-trader-columns .rsc-market-summary { margin-top: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @container (min-width: 900px) {
+    .rsc-trader-columns { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: start; gap: 24px; }
+    .rsc-trader-columns .rsc-performance { border-inline-start: 1px solid var(--rsc-line); padding-inline-start: 24px; }
+  }
+  @container (max-width: 480px) {
+    .rsc-trader-columns .rsc-market-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
 }

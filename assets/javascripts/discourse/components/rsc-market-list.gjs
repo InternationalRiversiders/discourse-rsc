@@ -5,7 +5,7 @@ import { action } from "@ember/object";
 import { debounce, cancel } from "@ember/runloop";
 import { ajax } from "discourse/lib/ajax";
 import { on } from "@ember/modifier";
-import { fn } from "@ember/helper";
+import { fn, array } from "@ember/helper";
 import { eq } from "discourse/truth-helpers";
 import { i18n } from "discourse-i18n";
 import { formatPrice } from "../lib/rsc-format";
@@ -184,11 +184,11 @@ export default class extends Component {
             value="losers"
             selected={{eq this.sort "losers"}}
           >{{uiText "losers"}}</option></select></div>
-      <div class="rsc-quote-head" aria-hidden="true"><span>{{uiText
+      <div class="rsc-quote-headers" aria-hidden="true">{{#each (array 1 2) as |column|}}<div class="rsc-quote-head" data-column={{column}}><span>{{uiText
             "instrument"
           }}</span><span>{{uiText "latest_price"}}</span><span>{{uiText
             "daily_change"
-          }}</span></div>
+          }}</span></div>{{/each}}</div>
       <div class="rsc-quote-list">{{#each this.rows key="id" as |item|}}
           <div class="rsc-quote-item"><button
               type="button"
@@ -216,17 +216,7 @@ export default class extends Component {
                     stroke="currentColor"
                     stroke-width="10"
                   /></svg></span>
-            </button><div class="rsc-quote-actions"><button
-                type="button"
-                class="btn btn-small positive"
-                disabled={{@readOnly}}
-                {{on "click" (fn @onTrade item.id "long")}}
-              >{{uiText "long"}}</button><button
-                type="button"
-                class="btn btn-small negative"
-                disabled={{@readOnly}}
-                {{on "click" (fn @onTrade item.id "short")}}
-              >{{uiText "short"}}</button></div></div>
+            </button></div>
         {{else}}<div class="rsc-empty"><strong>{{uiText
                 "no_results"
               }}</strong><p>{{uiText "search_hint"}}</p></div>{{/each}}</div>

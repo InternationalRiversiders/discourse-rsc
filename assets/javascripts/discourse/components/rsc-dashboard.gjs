@@ -1,6 +1,7 @@
 import { formatDateTime } from "../lib/campus-time";
 import RscNavigation from "./rsc-navigation";
 import ForumUser from "./rsc-user";
+import dIcon from "discourse/ui-kit/helpers/d-icon";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -164,11 +165,6 @@ export default class RscDashboard extends Component {
   @action viewPosition(position) {
     this.selectMarket(position.instrument_id);
     requestAnimationFrame(() => document.querySelector(".rsc-market-layout")?.scrollIntoView({ block: "start", behavior: "smooth" }));
-  }
-  @action quickTrade(id, side) {
-    this.selectMarket(id);
-    this.side = side;
-    this.openOrderTicket();
   }
   @action openOrderTicket() {
     if (!this.selected) { return; }
@@ -646,22 +642,16 @@ export default class RscDashboard extends Component {
             @now={{this.quoteClock}}
             @selectedId={{this.selected.id}}
             @onSelect={{this.selectMarket}}
-            @onTrade={{this.quickTrade}}
             @readOnly={{this.data.read_only}}
           /></div>
           {{#if this.marketDetailVisible}}
             <div class="rsc-market-layout"><section class="rsc-card rsc-chart">
-                <button
-                  type="button"
-                  class="rsc-back"
-                  {{on "click" this.backToMarkets}}
-                >← {{uiText "back_to_markets"}}</button>
                 <div class="rsc-detail-heading"><div><p
                       class="rsc-eyebrow"
                     >{{this.selected.symbol}}</p><h2
-                    >{{this.selected.name}}</h2></div><span
+                    >{{this.selected.name}}</h2></div><div class="rsc-detail-tools"><span
                     class="rsc-market-status {{this.selectedMarket.status}}"
-                  >{{uiText this.selectedMarket.status}}</span></div>
+                  >{{uiText this.selectedMarket.status}}</span><button type="button" class="btn btn-flat rsc-back" {{on "click" this.backToMarkets}}>{{dIcon "arrow-left"}}<span>返回列表</span></button></div></div>
                 <div class="rsc-quote-hero"><strong
                     class="rsc-price"
                   >{{formatPrice this.selected.quote.price}}

@@ -214,6 +214,7 @@ export default class extends Component {
           {{#if this.detailError}}<p role="alert" class="alert alert-error">{{this.detailError}}</p>{{/if}}
           {{#if this.detailBusy}}<p role="status" class="rsc-muted">正在加载…</p>{{/if}}
           {{#if this.detail}}
+          <div class="rsc-trader-columns"><div class="rsc-trader-records">
           <div class="rsc-market-summary"><div>{{uiText "equity"}}<strong
               >{{display this.detail.summary.equity}}</strong></div><div
             >{{uiText "total_pnl"}}<strong>{{display
@@ -253,7 +254,7 @@ export default class extends Component {
                         "empty"
                       }}</td></tr>{{/each}}</tbody></table></div>
           <RscPagination @page={{this.detail.pagination}} @change={{this.detailPage}} @busy={{this.detailBusy}} />
-          <div class="rsc-performance">
+          </div><div class="rsc-performance">
             <div class="rsc-performance-heading"><h3>{{uiText "historical_performance"}}</h3>
               <div class="rsc-performance-ranges" role="group" aria-label="收益图时间范围">
                 {{#each ranges as |range|}}<button type="button" class="btn {{if (eq range.days this.performanceDays) 'btn-primary'}}" aria-pressed={{if (eq range.days this.performanceDays) "true" "false"}} {{on "click" (fn this.performanceRange range.days)}}>{{range.label}}</button>{{/each}}
@@ -266,7 +267,7 @@ export default class extends Component {
               <div class="rsc-chart-axis"><span>{{when this.performance.start}} → {{when this.performance.end}}</span><span>累计 {{formatPercent this.performance.last}}</span></div>
             {{else}}<p class="rsc-performance-empty">该时段没有足够的收益记录</p>{{/if}}
             <p class="rsc-muted rsc-performance-note">{{uiText "performance_hint"}}</p>
-          </div>
+          </div></div>
           {{/if}}
         </section></td></tr>{{/if}}
               {{else}}<tr><td colspan="9">{{uiText "empty"}}</td></tr>{{/each}}
