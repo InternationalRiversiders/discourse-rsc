@@ -2,6 +2,7 @@ import { formatDateTime, formatDate } from "../lib/campus-time";
 import RscNavigation from "./rsc-navigation";
 import RscPagination from "./rsc-pagination";
 import ForumUser from "./rsc-user";
+import dIcon from "discourse/ui-kit/helpers/d-icon";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -184,17 +185,14 @@ export default class extends Component {
               {{#each this.rankedRows as |row|}}<tr><td><span
                       class="rsc-rank"
                       data-rank={{row.rank}}
-                    >{{row.rank}}</span></td><td><ForumUser @user={{row.forum_user}} @name={{row.username}} /><button
-                      class="btn btn-link rsc-trader-link"
+                    >{{row.rank}}</span></td><td><span class="rsc-ranked-user"><ForumUser @user={{row.forum_user}} @name={{row.username}} /><button
+                      class="btn btn-flat btn-icon rsc-trader-link"
                       type="button"
+                      title="查看持仓"
+                      aria-label="查看持仓"
                       disabled={{this.busy}}
                       {{on "click" (fn this.openTrader row.user_id)}}
-                    >交易详情</button>{{#unless
-                      (eq row.valuation_basis "current")
-                    }}<small
-                        class="rsc-valuation-note"
-                        title={{when row.valuation_at}}
-                      >{{uiText row.valuation_basis}}</small>{{/unless}}</td><td
+                    >{{dIcon "magnifying-glass"}}</button></span></td><td
                     title={{row.equity}}
                   >{{display row.equity}}</td><td title={{row.portfolio_equity}}>{{display row.portfolio_equity}}</td><td
                     title={{row.realized_pnl}}

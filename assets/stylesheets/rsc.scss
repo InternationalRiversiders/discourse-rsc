@@ -1710,7 +1710,14 @@
 .rsc-quote-item .rsc-quote-row { flex: 1; min-width: 0; border-bottom: 0; }
 .rsc-quote-actions { display: flex; flex-direction: column; gap: .35em; padding: .5em; }
 .rsc-trader-detail { margin-top: 1.25em; scroll-margin-top: 5em; }
-.rsc-trader-link { padding: 0; font-weight: 600; }
+.rsc-ranked-user { display: inline-flex; align-items: center; gap: .35em; }
+.rsc-app .rsc-trader-link {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 32px; width: 32px; min-width: 32px; height: 32px;
+  padding: 0; border: 0; border-radius: 50%; background: transparent;
+  color: var(--primary-medium);
+  &:hover, &:focus-visible { background: var(--primary-low); color: var(--primary); }
+}
 .rsc-interactive-chart { touch-action: pan-y; cursor: grab; }
 .rsc-interactive-chart:active { cursor: grabbing; }
 .rsc-read-only { max-width: 1440px; margin: 1em auto; }
