@@ -17,7 +17,7 @@ module DiscourseRsc
       packet = Packet.find_by!(token: params.require(:token))
       # Public sharing discloses the envelope, never allocations or claimants.
       status = packet.status == "open" && packet.expires_at <= Time.current ? "expired" : packet.status
-      render_json_dump(token: packet.token, sender: User.find_by(id: packet.user_id)&.username,
+      render_json_dump(token: packet.token, sender: User.find_by(id: packet.user_id)&.username, sender_user: UserIdentity.serialize(packet.user_id),
         message: packet.message, total: Amount.format(packet.total_units), status: status,
         count: packet.claim_limit || packet.allocations.size, claimed_count: packet.claims.count,
         expires_at: packet.expires_at, preview: true)

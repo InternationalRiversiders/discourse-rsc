@@ -1,3 +1,4 @@
+import ForumUser from "./rsc-user";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -30,7 +31,7 @@ export default class extends Component {
   <template>
     <section class="rsc-card rsc-packet-history"><h2>我的红包</h2><div class="rsc-chart-controls"><button type="button" class="btn" disabled={{this.busy}} {{on "click" (fn this.select "sent")}}>我发出的</button><button type="button" class="btn" disabled={{this.busy}} {{on "click" (fn this.select "received")}}>我领取的</button></div>
       {{#if this.error}}<p role="alert">{{this.error}}</p>{{/if}}
-      {{#each this.result.rows as |packet|}}<p><LinkTo @route="rsc.packet" @model={{packet.token}}>{{packet.message}} · {{packet.sender}} · {{formatAmount packet.total}} RSC · {{packet.claimed_count}} / {{packet.count}} · {{status packet.status}}</LinkTo>{{#if packet.my_amount}}<strong> 领取 {{formatAmount packet.my_amount}} RSC</strong>{{/if}}</p>{{else}}<p class="rsc-muted">暂无红包记录</p>{{/each}}
+      {{#each this.result.rows as |packet|}}<p><LinkTo @route="rsc.packet" @model={{packet.token}}>{{packet.message}} · {{formatAmount packet.total}} RSC · {{packet.claimed_count}} / {{packet.count}} · {{status packet.status}}</LinkTo> · <ForumUser @user={{packet.sender_user}} @name={{packet.sender}} />{{#if packet.my_amount}}<strong> 领取 {{formatAmount packet.my_amount}} RSC</strong>{{/if}}</p>{{else}}<p class="rsc-muted">暂无红包记录</p>{{/each}}
       <div class="rsc-chart-controls"><button type="button" class="btn" disabled={{if this.busy true this.first}} {{on "click" this.previous}}>上一页</button><span>{{this.result.pagination.page}} / {{this.result.pagination.pages}}</span><button type="button" class="btn" disabled={{if this.busy true this.last}} {{on "click" this.next}}>下一页</button></div>
     </section>
   </template>

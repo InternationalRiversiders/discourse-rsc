@@ -1,5 +1,6 @@
 import { formatDateTime } from "../lib/campus-time";
 import { formatAmount } from "../lib/rsc-format";
+import ForumUser from "./rsc-user";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { service } from "@ember/service";
@@ -32,7 +33,7 @@ export default class extends Component {
       <section class="rsc-post-tips" aria-label={{i18n "discourse_rsc.ui.tip_summary"}}>
         <div class="rsc-post-tips-heading">{{i18n "discourse_rsc.ui.tip_summary"}} · <strong title={{this.data.total}}>{{formatAmount this.data.total}} RSC</strong> · {{this.data.count}}</div>
         <ul>{{#each this.data.tips as |tip|}}
-          <li><span>{{#if tip.user_url}}<a href={{tip.user_url}} data-user-card={{tip.username}} title={{when tip.at}}>{{tip.username}}</a>{{else}}{{tip.username}}{{/if}} × {{tip.count}}</span><strong title={{tip.amount}}>{{formatAmount tip.amount}} RSC</strong></li>
+          <li><span><ForumUser @user={{tip.forum_user}} @name={{tip.username}} /> × {{tip.count}}</span><strong title={{tip.amount}}>{{formatAmount tip.amount}} RSC</strong></li>
         {{/each}}</ul>
       </section>
     {{/if}}

@@ -1,6 +1,7 @@
 import { formatDateTime, formatDate } from "../lib/campus-time";
 import RscNavigation from "./rsc-navigation";
 import RscPagination from "./rsc-pagination";
+import ForumUser from "./rsc-user";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -183,12 +184,12 @@ export default class extends Component {
               {{#each this.rankedRows as |row|}}<tr><td><span
                       class="rsc-rank"
                       data-rank={{row.rank}}
-                    >{{row.rank}}</span></td><td><button
+                    >{{row.rank}}</span></td><td><ForumUser @user={{row.forum_user}} @name={{row.username}} /><button
                       class="btn btn-link rsc-trader-link"
                       type="button"
                       disabled={{this.busy}}
                       {{on "click" (fn this.openTrader row.user_id)}}
-                    >{{row.username}}</button>{{#unless
+                    >交易详情</button>{{#unless
                       (eq row.valuation_basis "current")
                     }}<small
                         class="rsc-valuation-note"
@@ -214,7 +215,7 @@ export default class extends Component {
       {{#if this.detail}}<section
           class="rsc-card rsc-trader-detail"
           aria-label={{uiText "trader_detail"}}
-        ><h2>{{this.detail.summary.username}} · {{uiText "trader_detail"}}</h2>
+        ><h2><ForumUser @user={{this.detail.summary.forum_user}} @name={{this.detail.summary.username}} /> · {{uiText "trader_detail"}}</h2>
           <div class="rsc-market-summary"><div>{{uiText "equity"}}<strong
               >{{display this.detail.summary.equity}}</strong></div><div
             >{{uiText "total_pnl"}}<strong>{{display

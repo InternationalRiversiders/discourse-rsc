@@ -50,7 +50,7 @@ module DiscourseRsc
         user = members[user_id]
         next unless user && !user.suspended?
         score = [posts.fetch(user_id, 0) + (visits.include?(user_id) ? 1 : 0), 10].min
-        { user_id: user_id, username: user.username, score: score, paid: paid.include?(keys.fetch(user_id)), frozen: statuses.fetch(user_id, "active") != "active" }
+        { user_id: user_id, username: user.username, forum_user: UserIdentity.serialize(user), score: score, paid: paid.include?(keys.fetch(user_id)), frozen: statuses.fetch(user_id, "active") != "active" }
       end
     rescue ArgumentError
       raise Error.new("invalid_reward_date")

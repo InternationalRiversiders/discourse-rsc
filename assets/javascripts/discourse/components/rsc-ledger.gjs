@@ -1,4 +1,5 @@
 import { formatDateTime } from "../lib/campus-time";
+import ForumUser from "./rsc-user";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -49,7 +50,7 @@ export default class extends Component {
       <div class="rsc-filter-bar"><label>流水分类 <select disabled={{this.busy}} {{on "change" this.select}}><option value="all">全部流水</option><option value="payout">每日活跃奖励</option><option value="activity">其他活动与交易</option></select></label></div>
       {{#if this.error}}<p role="alert">{{this.error}}</p>{{/if}}
       <div class="rsc-scroll"><table class="rsc-compact-table"><thead><tr><th>时间</th><th>类型 / 对方 / 说明</th><th>收支</th><th>余额</th></tr></thead><tbody>
-        {{#each this.entries key="id" as |entry|}}<tr id={{entry.anchor}}><td>{{when entry.created_at}}</td><td>{{uiText entry.operation}}{{#if entry.counterparty}}<div>{{#if entry.counterparty.url}}<a href={{entry.counterparty.url}} data-user-card={{entry.counterparty.username}}>{{entry.counterparty.username}}</a>{{else}}{{entry.counterparty.username}}{{/if}}</div>{{/if}}{{#if entry.detail}}<small>{{entry.detail}}</small>{{/if}}{{#if entry.path}}<div><a href={{entry.path}}>查看相关记录 ↗</a></div>{{/if}}</td><td class={{valueTone entry.amount}} title={{entry.amount}}>{{signedAmount entry.amount}}</td><td title={{entry.balance_after}}>{{formatAmount entry.balance_after}}</td></tr>{{else}}<tr><td colspan="4">暂无流水</td></tr>{{/each}}
+        {{#each this.entries key="id" as |entry|}}<tr id={{entry.anchor}}><td>{{when entry.created_at}}</td><td>{{uiText entry.operation}}{{#if entry.counterparty}}<div><ForumUser @user={{entry.counterparty.forum_user}} @name={{entry.counterparty.username}} /></div>{{/if}}{{#if entry.detail}}<small>{{entry.detail}}</small>{{/if}}{{#if entry.path}}<div><a href={{entry.path}}>查看相关记录 ↗</a></div>{{/if}}</td><td class={{valueTone entry.amount}} title={{entry.amount}}>{{signedAmount entry.amount}}</td><td title={{entry.balance_after}}>{{formatAmount entry.balance_after}}</td></tr>{{else}}<tr><td colspan="4">暂无流水</td></tr>{{/each}}
       </tbody></table></div>
       {{#if this.more}}<button class="btn" type="button" disabled={{this.busy}} {{on "click" this.load}}>加载更早记录</button>{{/if}}
     </section>

@@ -61,6 +61,7 @@ after_initialize do
     app/services/discourse_rsc/risk
     app/services/discourse_rsc/valuation
     app/services/discourse_rsc/market_listing
+    app/services/discourse_rsc/user_identity
     app/services/discourse_rsc/wallet_history
     app/services/discourse_rsc/views
     app/services/discourse_rsc/reports

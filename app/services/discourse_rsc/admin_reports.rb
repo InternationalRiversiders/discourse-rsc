@@ -53,8 +53,11 @@ module DiscourseRsc
         scope = scope.where("from_id IN (:ids) OR to_id IN (:ids)", ids: ids)
       end
       result = Reports.relation_page(scope.order(created_at: :desc, origin: :desc, id: :desc), page: page, per_page: 20) { |row| row.attributes }
-      names = User.where(id: result[:rows].flat_map { |r| [r['from_id'], r['to_id']] }).pluck(:id, :username).to_h
+      users = User.where(id: result[:rows].flat_map { |r| [r['from_id'], r['to_id']] }).index_by(&:id)
+      names = users.transform_values(&:username)
       result[:rows].each do |row|
+        row['sender_user'] = UserIdentity.serialize(users[row['from_id']])
+        row['recipient_user'] = UserIdentity.serialize(users[row['to_id']])
         row['sender'] = names[row['from_id']] || "##{row['from_id']}"
         row['recipient'] = names[row['to_id']] || (row['to_id'] && "##{row['to_id']}")
         if row['origin'] == 'packet'

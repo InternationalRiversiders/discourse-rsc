@@ -1,5 +1,6 @@
 import { formatDateTime } from "../lib/campus-time";
 import RscNavigation from "./rsc-navigation";
+import ForumUser from "./rsc-user";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -787,7 +788,7 @@ export default class RscDashboard extends Component {
                         "empty"
                       }}</td></tr>{{/each}}</tbody></table></div></section>
       {{else if (eq @section "packet")}}
-        <section class="rsc-card rsc-packet"><p>{{this.data.packet.sender}}
+        <section class="rsc-card rsc-packet"><p><ForumUser @user={{this.data.packet.sender_user}} @name={{this.data.packet.sender}} />
             ·
             {{uiText "packet"}}</p><h1>{{this.data.packet.message}}</h1><strong
             class="rsc-price"
@@ -821,7 +822,7 @@ export default class RscDashboard extends Component {
         <section class="rsc-card"><h2>{{uiText "packet_claims"}}</h2><div
             class="rsc-table"
           ><table><tbody>{{#each this.data.packet.claims as |claim|}}<tr><td
-                    >{{claim.username}}</td><td>{{formatAmount claim.amount}}
+                    ><ForumUser @user={{claim.forum_user}} @name={{claim.username}} /></td><td>{{formatAmount claim.amount}}
                       RSC</td><td><time datetime={{claim.at}}>{{when claim.at}}</time></td></tr>{{else}}<tr><td
                     >{{uiText
                         "empty"

@@ -105,7 +105,7 @@ module DiscourseRsc
       users= /\A[1-9][0-9]*\z/.match?(query) ? users.where(id:query.to_i) : users.where("username_lower LIKE ?","%#{User.sanitize_sql_like(query)}%") if query.present?
       wallet_page=Reports.relation_page(users,page:params.fetch(:wallet_page,1),per_page:20) do |user|
         wallet=Account.find_by(user_id:user.id,kind:"wallet")
-        {id:user.id,username:user.username,balance:wallet&.balance || "0",status:wallet&.status || "active",status_reason:wallet&.status_reason}
+        {id:user.id,username:user.username,forum_user:UserIdentity.serialize(user),balance:wallet&.balance || "0",status:wallet&.status || "active",status_reason:wallet&.status_reason}
       end
       search=params[:instrument_q].to_s.strip.first(80)
       category = params[:instrument_category].presence

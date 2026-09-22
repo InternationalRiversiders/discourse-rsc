@@ -1,4 +1,5 @@
 import { formatDateTime } from "../lib/campus-time";
+import ForumUser from "./rsc-user";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -79,7 +80,7 @@ export default class extends Component {
         <button class="btn" type="submit">查询资金记录</button>
       </form>
       {{#if this.activity}}<div class="rsc-table"><table><thead><tr><th>时间</th><th>来源 / 类型</th><th>发起人</th><th>接收人</th><th>金额</th><th>状态 / 详情</th></tr></thead><tbody>
-        {{#each this.activity.rows as |row|}}<tr><td>{{when row.created_at}}</td><td>{{row.origin}} · {{row.kind}}</td><td>{{row.sender}}</td><td>{{row.recipient}}</td><td>{{formatAmount row.amount}} RSC</td><td>{{row.status}} {{row.detail}}
+        {{#each this.activity.rows as |row|}}<tr><td>{{when row.created_at}}</td><td>{{row.origin}} · {{row.kind}}</td><td><ForumUser @user={{row.sender_user}} @name={{row.sender}} /></td><td><ForumUser @user={{row.recipient_user}} @name={{row.recipient}} /></td><td>{{formatAmount row.amount}} RSC</td><td>{{row.status}} {{row.detail}}
         {{#if row.token}}<details><summary>红包领取详情</summary><p>已领取 {{row.packet.claimed_count}} / {{row.packet.count}} · 剩余 {{formatAmount row.packet.remaining}} RSC</p>{{#each row.claims as |claim|}}<p>#{{claim.user_id}} · {{formatAmount claim.amount}} RSC · {{when claim.at}}</p>{{/each}}</details>{{/if}}
         {{#if row.topic_id}}<p>话题 #{{row.topic_id}} · 帖子 #{{row.post_id}}</p>{{/if}}</td></tr>{{else}}<tr><td colspan="6">没有符合条件的记录。</td></tr>{{/each}}
       </tbody></table></div><RscPagination @page={{this.activity.pagination}} @change={{this.load}} />{{/if}}

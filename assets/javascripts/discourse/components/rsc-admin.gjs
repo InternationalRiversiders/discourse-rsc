@@ -1,4 +1,5 @@
 import RscNavigation from "./rsc-navigation";
+import ForumUser from "./rsc-user";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -290,7 +291,7 @@ export default class extends Component {
               }}</button></form><div class="rsc-table"><table><tbody>{{#each
                   this.data.wallets
                   as |wallet|
-                }}<tr><td>{{wallet.id}}</td><td>{{wallet.username}}</td><td
+                }}<tr><td>{{wallet.id}}</td><td><ForumUser @user={{wallet.forum_user}} @name={{wallet.username}} /></td><td
                     >{{formatAmount wallet.balance}} RSC</td><td
                     >{{wallet.status}}</td></tr>{{/each}}</tbody></table></div><RscPagination @page={{this.data.pagination.wallet}} @change={{fn this.pageChanged "wallet"}} /></section>
         <section class="rsc-card"><h2>{{uiText "admin_action"}}</h2><p
@@ -338,7 +339,7 @@ export default class extends Component {
           disabled={{this.writeDisabled}}
           type="button"
           {{on "click" (fn this.preview true)}}
-        >{{uiText "pay_rewards"}}</button>{{#if this.rewards}}<p>共 {{this.rewards.length}} 人 · 待发放 {{this.pendingRewardAmount}} RSC</p><label>奖励状态<select aria-label="奖励状态" {{on "change" this.filterRewards}}><option value="all">全部</option><option value="pending">待发放</option><option value="paid">已发放</option><option value="frozen">钱包冻结</option></select></label><div class="rsc-table"><table><thead><tr><th>用户</th><th>奖励</th><th>状态</th></tr></thead><tbody>{{#each this.rewardRows as |row|}}<tr><td>{{row.username}}</td><td>{{row.score}} RSC</td><td>{{#if row.paid}}已发放{{else if row.frozen}}钱包冻结{{else}}待发放{{/if}}</td></tr>{{else}}<tr><td colspan="3">暂无符合条件的记录。</td></tr>{{/each}}</tbody></table></div><RscPagination @page={{this.rewardPagination}} @change={{this.changeRewardPage}} />{{/if}}</section>
+        >{{uiText "pay_rewards"}}</button>{{#if this.rewards}}<p>共 {{this.rewards.length}} 人 · 待发放 {{this.pendingRewardAmount}} RSC</p><label>奖励状态<select aria-label="奖励状态" {{on "change" this.filterRewards}}><option value="all">全部</option><option value="pending">待发放</option><option value="paid">已发放</option><option value="frozen">钱包冻结</option></select></label><div class="rsc-table"><table><thead><tr><th>用户</th><th>奖励</th><th>状态</th></tr></thead><tbody>{{#each this.rewardRows as |row|}}<tr><td><ForumUser @user={{row.forum_user}} @name={{row.username}} /></td><td>{{row.score}} RSC</td><td>{{#if row.paid}}已发放{{else if row.frozen}}钱包冻结{{else}}待发放{{/if}}</td></tr>{{else}}<tr><td colspan="3">暂无符合条件的记录。</td></tr>{{/each}}</tbody></table></div><RscPagination @page={{this.rewardPagination}} @change={{this.changeRewardPage}} />{{/if}}</section>
       <RscAdminTools @readOnly={{this.data.read_only}} @requests={{this.data.requests}} @refresh={{this.refresh}} />
       <section class="rsc-card"><h2>{{uiText "data_sources"}}</h2><label>{{uiText "category"}}<select value={{this.instrumentCategory}} {{on "change" this.instrumentCategoryChanged}}><option value="">全部市场</option>{{#each options.category as |category|}}<option value={{category}}>{{categoryText category}}</option>{{/each}}</select></label><form {{on "submit" this.instrumentSearch}}><label>按标的代码或名称搜索<input value={{this.instrumentQuery}} {{on "input" this.instrumentQueryChanged}} /></label><button class="btn" type="submit">搜索</button></form><button
           class="btn"

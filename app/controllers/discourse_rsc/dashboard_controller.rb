@@ -77,7 +77,7 @@ module DiscourseRsc
 
     def packet
       item = Packet.find_by!(token: params.require(:token))
-      render_json_dump(packet_json(item).merge(claimed: item.claims.exists?(user_id: current_user.id), own: item.user_id == current_user.id, claims: item.claims.order(:id).map { |claim| { username: User.find_by(id: claim.user_id)&.username, amount: Amount.format(claim.units), at: claim.created_at } }))
+      render_json_dump(packet_json(item).merge(claimed: item.claims.exists?(user_id: current_user.id), own: item.user_id == current_user.id, claims: item.claims.order(:id).map { |claim| { forum_user: UserIdentity.serialize(claim.user_id), username: User.find_by(id: claim.user_id)&.username, amount: Amount.format(claim.units), at: claim.created_at } }))
     end
 
     def packets

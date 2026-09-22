@@ -43,7 +43,7 @@ module DiscourseRsc
       social = data[:social].fetch(wallet&.id, 0).to_i + Amount.parse(data[:legacy_social].fetch(user_id.to_s, BigDecimal("0")).abs.to_s("F")) * (data[:legacy_social].fetch(user_id.to_s, 0) < 0 ? -1 : 1)
       capital = total_equity && BigDecimal(Amount.format(total_equity - social)) - total_profit
       return_pct = capital && capital.positive? ? (total_profit * 100 / capital).truncate(2).to_s("F") : "0"
-      { valuation_basis: basis, valuation_at: valuations.filter_map { |value| value[:at] }.min, return_pct: return_pct, portfolio_equity: unrealized && Amount.format(margin + stakes + unrealized), user_id: user_id, username: data[:users][user_id], balance: Amount.format(balance), margin: Amount.format(margin),
+      { valuation_basis: basis, valuation_at: valuations.filter_map { |value| value[:at] }.min, return_pct: return_pct, portfolio_equity: unrealized && Amount.format(margin + stakes + unrealized), user_id: user_id, username: data[:users][user_id]&.username, forum_user: UserIdentity.serialize(data[:users][user_id]), balance: Amount.format(balance), margin: Amount.format(margin),
         reserved: Amount.format(reserved), equity: total_equity && Amount.format(total_equity), pnl: unrealized && Amount.format(unrealized), realized_pnl: realized.to_s("F"),
         total_pnl: unrealized && total_profit.to_s("F"), trade_count: filled.size + legacy_trades.size }
     end
@@ -56,7 +56,7 @@ module DiscourseRsc
       {
         legacy_trades: legacy.where(source_table: "exchange_trades").pluck(:data).group_by { |row| row["discourse_user_id"].to_i },
         wallets: wallets, positions: positions.group_by(&:user_id), prices: prices,
-        users: User.where(id: ids).pluck(:id, :username).to_h,
+        users: User.where(id: ids).index_by(&:id),
         orders: Order.where(user_id: ids).to_a.group_by(&:user_id), predictions: Prediction.where(user_id: ids).to_a.group_by(&:user_id),
         adjustments: legacy.where(source_table: "exchange_pnl_adjustments").group(Arel.sql("data ->> 'discourse_user_id'")).sum(Arel.sql("(data ->> 'amount_rsc')::numeric")),
         social: Entry.joins(:journal).where(account_id: wallets.values.map(&:id)).where(discourse_rsc_journals: { operation: %w[transfer post_tip red_packet_open red_packet_claim red_packet_refund] }).group(:account_id).sum(:units),
@@ -82,7 +82,7 @@ module DiscourseRsc
         data = portfolio_data(ids)
         rows = ids.map { |id| portfolio(id, data: data) }
         rows.select { |r| !r[sort.to_sym].nil? }.sort_by { |r| [-BigDecimal(r[sort.to_sym].to_s), -BigDecimal(r[:total_pnl]), -BigDecimal(r[:return_pct]), -BigDecimal(r[:portfolio_equity]), name_rank.fetch(r[:user_id])] }.map do |row|
-          row.slice(:valuation_basis, :valuation_at, :return_pct, :portfolio_equity, :user_id, :username, :equity, :pnl, :realized_pnl, :total_pnl, :trade_count)
+          row.slice(:valuation_basis, :valuation_at, :return_pct, :portfolio_equity, :user_id, :username, :forum_user, :equity, :pnl, :realized_pnl, :total_pnl, :trade_count)
         end
       end
     end
@@ -132,7 +132,7 @@ module DiscourseRsc
           Views.prediction(item).merge(symbol: "#{item.sport_match.home} — #{item.sport_match.away}", side: item.pick, quantity: Amount.format(item.stake_units))
         end
       end
-      { summary: portfolio(user_id).slice(:valuation_basis, :valuation_at, :user_id, :username, :equity, :total_pnl, :return_pct, :trade_count), section: section, rows: rows,
+      { summary: portfolio(user_id).slice(:valuation_basis, :valuation_at, :user_id, :username, :forum_user, :equity, :total_pnl, :return_pct, :trade_count), section: section, rows: rows,
         pagination: { page: number, per_page: 20, total: total, pages: pages } }
     rescue ArgumentError, TypeError
       raise Error.new("invalid_page")
@@ -173,11 +173,11 @@ module DiscourseRsc
       LegacyRecord.where(source_table: "post_tips").where("data ->> 'post_id' IN (?)", post_ids.map(&:to_s)).pluck(:data).each do |data|
         tips << { post_id: data["post_id"].to_i, user_id: data.fetch("from_discourse_user_id").to_i, amount: data.fetch("amount_rsc"), at: Time.iso8601(data.fetch("created_at")) }
       end
-      users = User.where(id: tips.map { |t| t[:user_id] }).pluck(:id, :username).to_h
+      users = User.where(id: tips.map { |t| t[:user_id] }).index_by(&:id)
       tips.group_by { |t| t[:post_id] }.transform_values do |post_tips|
         grouped = post_tips.group_by { |t| t[:user_id] }.map do |id, items|
-          username = users[id]
-          { username: username || I18n.t("user.deleted"), user_url: username && "/u/#{ERB::Util.url_encode(username)}", amount: Amount.format(items.sum { |t| Amount.parse(t[:amount]) }), count: items.size, at: items.map { |t| t[:at] }.max }
+          username = users[id]&.username
+          { forum_user: UserIdentity.serialize(users[id]), username: username || I18n.t("user.deleted"), user_url: username && "/u/#{ERB::Util.url_encode(username)}", amount: Amount.format(items.sum { |t| Amount.parse(t[:amount]) }), count: items.size, at: items.map { |t| t[:at] }.max }
         end.sort_by { |t| -t[:at].to_f }
         { total: Amount.format(post_tips.sum { |t| Amount.parse(t[:amount]) }), count: post_tips.size, tips: grouped }
       end

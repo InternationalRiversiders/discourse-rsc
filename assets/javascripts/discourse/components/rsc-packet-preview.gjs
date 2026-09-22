@@ -1,3 +1,4 @@
+import ForumUser from "./rsc-user";
 import Component from "@glimmer/component";
 import { service } from "@ember/service";
 import { LinkTo } from "@ember/routing";
@@ -9,7 +10,7 @@ export default class extends Component {
   @service currentUser;
   <template>
     <main class="rsc-app rsc-public-packet"><section class="rsc-card rsc-packet">
-      <p>{{@model.sender}} · {{text "packet"}}</p><h1>{{@model.message}}</h1>
+      <p><ForumUser @user={{@model.sender_user}} @name={{@model.sender}} /> · {{text "packet"}}</p><h1>{{@model.message}}</h1>
       <p class="rsc-price">{{formatAmount @model.total}} RSC</p>
       <p>{{@model.claimed_count}} / {{@model.count}} · {{text @model.status}}</p>
       <p>{{text "expires_at"}} <time datetime={{@model.expires_at}}>{{formatDateTime @model.expires_at}}</time></p>

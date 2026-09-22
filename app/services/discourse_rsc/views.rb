@@ -36,7 +36,7 @@ module DiscourseRsc
     def self.packet(item,user_id)
       claims=item.claims.to_a;mine=claims.find { |c| c.user_id==user_id }
       remaining=item.status=='open' ? item.total_units.to_i-claims.sum { |c| c.units.to_i } : 0
-      {token:item.token,message:item.message,mode:item.mode,status:item.status,total:Amount.format(item.total_units),remaining:Amount.format(remaining),minimum:item.minimum_units && Amount.format(item.minimum_units),maximum:item.maximum_units && Amount.format(item.maximum_units),count:item.claim_limit || item.allocations.size,claimed_count:claims.size,sender:User.find_by(id:item.user_id)&.username,expires_at:item.expires_at,created_at:item.created_at,claimed:!!mine,own:item.user_id==user_id,my_amount:mine && Amount.format(mine.units)}
+      {token:item.token,message:item.message,mode:item.mode,status:item.status,total:Amount.format(item.total_units),remaining:Amount.format(remaining),minimum:item.minimum_units && Amount.format(item.minimum_units),maximum:item.maximum_units && Amount.format(item.maximum_units),count:item.claim_limit || item.allocations.size,claimed_count:claims.size,sender:User.find_by(id:item.user_id)&.username,sender_user:UserIdentity.serialize(item.user_id),expires_at:item.expires_at,created_at:item.created_at,claimed:!!mine,own:item.user_id==user_id,my_amount:mine && Amount.format(mine.units)}
     end
   end
 end

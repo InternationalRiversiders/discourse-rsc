@@ -52,9 +52,10 @@ module DiscourseRsc
     end
 
     def self.identity(id,fallback=nil)
-      username=User.find_by(id:id)&.username if id
+      user=User.find_by(id:id) if id
+      username=user&.username
       return nil unless id || fallback.present?
-      {user_id:id,username:username || fallback || "##{id}",url:username && "/u/#{ERB::Util.url_encode(username)}"}
+      {user_id:id,forum_user:UserIdentity.serialize(user),username:username || fallback || "##{id}",url:username && "/u/#{ERB::Util.url_encode(username)}"}
     end
 
     def self.context(data,user,legacy:false)

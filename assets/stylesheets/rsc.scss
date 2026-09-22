@@ -2033,3 +2033,11 @@
 
 .rsc-app .rsc-wallet-balance { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5em; margin: 0 0 16px; color: var(--primary-medium); }
 .rsc-app .rsc-wallet-balance strong { color: var(--primary); font-variant-numeric: tabular-nums; }
+
+// Forum identity links use Discourse's avatar and native user card.
+.rsc-forum-user {
+  display: inline-flex; align-items: center; gap: .4em; max-width: 100%;
+  vertical-align: middle; color: var(--primary); font-weight: 600;
+  .avatar { width: 24px; height: 24px; flex: 0 0 24px; border-radius: 50%; }
+  > span { min-width: 0; overflow-wrap: anywhere; }
+}
