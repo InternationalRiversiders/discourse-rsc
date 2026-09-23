@@ -8,7 +8,7 @@ import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
 import { on } from "@ember/modifier";
-import { fn } from "@ember/helper";
+import { fn, get } from "@ember/helper";
 import { eq } from "discourse/truth-helpers";
 import { ajax } from "discourse/lib/ajax";
 import { extractError } from "discourse/lib/ajax-error";
@@ -158,6 +158,10 @@ export default class extends Component {
   get detailLast() {
     return this.detail.pagination.page >= this.detail.pagination.pages;
   }
+  get extraMetric() {
+    return ["portfolio_equity", "realized_pnl", "pnl"].includes(this.sortKey) ? this.sortKey : null;
+  }
+  get detailColspan() { return this.extraMetric ? 7 : 6; }
   get performance() {
     return performanceChart(this.detail?.performance?.points, this.performanceDays);
   }
@@ -177,8 +181,7 @@ export default class extends Component {
                 selected={{eq sort this.sortKey}}
               >{{uiText sort}}</option>{{/each}}</select></label></form>
         <div class="rsc-table rsc-ranking-table"><table><thead><tr><th>{{uiText "rank"}}</th><th
-                >{{uiText "username"}}</th><th>{{uiText "equity"}}</th><th
-                >{{uiText "portfolio_equity"}}</th><th>{{uiText "realized_pnl"}}</th><th>{{uiText "pnl"}}</th><th
+                >{{uiText "username"}}</th><th>{{uiText "equity"}}</th>{{#if this.extraMetric}}<th>{{uiText this.extraMetric}}</th>{{/if}}<th
                 >{{uiText "total_pnl"}}</th><th>{{uiText "return_pct"}}</th><th
                 >{{uiText "trade_count"}}</th></tr></thead><tbody>
               {{#each this.rankedRows key="user_id" as |row|}}<tr><td><span
@@ -194,19 +197,13 @@ export default class extends Component {
                       {{on "click" (fn this.openTrader row.user_id)}}
                     >{{dIcon "magnifying-glass"}}</button></span></td><td
                     title={{row.equity}}
-                  >{{display row.equity}}</td><td title={{row.portfolio_equity}}>{{display row.portfolio_equity}}</td><td
-                    title={{row.realized_pnl}}
-                    class={{valueTone row.realized_pnl}}
-                  >{{display row.realized_pnl}}</td><td
-                    title={{row.pnl}}
-                    class={{valueTone row.pnl}}
-                  >{{display row.pnl}}</td><td
+                  >{{display row.equity}}</td>{{#if this.extraMetric}}<td title={{get row this.extraMetric}} class={{unless (eq this.extraMetric "portfolio_equity") (valueTone (get row this.extraMetric))}}>{{display (get row this.extraMetric)}}</td>{{/if}}<td
                     title={{row.total_pnl}}
                     class={{valueTone row.total_pnl}}
                   >{{display row.total_pnl}}</td><td>{{formatPercent
                       row.return_pct
                     }}</td><td>{{row.trade_count}}</td></tr>
-      {{#if (eq this.activeTraderId row.user_id)}}<tr class="rsc-trader-expanded"><td colspan="9"><section
+      {{#if (eq this.activeTraderId row.user_id)}}<tr class="rsc-trader-expanded"><td colspan={{this.detailColspan}}><section
           class="rsc-trader-detail"
           aria-busy={{if this.detailBusy "true" "false"}}
           aria-label={{uiText "trader_detail"}}
@@ -270,7 +267,7 @@ export default class extends Component {
           </div></div>
           {{/if}}
         </section></td></tr>{{/if}}
-              {{else}}<tr><td colspan="9">{{uiText "empty"}}</td></tr>{{/each}}
+              {{else}}<tr><td colspan={{this.detailColspan}}>{{uiText "empty"}}</td></tr>{{/each}}
             </tbody></table></div>
         <RscPagination @page={{this.result.pagination}} @change={{this.load}} @busy={{this.busy}} />
       </section>

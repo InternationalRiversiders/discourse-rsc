@@ -15,12 +15,12 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   for(const width of [1920,1440,1024,390,320]){
    await page.setViewportSize({width,height:1000});histories=0;
    await page.goto('http://rsc.test:3000/rsc/market',{waitUntil:'domcontentloaded'});await page.locator('.rsc-market-board').waitFor();
-   await page.waitForFunction(()=>getComputedStyle(document.querySelector('#main-outlet-wrapper')).maxWidth==='1920px');
+   await page.waitForFunction(()=>getComputedStyle(document.querySelector('#main-outlet-wrapper')).maxWidth==='1720px');
    assert.equal(await page.locator('.rsc-market-layout,.rsc-order-ticket').count(),0);
    assert.equal(histories,0,'No unselected instrument history requests');
    const app=await page.locator('.rsc-app').boundingBox(),main=await page.locator('.rsc-market-main').boundingBox(),workbench=await page.locator('.rsc-workbench').boundingBox();
    assert(Math.abs(main.width-workbench.width)<2,'List uses the entire workspace before selection');
-   if(width===1920)assert(app.width>1400,'Desktop page wider than the former 1240px cap');
+   if(width===1920)assert(app.width<=1440 && app.width>=1200,'Desktop market has a bounded reading width');
    await page.locator('.rsc-quote-row').first().click();await page.locator('.rsc-chart').waitFor();
    assert.equal(await page.locator('.rsc-order-ticket').count(),0,'Quote-only view');
    await page.locator('.rsc-open-order').click();await page.locator('.rsc-order-ticket').waitFor();
@@ -45,7 +45,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   await loaded;await page.locator('.rsc-back').click();const closedHistories=histories;
   await page.waitForResponse(r=>r.url().includes('/rsc/state.json')&&r.status()===200,{timeout:20000});assert.equal(histories,closedHistories,'Closing the panel stops its history polling');assert.equal(await page.locator('.rsc-market-layout').count(),0);
   await page.goto('http://rsc.test:3000/rsc/market?instrument_id=999999999',{waitUntil:'domcontentloaded'});await page.locator('.rsc-market-board').waitFor();assert.equal(await page.locator('.rsc-market-layout,.rsc-order-ticket').count(),0);
-  await page.goto('http://rsc.test:3000/latest',{waitUntil:'domcontentloaded'});await page.locator('#main-outlet').waitFor();assert.notEqual(await page.locator('#main-outlet-wrapper').evaluate(e=>getComputedStyle(e).maxWidth),'1920px','Normal forum layout restored');
+  await page.goto('http://rsc.test:3000/latest',{waitUntil:'domcontentloaded'});await page.locator('#main-outlet').waitFor();assert.notEqual(await page.locator('#main-outlet-wrapper').evaluate(e=>getComputedStyle(e).maxWidth),'1720px','Normal forum layout restored');
   assert.deepEqual(errors,[]);await context.close();
  }
  }finally{await browser.close();}

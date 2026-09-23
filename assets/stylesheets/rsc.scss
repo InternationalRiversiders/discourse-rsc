@@ -2073,10 +2073,15 @@
   > span { min-width: 0; overflow-wrap: anywhere; }
 }
 
-// Give data-heavy RSC pages the available desktop space, within the sidebar layout.
-#main-outlet-wrapper:has(.rsc-app) { max-width: 1920px; }
+// Keep room for trading data without stretching pages to the screen edges.
+#main-outlet-wrapper:has(.rsc-app) { max-width: 1720px; }
 // Horizon also caps direct outlet children at 1000px with a highly specific rule.
-#main-outlet .rsc-app { max-width: none !important; width: 100%; box-sizing: border-box; }
+#main-outlet .rsc-app { max-width: 1440px !important; width: 100%; box-sizing: border-box; }
+#main-outlet .rsc-app[data-section="wallet"] { max-width: 1240px !important; }
+#main-outlet .rsc-app.rsc-ranking-page { max-width: 1280px !important; }
+@media (min-width: 701px) {
+  #main-outlet .rsc-app { padding-inline: clamp(16px, 2vw, 28px); }
+}
 .rsc-app[data-section="market"] {
   .rsc-workbench:not(.detail-open) { grid-template-columns: minmax(0, 1fr); }
   .rsc-back { display: inline-flex; }
