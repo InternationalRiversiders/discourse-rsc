@@ -12,10 +12,14 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   await page.route('**/rsc/orders.json',route=>{if(route.request().method()==='POST')throw Error('Layout test must not trade');return route.continue();});
   await page.goto('http://rsc.test:3000/login');
   assert.equal(await page.evaluate(async c=>{const csrf=await(await fetch('/session/csrf.json')).json();return (await fetch('/session.json',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf.csrf,'X-Requested-With':'XMLHttpRequest'},body:JSON.stringify({login:c.username,password:c.password})})).status;},c),200);
-  for(const width of [1920,1440,1024,390,320]){
+  for(const width of [3840,2560,1920,1440,1024,390,320]){
    await page.setViewportSize({width,height:1000});histories=0;
+   await page.goto('http://rsc.test:3000/latest',{waitUntil:'domcontentloaded'});await page.locator('.topic-list').waitFor();
+   const forumFrame=await page.locator('#main-outlet-wrapper').boundingBox();
    await page.goto('http://rsc.test:3000/rsc/market',{waitUntil:'domcontentloaded'});await page.locator('.rsc-market-board').waitFor();
-   await page.waitForFunction(()=>getComputedStyle(document.querySelector('#main-outlet-wrapper')).maxWidth==='1720px');
+   await page.waitForFunction(()=>getComputedStyle(document.querySelector('.rsc-app')).maxWidth==='1440px');
+   const rscFrame=await page.locator('#main-outlet-wrapper').boundingBox();
+   assert(Math.abs(rscFrame.x-forumFrame.x)<2 && Math.abs(rscFrame.width-forumFrame.width)<2,'RS Coin must not resize the forum frame');
    assert.equal(await page.locator('.rsc-market-layout,.rsc-order-ticket').count(),0);
    assert.equal(histories,0,'No unselected instrument history requests');
    const app=await page.locator('.rsc-app').boundingBox(),main=await page.locator('.rsc-market-main').boundingBox(),workbench=await page.locator('.rsc-workbench').boundingBox();
@@ -45,7 +49,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   await loaded;await page.locator('.rsc-back').click();const closedHistories=histories;
   await page.waitForResponse(r=>r.url().includes('/rsc/state.json')&&r.status()===200,{timeout:20000});assert.equal(histories,closedHistories,'Closing the panel stops its history polling');assert.equal(await page.locator('.rsc-market-layout').count(),0);
   await page.goto('http://rsc.test:3000/rsc/market?instrument_id=999999999',{waitUntil:'domcontentloaded'});await page.locator('.rsc-market-board').waitFor();assert.equal(await page.locator('.rsc-market-layout,.rsc-order-ticket').count(),0);
-  await page.goto('http://rsc.test:3000/latest',{waitUntil:'domcontentloaded'});await page.locator('#main-outlet').waitFor();assert.notEqual(await page.locator('#main-outlet-wrapper').evaluate(e=>getComputedStyle(e).maxWidth),'1720px','Normal forum layout restored');
+  await page.goto('http://rsc.test:3000/latest',{waitUntil:'domcontentloaded'});await page.locator('#main-outlet').waitFor();
   assert.deepEqual(errors,[]);await context.close();
  }
  }finally{await browser.close();}
