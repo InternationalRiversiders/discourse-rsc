@@ -2080,7 +2080,7 @@
 #main-outlet .rsc-app[data-section="wallet"] { max-width: 1240px !important; }
 #main-outlet .rsc-app.rsc-ranking-page { max-width: 1280px !important; }
 @media (min-width: 701px) {
-  #main-outlet .rsc-app { padding-inline: clamp(16px, 2vw, 28px); }
+  #main-outlet .rsc-app { width: calc(100% - clamp(24px, 3vw, 48px)); }
 }
 .rsc-app[data-section="market"] {
   .rsc-workbench:not(.detail-open) { grid-template-columns: minmax(0, 1fr); }
