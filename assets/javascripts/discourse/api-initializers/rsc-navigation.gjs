@@ -57,18 +57,25 @@ export default apiInitializer((api) => {
             return section;
           }
 
-          const links = section.links.filter((link) => link !== coin);
+          const collections = section.links.find(
+            (link) => link.name === "collections"
+          );
+          const links = section.links.filter(
+            (link) => link !== coin && link !== collections
+          );
           const messagesIndex = links.findIndex(
             (link) => link.name === "my-messages"
           );
-          const postsIndex = links.findIndex((link) => link.name === "my-posts");
+          const postsIndex = links.findIndex(
+            (link) => link.name === "my-posts"
+          );
           const position =
             messagesIndex >= 0
-              ? messagesIndex
+              ? messagesIndex + 1
               : postsIndex >= 0
                 ? postsIndex + 1
                 : links.length;
-          links.splice(position, 0, coin);
+          links.splice(position, 0, ...[coin, collections].filter(Boolean));
           section.links = links;
           return section;
         }
