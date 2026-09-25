@@ -278,4 +278,26 @@ class ForecastTest < Minitest::Test
     R::ForecastProvider.define_singleton_method(:get,original) if original
   end
 
+  def test_live_uma_posed_is_not_a_proposed_result
+    @resolution = { 'condition_id'=>@market.condition_id, 'status'=>'posed', 'extended_review'=>false,
+      'price'=>'69', 'proposed_price'=>'69', 'reproposed_price'=>'69', 'new_version_q'=>true }
+    q=quote
+    assert_equal 'open', @market.reload.state
+    assert_equal '20', q[:shares]
+    assert_nil @market.confirmed_at
+    assert_equal 0, R::ForecastSettlement.settle(@market)
+    @resolution['status']='proposed'
+    assert_raises(R::Error) { quote }
+    assert_equal 'awaiting', @market.reload.state
+  end
+  def test_extended_review_and_unknown_status_always_pause
+    ['posed', 'new-unrecognized-state', nil].each do |status|
+      @market.update!(state:'open')
+      R::ForecastSettlement.observe(@market, { 'condition_id'=>@market.condition_id,
+        'status'=>status, 'extended_review'=>status=='posed' })
+      assert_equal 'awaiting', @market.reload.state
+      assert_equal 0, R::ForecastSettlement.settle(@market)
+    end
+  end
+
 end

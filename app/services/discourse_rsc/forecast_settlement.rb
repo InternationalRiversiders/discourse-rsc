@@ -33,7 +33,8 @@ module DiscourseRsc
             market.update!(state: 'awaiting', resolution: row, resolution_digest: digest,
               resolution_seen_at: market.resolution_digest == digest ? market.resolution_seen_at : Time.current, confirmed_at: nil)
           end
-        elsif row['status'].present? && !%w[unresolved open].include?(row['status'])
+        # UMA's initialized question is 'posed', distinct from a proposed result.
+        elsif row['extended_review'] == true || !%w[posed unresolved open].include?(row['status'])
           market.update!(state: 'awaiting', resolution: row, resolution_digest: nil, resolution_seen_at: nil, confirmed_at: nil)
         else
           market.update!(resolution: row, resolution_digest: nil, resolution_seen_at: nil, confirmed_at: nil)
