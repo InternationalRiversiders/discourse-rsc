@@ -79,7 +79,7 @@ class ForecastTest
       [raw]
     end
     ids=R::ForecastDiscovery.discover
-    assert_equal 8,calls.size
+    assert_equal 16,calls.size
     assert calls.all?{|q|q[:limit]==100 && q[:tag_id].present?}
     assert_equal 1,ids.size
     refute @market.reload.featured

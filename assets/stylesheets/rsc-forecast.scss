@@ -106,3 +106,15 @@
   button.is-active { background: var(--tertiary-low); color: var(--tertiary); }
   small { margin-left: 3px; font-variant-numeric: tabular-nums; opacity: .8; }
 }
+
+.rsc-forecast {
+  .forecast-toolbar > .forecast-tabs { flex-wrap: wrap; }
+  .forecast-browse-filters, .forecast-review-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .forecast-browse-filters input, .forecast-review-actions input { flex: 1 1 240px; min-width: 0; margin: 0; }
+  .forecast-browse-filters select { flex: 0 1 150px; max-width: 100%; margin: 0; }
+  .forecast-preview-link { background: transparent; padding: 0; border: 0; color: var(--primary); text-align: left; min-width: 0; overflow-wrap: anywhere; font: inherit; cursor: pointer; }
+  .forecast-preview-link:hover { color: var(--tertiary); }
+  .forecast-card .forecast-preview-link { font-weight: 650; line-height: 1.45; }
+  .forecast-pagination { display: flex; align-items: center; justify-content: center; gap: 14px; margin-block: 20px; }
+  .forecast-order textarea { box-sizing: border-box; width: 100%; min-height: 100px; }
+}

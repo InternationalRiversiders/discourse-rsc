@@ -48,6 +48,8 @@ en:
       fiba: FIBA World Cup
       mens-olympics-basketball: Olympic Basketball
     notifications:
+      forecast_request_approved: "Your requested prediction market is now open: %{question}"
+      forecast_request_rejected: "Your prediction-market request was not approved. See My requests for details: %{question}"
       forecast_settled: "%{match} · resolved, %{amount} RSC credited"
       transfer: sent you %{amount} RSC
       post_tip: tipped your post %{amount} RSC
@@ -64,6 +66,12 @@ en:
       stock_refunded: 'Order reservation refunded: %{amount} RSC'
       red_packet_claimed_by: claimed %{amount} RSC from your packet
     errors:
+      forecast_invalid_reference: "Enter a valid Polymarket market ID or market/event link."
+      forecast_not_eligible: "This question is outside this site’s listing scope or is no longer trading."
+      forecast_request_recent: "This request was recently reviewed. Wait at least one day before reapplying."
+      forecast_request_limit: "You may have at most 5 pending requests."
+      forecast_request_missing: "No pending requests remain. Refresh and try again."
+      forecast_request_changed: "The rules changed after submission. Reject the old request and request a new review."
       forecast_disabled: "Prediction markets are not enabled."
       forecast_unavailable: "Reliable market data is temporarily unavailable."
       forecast_stale: "The price is stale. Request a new quote."

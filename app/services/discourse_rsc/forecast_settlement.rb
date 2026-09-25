@@ -84,8 +84,8 @@ module DiscourseRsc
         end
         # Holdings stay in the settlement watch list after falling out of popular.
         ids = ForecastPosition.where(state: 'open').where('shares_units > 0').select(:market_id)
-        scope = ForecastMarket.where(settled_at: nil).where('featured = TRUE OR id IN (?)', ids)
-        scope.order(Arel.sql('synced_at ASC NULLS FIRST')).limit(12).each do |market|
+        scope = ForecastMarket.where(settled_at: nil).where('featured = TRUE OR id IN (?) OR id IN (?)', ids, ForecastRequest.approved_markets)
+        scope.order(Arel.sql("CASE WHEN id IN (#{ids.to_sql}) THEN 0 ELSE 1 END, synced_at ASC NULLS FIRST")).limit(12).each do |market|
           break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
           begin
             ForecastProvider.refresh(market)

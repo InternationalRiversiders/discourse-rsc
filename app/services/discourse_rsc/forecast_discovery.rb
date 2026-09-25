@@ -57,19 +57,29 @@ module DiscourseRsc
     end
 
     def self.discover
-      pool = []
-      # Eight bounded requests per ten-minute discovery; no per-visitor upstream requests.
+      pool, catalog = [], []
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 45
+      # Two bounded pages per source: popular and newly created, shared by all visitors.
       SOURCES.each do |category, tags|
         tags.each do |tag|
-          rows = ForecastProvider.get(ForecastProvider::GAMMA, '/markets', closed: false, active: true,
-            limit: 100, order: 'volume24hr', ascending: false, tag_id: tag)
-          raise Error.new('forecast_unavailable', status: 503) unless rows.is_a?(Array)
-          pool.concat(candidates(rows, category))
+          %w[volume24hr createdAt].each do |order|
+            raise Error.new('forecast_unavailable', status: 503) if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+            rows = ForecastProvider.get(ForecastProvider::GAMMA, '/markets', closed: false, active: true,
+              limit: 100, order: order, ascending: false, tag_id: tag)
+            raise Error.new('forecast_unavailable', status: 503) unless rows.is_a?(Array)
+            pool.concat(candidates(rows, category))
+            catalog.concat(rows.filter_map { |raw| ForecastCatalog.entry(raw, category) })
+          end
         end
       end
+      blocked = ForecastRequest.where(status: %w[pending rejected]).distinct.pluck(:external_id)
+      blocked -= ForecastMarket.where(external_id: blocked).pluck(:external_id)
+      pool.reject! { |candidate| blocked.include?(candidate[:id]) }
       chosen, meta = [], {}
       ForecastMarket.transaction do
         select(pool).each do |candidate|
+          Commands.lock("forecast-listing:#{candidate[:id]}")
+          next if !ForecastMarket.exists?(external_id: candidate[:id]) && ForecastRequest.exists?(external_id: candidate[:id], status: %w[pending rejected])
           market = ForecastProvider.ingest(candidate[:raw], featured: true)
           next unless market && market.state == 'open'
           chosen << market.id
@@ -79,6 +89,7 @@ module DiscourseRsc
         ForecastMarket.where(featured: true).where.not(id: chosen).update_all(featured: false)
         PluginStore.set(STORE, 'selection', meta)
       end
+      ForecastCatalog.publish(catalog)
       chosen
     end
   end

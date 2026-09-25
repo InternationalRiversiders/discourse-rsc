@@ -107,7 +107,7 @@ module DiscourseRsc
         attempts = 0
         deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 60
         ids = ForecastPosition.where(state: 'open').where('shares_units > 0').select(:market_id)
-        markets = ForecastMarket.where('featured = TRUE OR id IN (?)', ids).order(volume: :desc).to_a
+        markets = ForecastMarket.where('featured = TRUE OR id IN (?) OR id IN (?)', ids, ForecastRequest.approved_markets).order(volume: :desc).to_a
         # Correct sensitive wording and fill missing titles before other refreshes.
         markets.sort_by! { |m| m.question.match?(/invad|invasion/i) ? -1 : (cached(m) ? 1 : 0) }
         markets.each do |market|

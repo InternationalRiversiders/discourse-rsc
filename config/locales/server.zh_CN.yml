@@ -48,6 +48,8 @@ zh_CN:
       fiba: 男篮世界杯
       mens-olympics-basketball: 奥运男篮
     notifications:
+      forecast_request_approved: "你申请的预测题目已开放交易：%{question}"
+      forecast_request_rejected: "预测题目申请暂未通过，可在我的申请查看说明：%{question}"
       forecast_settled: "%{match} · 已确认结算，到账 %{amount} RSC"
       transfer: 向你转账了 %{amount} RSC
       post_tip: 打赏了你的帖子 %{amount} RSC
@@ -64,6 +66,12 @@ zh_CN:
       stock_refunded: 委托结束，退回 %{amount} RSC
       red_packet_claimed_by: 领取了你的红包 %{amount} RSC
     errors:
+      forecast_invalid_reference: "请输入有效的 Polymarket 市场 ID 或市场／事件链接。"
+      forecast_not_eligible: "该题目目前不在本站开放范围内，或已停止接受交易。"
+      forecast_request_recent: "此申请最近已审核，请至少一天后再提交。"
+      forecast_request_limit: "最多同时保留 5 个待审核申请。"
+      forecast_request_missing: "没有待审核申请，请刷新后重试。"
+      forecast_request_changed: "申请后题目规则已变化，请拒绝旧申请并重新核对申请。"
       forecast_disabled: "预测市场暂未开放。"
       forecast_unavailable: "暂时无法取得可靠的市场数据，请稍后再试。"
       forecast_stale: "报价已经过期，请重新获取。"

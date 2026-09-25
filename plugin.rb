@@ -33,6 +33,7 @@ after_initialize do
     app/models/discourse_rsc/instrument
     app/models/discourse_rsc/position
     app/models/discourse_rsc/order
+    app/models/discourse_rsc/forecast_request
     app/models/discourse_rsc/forecast_market
     app/models/discourse_rsc/forecast_position
     app/models/discourse_rsc/forecast_quote
@@ -61,6 +62,8 @@ after_initialize do
     app/services/discourse_rsc/catalog
     app/services/discourse_rsc/provider_http
     app/services/discourse_rsc/forecast_translation
+    app/services/discourse_rsc/forecast_catalog
+    app/services/discourse_rsc/forecast_listing
     app/services/discourse_rsc/forecast_discovery
     app/services/discourse_rsc/forecast_provider
     app/services/discourse_rsc/forecast_exchange

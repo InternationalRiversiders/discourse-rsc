@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 module DiscourseRsc
   class ForecastController < WalletController
+    skip_before_action :ensure_rsc_member, only: %i[requests review_listing]
     before_action :ensure_forecast
     def index
       render 'default/empty'
@@ -14,10 +15,49 @@ module DiscourseRsc
       metadata = ForecastDiscovery.metadata
       markets = scope.reject { |m| ForecastDiscovery.excluded?(question: m.question, event_title: m.event_title, rules: m.rules) }
       markets.sort_by! { |m| metadata.dig(m.id.to_s, 'rank') || ForecastDiscovery::LIMIT + 1 }
-      render_json_dump(markets: markets.first(ForecastDiscovery::LIMIT).map { |m| market_view(m).merge(category: metadata.dig(m.id.to_s, 'category') || 'other') }, balance: wallet.balance,
+      joined = ForecastMarket.where(id: ForecastRequest.approved_markets).where.not(state: 'resolved').order(id: :desc)
+      render_json_dump(admin: Access.admin?(current_user), joined: joined.limit(200).reject { |m| ForecastDiscovery.excluded?(question: m.question, event_title: m.event_title, rules: m.rules) }.map { |m| market_view(m) }, markets: markets.first(ForecastDiscovery::LIMIT).map { |m| market_view(m).merge(category: metadata.dig(m.id.to_s, 'category') || 'other') }, balance: wallet.balance,
         read_only: Safety.read_only?, holdings: holdings.limit(100).map { |p| position_view(p) },
         trades: trades.map { |t| { id: t.id, market_id: t.market_id, question: ForecastTranslation.presentation(t.market)[:question], outcome: ForecastTranslation.presentation(t.market)[:outcomes][t.outcome],
           side: t.side, outcome_index: t.outcome, shares: Amount.format(t.shares_units), cash: Amount.format(t.cash_units), pnl: Amount.format(t.pnl_units), at: t.created_at } })
+    end
+
+    def catalog
+      RateLimiter.new(current_user, 'rsc-forecast-catalog', 20, 1.minute).performed!
+      render_json_dump(ForecastCatalog.browse(actor: current_user, query: params[:q], category: params.fetch(:category, 'all'), order: params.fetch(:order, 'balanced'), page: params[:page], event_id: params[:event_id]))
+    end
+
+    def catalog_show
+      RateLimiter.new(current_user, 'rsc-forecast-preview', 15, 1.minute).performed!
+      external_id = ForecastCatalog.id(params[:external_id])
+      raw = ForecastCatalog.preview(external_id)
+      existing = ForecastMarket.find_by(external_id: external_id)
+      market = existing || ForecastMarket.new(ForecastProvider.parse(raw))
+      market.synced_at = Time.iso8601(raw['_rsc_fetched_at']) if !existing && raw['_rsc_fetched_at']
+      own_request = ForecastRequest.find_by(user_id: current_user.id, external_id: external_id)
+      render_json_dump(market_view(market, detail: true).merge(preview: true, external_id: external_id,
+        market_id: existing&.id, request_status: own_request&.status, review_reason: own_request&.review_reason))
+    end
+
+    def requests
+      raise Error.new('membership_required', status: 403) unless Access.member?(current_user) || Access.admin?(current_user)
+      own = ForecastRequest.where(user_id: current_user.id).order(id: :desc).limit(50)
+      data = { mine: own.map { |r| request_view(r) } }
+      if params[:admin] == 'true'
+        raise Error.new('admin_required', status: 403) unless Access.admin?(current_user)
+        data[:pending] = ForecastRequest.where(status: 'pending').order(:id).limit(100).map { |r| request_view(r) }
+      end
+      render_json_dump(data)
+    end
+
+    def request_listing
+      RateLimiter.new(current_user, 'rsc-forecast-request', 5, 1.hour).performed!
+      render_json_dump(ForecastListing.submit(actor: current_user, external_id: params.require(:external_id), reason: params[:reason], request_id: params.require(:request_id)))
+    end
+
+    def review_listing
+      RateLimiter.new(current_user, 'rsc-forecast-review', 10, 1.minute).performed!
+      render_json_dump(ForecastListing.review(actor: current_user, external_id: params.require(:external_id), decision: params.require(:decision), reason: params[:reason], request_id: params.require(:request_id)))
     end
 
     def show
@@ -43,6 +83,11 @@ module DiscourseRsc
     end
 
     private
+    def request_view(row)
+      { id: row.id, external_id: row.external_id, question: row.question, status: row.status,
+        reason: row.reason, review_reason: row.review_reason, market_id: row.market_id, created_at: row.created_at }
+    end
+
     def ensure_forecast
       ForecastExchange.enabled!
     end
