@@ -18,12 +18,22 @@ en:
         stock_refunded: 'Order reservation refunded: %{amount} RSC'
         red_packet_claimed_by: claimed %{amount} RSC from your packet
       forecast_ui:
+        category_all: "All"
+        category_technology: "Tech & science"
+        category_culture: "Culture & fun"
+        category_economy: "Economy"
+        category_crypto: "Crypto"
+        category_gaming: "Esports"
+        category_sports: "Sports"
+        category_world: "World"
+        category_other: "Other"
+        categories: "Market categories"
         translated_hint: "Automatic translation · Original rules govern settlement"
         show_chinese: "Show Chinese"
         show_original: "Show original"
         multiple: "Return multiple (incl. stake)"
         updated: "Updated"
-        popular: "Popular"
+        popular: "Discover"
         holdings: "My positions"
         history: "Activity"
         search: "Search popular questions"

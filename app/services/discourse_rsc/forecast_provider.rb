@@ -68,23 +68,7 @@ module DiscourseRsc
     end
 
     def self.discover
-      chosen = []
-      3.times do |page|
-        rows = get(GAMMA, '/markets', closed: false, active: true, limit: 100, offset: page * 100, order: 'volume24hr', ascending: false)
-        raise Error.new('forecast_unavailable', status: 503) unless rows.is_a?(Array)
-        rows.each do |raw|
-          attrs = parse(raw)
-          next if raw['negRiskOther'] == true
-          next unless attrs && attrs[:state] == 'open' && attrs[:ends_at] > 1.hour.from_now
-          next unless attrs[:volume] >= 1000 && attrs[:liquidity] >= 5000 && attrs[:prices].all? { |p| decimal(p).between?(BigDecimal('0.02'), BigDecimal('0.98')) }
-          market = ingest(raw, featured: true)
-          chosen << market.id if market && market.state == 'open'
-          break if chosen.size >= 24
-        end
-        break if chosen.size >= 24 || rows.size < 100
-      end
-      ForecastMarket.where(featured: true).where.not(id: chosen).update_all(featured: false) if chosen.any?
-      chosen
+      ForecastDiscovery.discover
     end
 
     def self.refresh(market)

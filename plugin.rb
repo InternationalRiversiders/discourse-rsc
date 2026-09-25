@@ -61,6 +61,7 @@ after_initialize do
     app/services/discourse_rsc/catalog
     app/services/discourse_rsc/provider_http
     app/services/discourse_rsc/forecast_translation
+    app/services/discourse_rsc/forecast_discovery
     app/services/discourse_rsc/forecast_provider
     app/services/discourse_rsc/forecast_exchange
     app/services/discourse_rsc/forecast_settlement

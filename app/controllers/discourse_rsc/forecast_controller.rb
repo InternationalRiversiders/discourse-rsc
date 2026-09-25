@@ -11,7 +11,10 @@ module DiscourseRsc
       scope = ForecastMarket.where(featured: true).where.not(state: 'resolved').order(volume: :desc)
       holdings = ForecastPosition.where(user_id: current_user.id).where('shares_units > 0').includes(:market).order(updated_at: :desc)
       trades = ForecastTrade.where(user_id: current_user.id).includes(:market).order(id: :desc).limit(30)
-      render_json_dump(markets: scope.limit(24).map { |m| market_view(m) }, balance: wallet.balance,
+      metadata = ForecastDiscovery.metadata
+      markets = scope.reject { |m| ForecastDiscovery.excluded?(question: m.question, event_title: m.event_title, rules: m.rules) }
+      markets.sort_by! { |m| metadata.dig(m.id.to_s, 'rank') || ForecastDiscovery::LIMIT + 1 }
+      render_json_dump(markets: markets.first(ForecastDiscovery::LIMIT).map { |m| market_view(m).merge(category: metadata.dig(m.id.to_s, 'category') || 'other') }, balance: wallet.balance,
         read_only: Safety.read_only?, holdings: holdings.limit(100).map { |p| position_view(p) },
         trades: trades.map { |t| { id: t.id, market_id: t.market_id, question: ForecastTranslation.presentation(t.market)[:question], outcome: ForecastTranslation.presentation(t.market)[:outcomes][t.outcome],
           side: t.side, outcome_index: t.outcome, shares: Amount.format(t.shares_units), cash: Amount.format(t.cash_units), pnl: Amount.format(t.pnl_units), at: t.created_at } })

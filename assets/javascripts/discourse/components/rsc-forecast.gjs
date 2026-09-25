@@ -14,6 +14,7 @@ import { formatAmount, signedAmount, valueTone } from "../lib/rsc-format";
 import RscNavigation from "./rsc-navigation";
 
 const ft = (key) => i18n(`discourse_rsc.forecast_ui.${key}`);
+const categoryLabel = (key) => ft(`category_${key || "other"}`);
 const pretty = formatAmount;
 const signed = signedAmount;
 const when = formatDateTime;
@@ -29,6 +30,7 @@ export default class RscForecast extends Component {
   @tracked section = "popular";
   @tracked showOriginal = false;
   @tracked search = "";
+  @tracked category = "all";
   @tracked outcome = 0;
   @tracked side = "buy";
   @tracked amount = "10";
@@ -62,8 +64,17 @@ export default class RscForecast extends Component {
 
   get markets() {
     const query = this.search.trim().toLowerCase();
-    return this.data.markets.filter((m) => !query || `${m.question} ${m.event_title} ${m.original_question || ""}`.toLowerCase().includes(query));
+    return this.data.markets.filter((m) => (this.category === "all" || (m.category || "other") === this.category) && (!query || `${m.question} ${m.event_title} ${m.original_question || ""}`.toLowerCase().includes(query)));
   }
+
+  get categories() {
+    return ["all", "technology", "culture", "economy", "crypto", "gaming", "sports", "world", "other"].map((key) => ({
+      key, label: categoryLabel(key), count: this.data.markets.filter((m) => key === "all" || (m.category || "other") === key).length,
+    })).filter((item) => item.count > 0 || item.key === "all");
+  }
+
+  @action
+  setCategory(key) { this.category = key; }
 
   get choices() { return this.detail ? options(this.detail) : []; }
   get selectedLabel() { return this.detail ? outcomeLabel(this.detail.outcomes[this.outcome]) : ""; }
@@ -236,6 +247,9 @@ export default class RscForecast extends Component {
           </aside>
         </div>
       {{else}}
+        <nav aria-label={{ft "categories"}} class="forecast-categories">
+          {{#each this.categories as |category|}}<button class={{if (eq this.category category.key) "is-active"}} aria-pressed={{eq this.category category.key}} type="button" {{on "click" (fn this.setCategory category.key)}}>{{category.label}} <small>{{category.count}}</small></button>{{/each}}
+        </nav>
         <div class="forecast-grid">{{#each this.markets as |market|}}<article class="forecast-card"><div class="forecast-card-top"><span aria-hidden="true" class="forecast-mark">{{dIcon "chart-line"}}</span><LinkTo class="forecast-card-title" @query={{hash market_id=market.id outcome=0}} @route="rsc.forecast">{{market.question}}</LinkTo></div><div class="forecast-event" title={{market.event_title}}>{{market.event_title}}</div><div class="forecast-outcomes">{{#each (options market) as |choice|}}<LinkTo class="forecast-outcome" @query={{hash market_id=market.id outcome=choice.index}} @route="rsc.forecast"><span>{{choice.name}}</span><strong>{{choice.probability}}</strong></LinkTo>{{/each}}</div><div class="forecast-card-footer"><span>{{ft "volume"}} ${{pretty market.volume 0}}</span><span>{{status market.state}}</span></div></article>{{else}}<p class="forecast-hint">{{ft "empty"}}</p>{{/each}}</div>
         <p class="forecast-hint">{{ft "source_hint"}}</p>
       {{/if}}

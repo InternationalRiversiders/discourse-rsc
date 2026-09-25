@@ -96,3 +96,13 @@
 }
 
 .rsc-forecast .forecast-translation { display: flex; align-items: center; gap: .5em; flex-wrap: wrap; color: var(--primary-medium); margin-bottom: .5em; }
+
+.rsc-forecast .forecast-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+  button { border: 0; background: var(--primary-very-low); color: var(--primary-medium); padding: 8px 12px; white-space: nowrap; }
+  button.is-active { background: var(--tertiary-low); color: var(--tertiary); }
+  small { margin-left: 3px; font-variant-numeric: tabular-nums; opacity: .8; }
+}
