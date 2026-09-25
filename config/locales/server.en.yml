@@ -1,6 +1,6 @@
 en:
   site_settings:
-    rsc_forecast_auto_review_enabled: "AI review of prediction listing requests: reject China-related politics; other questions still require valid rules and order books. Reuses the translation model; failures or uncertainty remain for manual review."
+    rsc_forecast_auto_review_enabled: "AI review of prediction listing requests: reject China-related politics; other questions still require valid rules and order books. Reuses the translation model; content filtering or explicit refusal rejects, while technical failures or uncertainty remain for manual review."
     rsc_forecast_auto_review_daily_limit: "Maximum new AI listing-review decisions per UTC day; cached verdict checks do not count."
     rsc_forecast_translation_daily_limit: "Maximum prediction-market translation requests per UTC day; cache hits do not count."
     rsc_forecast_translation_model_id: "Discourse AI model ID for Chinese prediction-market translations; 0 disables. Public text only, cached in the background."

@@ -1,6 +1,6 @@
 zh_CN:
   site_settings:
-    rsc_forecast_auto_review_enabled: "AI 自动审核预测市场加入申请：涉及中国政治的不通过，其余通过后仍核验规则和盘口。复用预测市场翻译模型；失败或不确定保留人工审核。"
+    rsc_forecast_auto_review_enabled: "AI 自动审核预测市场加入申请：涉及中国政治的不通过，其余通过后仍核验规则和盘口。复用预测市场翻译模型；内容过滤或拒答不通过，技术故障或不确定保留人工审核。"
     rsc_forecast_auto_review_daily_limit: "AI 自动审核每日最多新判断次数（UTC 日），重复核验缓存结果不计数。"
     rsc_forecast_translation_daily_limit: "预测市场自动翻译每日最多请求次数（UTC 日）；命中缓存不计数。"
     rsc_forecast_translation_model_id: "预测市场中文翻译使用的 Discourse AI 模型 ID；0 关闭。仅翻译公开题目，后台缓存。"

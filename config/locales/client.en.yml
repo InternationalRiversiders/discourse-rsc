@@ -19,7 +19,7 @@ en:
         red_packet_claimed_by: claimed %{amount} RSC from your packet
       forecast_ui:
         auto_review: "AI automatic review"
-        auto_review_hint: "Only China-related politics are excluded editorially; rules and order books are still checked. Uncertain or failed reviews remain pending. Disable to review new requests manually."
+        auto_review_hint: "China-related politics, provider content filtering and explicit refusals are rejected. Rules and order books are still checked. Uncertainty or technical failures remain pending. Disable to review new requests manually."
         sort_balanced: "Variety"
         events: "events"
         back_events: "Back to all events"

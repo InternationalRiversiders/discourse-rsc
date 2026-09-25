@@ -2,7 +2,55 @@
 module DiscourseRsc
   module ForecastAutoReview
     STORE = 'rsc_forecast_auto_review'
-    VERSION = 1
+    VERSION = 2
+    Completion = Struct.new(:text, :filter_reason, keyword_init: true)
+
+    # Discourse AI normally returns only message text, losing finish_reason. Capture
+    # this one request's provider result through its per-request audit callback.
+    class CompletionCapture
+      attr_reader :filter_reason, :observed
+
+      def add_from_audit_log(log)
+        body = JSON.parse(log.raw_response_payload.to_s)
+        return unless body.is_a?(Hash)
+        @observed = true
+        Array(body['choices']).each do |choice|
+          next unless choice.is_a?(Hash)
+          @filter_reason = 'content_filter' if choice['finish_reason'] == 'content_filter'
+          message = choice['message']
+          if message.is_a?(Hash) && message['refusal'].is_a?(String) && message['refusal'].present?
+            @filter_reason ||= 'provider_refusal'
+          end
+        end
+        error = body['error']
+        if error.is_a?(Hash) && %w[content_filter content_policy_violation].include?(error['code'])
+          @filter_reason ||= error['code']
+        end
+      rescue JSON::ParserError
+        # An empty/broken response is a technical failure, not evidence of filtering.
+        nil
+      end
+    end
+
+    def self.capture_completion
+      capture = CompletionCapture.new
+      text = yield capture
+      raise Error.new('forecast_ai_invalid') unless capture.observed
+      Completion.new(text: text, filter_reason: capture.filter_reason)
+    rescue StandardError
+      raise unless capture.filter_reason
+      Completion.new(filter_reason: capture.filter_reason)
+    end
+
+    def self.filtered_verdict(signal)
+      { 'decision' => 'reject', 'reason' => '模型内容过滤或拒答，本次申请未通过审核。', 'provider_signal' => signal }
+    end
+
+    def self.plain_refusal?(text)
+      return false unless text.is_a?(String) && text.strip.length <= 400
+      text.strip.match?(/\A(?:很?抱歉|对不起|不好意思)[，,。！!：:\s]*(?:我(?:们)?(?:暂时)?(?:目前)?(?:还)?(?:暂)?(?:不被允许|无法|不能)|(?:暂时)?(?:无法|不能|不便))/) ||
+        text.strip.match?(/\A(?:I(?:'m| am) sorry[,.:!]?\s*|Sorry[,.:!]?\s*)?I (?:cannot|can't|am unable to) (?:help|assist|answer|respond|comply|fulfill|provide)/i)
+    end
 
     def self.configured?
       defined?(DiscourseAi::Completions::Prompt) && defined?(LlmModel) && SiteSetting.discourse_ai_enabled &&
@@ -68,14 +116,23 @@ module DiscourseRsc
       )
       extra = {}
       extra[:thinking] = { type: 'disabled' } if URI(model.url.to_s).host == 'api.deepseek.com' && model.name == 'deepseek-flash'
-      model.to_llm.generate(prompt, extra_model_params: extra, user: Discourse.system_user, temperature: 0,
-        max_tokens: [model.max_output_tokens || 1024, 1024].min, feature_name: 'rsc_forecast_auto_review')
+      capture_completion do |capture|
+        context = DiscourseAi::Completions::ExecutionContext.new(token_usage_tracker: capture)
+        model.to_llm.generate(prompt, extra_model_params: extra, user: Discourse.system_user, temperature: 0,
+          execution_context: context, max_tokens: [model.max_output_tokens || 1024, 1024].min,
+          feature_name: 'rsc_forecast_auto_review')
+      end
     end
 
     def self.classify(attrs)
       return { 'decision' => 'reject', 'reason' => '涉及中国政治相关内容，不在本站开放范围内。' } if ForecastDiscovery.excluded?(**attrs.slice(:question, :event_title, :rules))
       return { 'decision' => 'manual', 'reason' => '规则较长，需管理员人工核对。' } if attrs[:rules].length > 12_000
       text = generate(attrs)
+      if text.is_a?(Completion)
+        return filtered_verdict(text.filter_reason) if text.filter_reason
+        text = text.text
+      end
+      return filtered_verdict('plain_refusal') if plain_refusal?(text)
       raise Error.new('forecast_ai_invalid') unless text.is_a?(String)
       data = JSON.parse(text.strip.sub(/\A```(?:json)?\s*/i, '').sub(/\s*```\z/, ''))
       unless data.is_a?(Hash) && %w[approve reject manual].include?(data['decision']) &&
