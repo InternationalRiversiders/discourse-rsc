@@ -1,5 +1,6 @@
 zh_CN:
   site_settings:
+    rsc_forecast_enabled: "启用独立预测市场：同步 Polymarket 热门问题，以 RSC 买卖份额并按最终结果结算"
     rsc_campaign_enabled: 2026 世界杯活动：赛果齐全后自动补发未完成的返利和徽章
     rsc_campaign_silver_badge_id: 绿茵观察家徽章 ID（需名称一致且不可重复授予）
     rsc_campaign_gold_badge_id: 足坛预言家徽章 ID（需名称一致且不可重复授予）
@@ -45,6 +46,7 @@ zh_CN:
       fiba: 男篮世界杯
       mens-olympics-basketball: 奥运男篮
     notifications:
+      forecast_settled: "%{match} · 已确认结算，到账 %{amount} RSC"
       transfer: 向你转账了 %{amount} RSC
       post_tip: 打赏了你的帖子 %{amount} RSC
       issuance: 向你发放了 %{amount} RSC
@@ -60,6 +62,14 @@ zh_CN:
       stock_refunded: 委托结束，退回 %{amount} RSC
       red_packet_claimed_by: 领取了你的红包 %{amount} RSC
     errors:
+      forecast_disabled: "预测市场暂未开放。"
+      forecast_unavailable: "暂时无法取得可靠的市场数据，请稍后再试。"
+      forecast_stale: "报价已经过期，请重新获取。"
+      forecast_closed: "该问题已停止交易或正在等待结果确认。"
+      forecast_limit: "超过交易限额：每次买入 1–500 RSC，每人每题最多 2,000 份；市场总份额上限 20,000。"
+      forecast_shares: "可卖出的份额不足。"
+      forecast_liquidity: "有效盘口不足以完成这笔交易，请减小数量或稍后再试。"
+      forecast_quote_expired: "确认报价已过期或已使用，请重新获取。"
       reset_below_retained: "目标总资产低于保留的持仓权益与未结算预测本金。"
       instrument_inactive: "该标的已停用，请先在标的管理中核实并启用。"
       campaign_not_ready: 世界杯活动资料不完整，或预测结算与赛果不一致，暂不能发放。

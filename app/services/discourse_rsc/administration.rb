@@ -40,7 +40,8 @@ module DiscourseRsc
           before = wallet.balance
           retained = Position.where(user_id: user.id).includes(:instrument).sum do |position|
             position.margin_units.to_i + Valuation.position(position)[:pnl]
-          end + Prediction.where(user_id: user.id, status: "pending").sum(:stake_units).to_i
+          end + Prediction.where(user_id: user.id, status: "pending").sum(:stake_units).to_i +
+            ForecastPosition.where(user_id: user.id, state: "open").sum(:cost_units).to_i
           raise Error.new("reset_below_retained", status: 409) if mode == "total_equity" && target < retained
           balance_target = mode == "cash" ? target : target - retained
           delta = balance_target - wallet.balance_units.to_i

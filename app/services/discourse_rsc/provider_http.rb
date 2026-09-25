@@ -4,7 +4,7 @@ require "uri"
 require "time"
 module DiscourseRsc
   module ProviderHttp
-    HOSTS = %w[query1.finance.yahoo.com api.exchange.coinbase.com api.twelvedata.com site.api.espn.com api.kraken.com www.okx.com].freeze
+    HOSTS = %w[query1.finance.yahoo.com api.exchange.coinbase.com api.twelvedata.com site.api.espn.com api.kraken.com www.okx.com gamma-api.polymarket.com clob.polymarket.com data-api.polymarket.com].freeze
     # Redis is shared by web processes and Sidekiq, including both A/B containers.
     # Reserve a bounded queue slot using Redis's clock, never a process-local clock.
     RESERVE = <<~LUA

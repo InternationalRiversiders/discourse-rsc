@@ -4,6 +4,7 @@ export default function () {
     this.route("leaderboard");
     this.route("admin");
     this.route("sports");
+    this.route("forecast");
     this.route("packet", { path: "/packets/:token" });
   });
 }

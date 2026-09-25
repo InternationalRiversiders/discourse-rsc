@@ -10,8 +10,10 @@ gem 'websocket-driver', '0.8.2', require_name: 'websocket/driver'
 
 enabled_site_setting :rsc_enabled
 register_svg_icon "coins"
+register_svg_icon "chart-line"
 register_svg_icon "triangle-exclamation"
 register_asset "stylesheets/rsc.scss"
+register_asset "stylesheets/rsc-forecast.scss"
 
 module ::DiscourseRsc
   PLUGIN_NAME = "discourse-rsc"
@@ -31,6 +33,10 @@ after_initialize do
     app/models/discourse_rsc/instrument
     app/models/discourse_rsc/position
     app/models/discourse_rsc/order
+    app/models/discourse_rsc/forecast_market
+    app/models/discourse_rsc/forecast_position
+    app/models/discourse_rsc/forecast_quote
+    app/models/discourse_rsc/forecast_trade
     app/models/discourse_rsc/sport_match
     app/models/discourse_rsc/prediction
     app/models/discourse_rsc/packet
@@ -54,6 +60,9 @@ after_initialize do
     app/services/discourse_rsc/exchange
     app/services/discourse_rsc/catalog
     app/services/discourse_rsc/provider_http
+    app/services/discourse_rsc/forecast_provider
+    app/services/discourse_rsc/forecast_exchange
+    app/services/discourse_rsc/forecast_settlement
     app/services/discourse_rsc/market_data
     app/services/discourse_rsc/crypto_stream
     app/services/discourse_rsc/sports_presentation
@@ -74,6 +83,7 @@ after_initialize do
     app/services/discourse_rsc/rewards
     app/services/discourse_rsc/notification_delivery
     app/controllers/discourse_rsc/wallet_controller
+    app/controllers/discourse_rsc/forecast_controller
     app/controllers/discourse_rsc/dashboard_controller
     app/controllers/discourse_rsc/features_controller
     app/controllers/discourse_rsc/public_packets_controller
@@ -81,6 +91,7 @@ after_initialize do
     app/jobs/regular/discourse_rsc_provider_poll
     app/jobs/regular/discourse_rsc_manual_sync
     app/jobs/scheduled/discourse_rsc_sync_data
+    app/jobs/scheduled/discourse_rsc_forecast_tick
     app/jobs/scheduled/discourse_rsc_business_tick
     app/jobs/scheduled/discourse_rsc_trading_tick
     app/jobs/scheduled/discourse_rsc_deliver_notifications

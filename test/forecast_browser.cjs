@@ -1,0 +1,74 @@
+const fs=require('fs');
+const assert=require('assert/strict');
+const {chromium}=require('/home/ubuntu/.npm/_npx/420ff84f11983ee5/node_modules/playwright');
+const creds=JSON.parse(fs.readFileSync('/tmp/forecast-browser-credentials.json','utf8'));
+const out='/opt/discourse-community-test/results/forecast-20260925';
+(async()=>{
+ const browser=await chromium.launch({executablePath:'/home/ubuntu/.cache/ms-playwright/chromium-1223/chrome-linux/chrome',args:['--no-sandbox','--host-resolver-rules=MAP community.test 127.0.0.1']});
+ const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'zh-CN'});
+ const page=await context.newPage();const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE',e.message);});
+ await page.goto('http://community.test:3000/');
+ const login=await page.evaluate(async c=>{const csrf=await fetch('/session/csrf.json').then(r=>r.json());const r=await fetch('/session.json',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf.csrf,'X-Requested-With':'XMLHttpRequest'},body:JSON.stringify({login:c.username,password:c.password})});return {status:r.status,data:await r.json()};},creds.alice);
+ assert.equal(login.status,200);assert.ok(!login.data.error);
+ await page.goto('http://community.test:3000/rsc/forecast');
+ await page.locator('.forecast-card').first().waitFor({timeout:25000});
+ assert.ok(await page.locator('.forecast-card').count()>=20);
+ await page.screenshot({path:out+'/desktop-list.png',fullPage:true});
+ await page.locator('.forecast-card-title').filter({hasText:'校园音乐节'}).click();
+ await page.locator('.forecast-chart polyline').waitFor().catch(async e=>{await page.screenshot({path:out+'/failure.png',fullPage:true});console.log((await page.locator('.rsc-forecast').innerText()).slice(0,2800));throw e;});
+ const before=await page.evaluate(()=>fetch('/rsc/forecast/state.json').then(r=>r.json()));
+ const startingShares=Number(before.holdings.find(p=>p.market_id===creds.market_id && p.outcome===0 && p.state==='open')?.shares || 0);
+ await page.locator('.forecast-order input').fill('12');
+ await page.locator('.forecast-order input').pressSequentially('3');
+ assert.equal(await page.locator('.forecast-order input').inputValue(),'123');
+ await page.locator('.forecast-order input').fill('12');
+ await page.getByRole('button',{name:'获取确认报价',exact:true}).click();
+ await page.locator('.forecast-quote').waitFor();
+ assert.match(await page.locator('.forecast-quote').innerText(),/20/);
+ await page.screenshot({path:out+'/desktop-detail.png',fullPage:true});
+ await page.getByRole('button',{name:/确认交易/}).click();
+ await page.getByRole('status').filter({hasText:'交易成功'}).waitFor();
+ const positions=await page.evaluate(()=>fetch('/rsc/forecast/state.json').then(r=>r.json()));
+ const position=positions.holdings.find(p=>p.market_id===creds.market_id && p.outcome===0);
+ assert.equal(Number(position.shares),startingShares+20);
+ await page.getByRole('button',{name:'卖出',exact:true}).click();
+ await page.locator('.forecast-order input').fill('5');
+ await page.getByRole('button',{name:'获取确认报价',exact:true}).click();
+ await page.locator('.forecast-quote').waitFor();
+ await page.getByRole('button',{name:/确认交易/}).click();
+ await page.getByRole('status').filter({hasText:'交易成功'}).waitFor();
+ const after=await page.evaluate(()=>fetch('/rsc/forecast/state.json').then(r=>r.json()));
+ assert.equal(Number(after.holdings.find(p=>p.market_id===creds.market_id&&p.outcome===0).shares),startingShares+15);
+ await page.getByRole('button',{name:'一天',exact:true}).click();
+ await page.locator('.forecast-chart polyline').waitFor();
+ for(const scheme of ['light','dark']){
+  await page.emulateMedia({colorScheme:scheme});
+  for(const width of [1440,768,390,320]){
+   await page.setViewportSize({width,height:900});
+   const overflow=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
+   assert.ok(overflow.scroll<=overflow.width+1,JSON.stringify({scheme,...overflow}));
+   if(width===390){const layout=await page.evaluate(()=>({order:document.querySelector('.forecast-order').getBoundingClientRect().top,rules:document.querySelector('.forecast-rules').getBoundingClientRect().top}));assert.ok(layout.order<layout.rules);}
+   if(width===390||width===1440)await page.screenshot({path:`${out}/${scheme}-${width}-detail.png`,fullPage:true});
+  }
+ }
+ await page.getByRole('button',{name:'我的持仓',exact:true}).click();
+ await page.locator('.forecast-position').first().waitFor();
+ await page.screenshot({path:out+'/mobile-holdings.png',fullPage:true});
+ await page.getByRole('button',{name:'交易记录',exact:true}).click();
+ await page.locator('.forecast-table tbody tr').first().waitFor();
+ await page.locator('.forecast-table a').filter({hasText:'校园音乐节'}).first().click();
+ await page.locator('.forecast-order').waitFor();
+ await page.getByRole('link',{name:'返回热门问题'}).click();
+ await page.locator('.forecast-card').first().waitFor();
+ await page.locator('.forecast-search').fill('Fed');
+ assert.ok(await page.locator('.forecast-card').count()>0);
+ await page.locator('.forecast-search').fill('no-such-question-unique');
+ assert.equal(await page.locator('.forecast-card').count(),0);
+ await page.locator('.forecast-search').fill('');
+ await page.screenshot({path:out+'/mobile-list.png',fullPage:true});
+ await page.locator('.forecast-card').first().locator('.forecast-outcome').nth(1).click();
+ await page.locator('.forecast-outcome.selected').waitFor();
+ assert.match(await page.locator('.forecast-outcome.selected').innerText(),/否/);
+ assert.deepEqual(errors,[]);console.log('PASS: real forum buy/sell, holdings, chart period, search, route links; 4 widths × 2 schemes; no JS errors.');
+ await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});

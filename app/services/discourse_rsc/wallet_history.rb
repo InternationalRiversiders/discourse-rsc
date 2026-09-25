@@ -60,7 +60,7 @@ module DiscourseRsc
 
     def self.context(data,user,legacy:false)
       # Only public context fields. Never expose raw imported metadata wholesale.
-      detail=data.values_at('reason','date','message','symbol','matchName','homeTeam','awayTeam').select { |v| v.is_a?(String) }.map { |s| s.first(500) }.join(' · ')
+      detail=data.values_at('reason','date','message','symbol','matchName','homeTeam','awayTeam','question','outcome').select { |v| v.is_a?(String) }.map { |s| s.first(500) }.join(' · ')
       path=nil
       post_id=data['post_id'] || data['postId']
       post=Post.find_by(id:post_id) if post_id
@@ -81,6 +81,7 @@ module DiscourseRsc
         match=SportMatch.find_by(id:data['match_id']) || Prediction.find_by(id:data['prediction_id'])&.sport_match
         if match;path="/rsc/sports?match_id=#{match.id}#rsc-match-#{match.id}";detail=["#{match.home} — #{match.away}",detail].reject(&:blank?).join(' · ');end
       end
+      path="/rsc/forecast?market_id=#{data['forecast_market_id'].to_i}" if !legacy && data['forecast_market_id']
       {detail:detail,path:path}
     end
   end

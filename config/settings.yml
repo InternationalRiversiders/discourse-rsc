@@ -1,4 +1,7 @@
 plugins:
+  rsc_forecast_enabled:
+    default: false
+    client: true
   rsc_enabled:
     default: false
     client: true

@@ -2,7 +2,7 @@
 
 module DiscourseRsc
   class NotificationDelivery
-    KINDS = %w[transfer post_tip issuance red_packet_claim red_packet_claimed_by red_packet_refund daily_reward prediction_settled stock_filled stock_closed stock_liquidated stock_stop_loss stock_take_profit stock_refunded].freeze
+    KINDS = %w[transfer post_tip issuance red_packet_claim red_packet_claimed_by red_packet_refund daily_reward prediction_settled forecast_settled stock_filled stock_closed stock_liquidated stock_stop_loss stock_take_profit stock_refunded].freeze
 
     def self.attempt(event)
       deliver(event)
@@ -24,6 +24,7 @@ module DiscourseRsc
       return "/rsc/market" if event.kind.start_with?("stock_")
       return "/rsc/sports?match_id=#{payload['match_id'].to_i}#rsc-match-#{payload['match_id'].to_i}" if event.kind == "prediction_settled" && payload["match_id"]
       return "/rsc/sports" if event.kind == "prediction_settled"
+      return "/rsc/forecast?market_id=#{payload['forecast_market_id'].to_i}" if event.kind == "forecast_settled"
       "/rsc?journal_id=#{event.journal_id}#rsc-entry-#{event.journal_id}"
     end
 

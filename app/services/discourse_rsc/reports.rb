@@ -6,6 +6,8 @@ module DiscourseRsc
       positions = data[:positions].fetch(user_id, [])
       orders = data[:orders].fetch(user_id, [])
       predictions = data[:predictions].fetch(user_id, [])
+      forecasts = data.fetch(:forecasts, {}).fetch(user_id, [])
+      forecast_cost = forecasts.select { |p| p.state == "open" }.sum { |p| p.cost_units.to_i }
       wallet = data[:wallets][user_id]
       valuations = positions.map { |position| Valuation.position(position, data[:prices][position.instrument_id]) }
       pnl = valuations.map { |value| value[:pnl] }
@@ -36,6 +38,9 @@ module DiscourseRsc
       end
       stakes = predictions.select { |p| p.status == "pending" }.sum { |p| p.stake_units.to_i }
       realized += BigDecimal(Amount.format(predictions.reject { |p| p.status == "pending" }.sum { |p| p.payout_units.to_i - p.stake_units.to_i }))
+      realized += BigDecimal(Amount.format(forecasts.sum { |p| p.realized_units.to_i }))
+      stakes += forecast_cost
+      basis = "cost" if forecast_cost.positive?
       realized += data[:adjustments].fetch(user_id.to_s, 0)
       unrealized = pnl.none?(&:nil?) ? pnl.sum : nil
       total_equity = unrealized && balance + reserved + margin + stakes + unrealized
@@ -55,6 +60,7 @@ module DiscourseRsc
       legacy = LegacyRecord.where("data ->> 'discourse_user_id' IN (?)", ids.map(&:to_s))
       {
         legacy_trades: legacy.where(source_table: "exchange_trades").pluck(:data).group_by { |row| row["discourse_user_id"].to_i },
+        forecasts: ForecastPosition.where(user_id: ids).to_a.group_by(&:user_id),
         wallets: wallets, positions: positions.group_by(&:user_id), prices: prices,
         users: User.where(id: ids).index_by(&:id),
         orders: Order.where(user_id: ids).to_a.group_by(&:user_id), predictions: Prediction.where(user_id: ids).to_a.group_by(&:user_id),
