@@ -18,6 +18,8 @@ zh_CN:
         stock_refunded: 委托结束，退回 %{amount} RSC
         red_packet_claimed_by: 领取了你的红包 %{amount} RSC
       forecast_ui:
+        auto_review: "AI 自动审核"
+        auto_review_hint: "仅排除中国政治相关题目；通过后仍检查规则和盘口。无法判断或调用失败时保留人工审核。关闭后，新申请由管理员处理。"
         sort_balanced: "综合推荐"
         events: "个事件"
         back_events: "返回全部事件"
@@ -47,7 +49,7 @@ zh_CN:
         open_trading: "进入交易"
         back_browse: "返回列表"
         apply: "申请加入"
-        apply_hint: "由管理员核对规则和盘口后开放 RSC 交易。"
+        apply_hint: "申请审核通过并确认规则和盘口后开放 RSC 交易。"
         request_reason: "推荐理由"
         request_sent: "申请已提交，可在“我的申请”查看进度。"
         review_reason: "审核说明（拒绝时必填）"

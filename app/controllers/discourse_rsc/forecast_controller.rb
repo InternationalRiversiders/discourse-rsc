@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 module DiscourseRsc
   class ForecastController < WalletController
-    skip_before_action :ensure_rsc_member, only: %i[requests review_listing]
+    skip_before_action :ensure_rsc_member, only: %i[requests review_listing auto_review_settings]
     before_action :ensure_forecast
     def index
       render 'default/empty'
@@ -46,6 +46,8 @@ module DiscourseRsc
       if params[:admin] == 'true'
         raise Error.new('admin_required', status: 403) unless Access.admin?(current_user)
         data[:pending] = ForecastRequest.where(status: 'pending').order(:id).limit(100).map { |r| request_view(r) }
+        data[:auto_review_enabled] = SiteSetting.rsc_forecast_auto_review_enabled
+        data[:auto_review_configured] = !!ForecastAutoReview.configured?
       end
       render_json_dump(data)
     end
@@ -58,6 +60,17 @@ module DiscourseRsc
     def review_listing
       RateLimiter.new(current_user, 'rsc-forecast-review', 10, 1.minute).performed!
       render_json_dump(ForecastListing.review(actor: current_user, external_id: params.require(:external_id), decision: params.require(:decision), reason: params[:reason], request_id: params.require(:request_id)))
+    end
+
+    def auto_review_settings
+      raise Error.new('admin_required', status: 403) unless Access.admin?(current_user)
+      value = params.require(:enabled).to_s
+      raise Discourse::InvalidParameters.new(:enabled) unless %w[true false].include?(value)
+      raise Error.new('forecast_ai_unconfigured') if value == 'true' && !ForecastAutoReview.configured?
+      SiteSetting.rsc_forecast_auto_review_enabled = value == 'true'
+      Audit.create!(actor_user_id: current_user.id, action: 'forecast_auto_review_settings',
+        details: { enabled: value == 'true' }, created_at: Time.current)
+      render_json_dump(auto_review_enabled: SiteSetting.rsc_forecast_auto_review_enabled)
     end
 
     def show
@@ -85,7 +98,8 @@ module DiscourseRsc
     private
     def request_view(row)
       { id: row.id, external_id: row.external_id, question: row.question, status: row.status,
-        reason: row.reason, review_reason: row.review_reason, market_id: row.market_id, created_at: row.created_at }
+        reason: row.reason, review_reason: row.review_reason, market_id: row.market_id, created_at: row.created_at,
+        auto_review: ForecastAutoReview.presentation(row) }
     end
 
     def ensure_forecast

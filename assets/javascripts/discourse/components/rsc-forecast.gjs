@@ -198,6 +198,17 @@ export default class RscForecast extends Component {
   @action
   setReviewReason(id, event) { this.reviewReasons = {...this.reviewReasons, [id]: event.target.value}; }
   @action
+  async toggleAutoReview(event) {
+    const enabled = event.target.checked;
+    this.busy = true; this.error = "";
+    try {
+      const result = await ajax("/rsc/forecast/auto-review-settings.json", {type: "POST", data: {enabled}});
+      if (!this.isDestroying) { this.requestData = {...this.requestData, ...result}; }
+    } catch (error) {
+      if (!this.isDestroying) { event.target.checked = !!this.requestData.auto_review_enabled; this.error = extractError(error); }
+    } finally { if (!this.isDestroying) { this.busy = false; } }
+  }
+  @action
   async reviewListing(id, decision) {
     if (this.busy) { return; }
     this.busy = true; this.error = "";
@@ -326,9 +337,10 @@ export default class RscForecast extends Component {
         <p class="forecast-hint">{{ft "joined_hint"}}</p>
         <div class="forecast-grid">{{#each this.data.joined as |market|}}<article class="forecast-card"><LinkTo class="forecast-card-title" @query={{hash section=null market_id=market.id}} @route="rsc.forecast">{{market.question}}</LinkTo><div class="forecast-outcomes">{{#each (options market) as |choice|}}<LinkTo class="forecast-outcome" @query={{hash section=null market_id=market.id outcome=choice.index}} @route="rsc.forecast"><span>{{choice.name}}</span><strong>{{choice.probability}}</strong></LinkTo>{{/each}}</div><small>{{status market.state}}</small></article>{{else}}<p class="forecast-hint">{{ft "no_joined"}}</p>{{/each}}</div>
       {{else if (eq this.section "requests")}}
-        {{#each this.requestData.mine key="id" as |request|}}<article class="forecast-position"><div class="forecast-position-heading"><button class="forecast-preview-link" type="button" {{on "click" (fn this.previewCatalog request.external_id)}}>{{request.question}}</button><strong>{{requestStatus request.status}}</strong></div><p>{{request.reason}}</p>{{#if request.review_reason}}<p class="forecast-hint">{{request.review_reason}}</p>{{/if}}{{#if request.market_id}}<LinkTo @query={{hash section=null market_id=request.market_id}} @route="rsc.forecast">{{ft "open_trading"}}</LinkTo>{{/if}}<small>{{when request.created_at}}</small></article>{{else}}<p class="forecast-hint">{{ft "no_requests"}}</p>{{/each}}
+        {{#each this.requestData.mine key="id" as |request|}}<article class="forecast-position"><div class="forecast-position-heading"><button class="forecast-preview-link" type="button" {{on "click" (fn this.previewCatalog request.external_id)}}>{{request.question}}</button><strong>{{requestStatus request.status}}</strong></div><p>{{request.reason}}</p>{{#if request.auto_review.reason}}<p class="forecast-hint">{{request.auto_review.reason}}</p>{{/if}}{{#if request.review_reason}}<p class="forecast-hint">{{request.review_reason}}</p>{{/if}}{{#if request.market_id}}<LinkTo @query={{hash section=null market_id=request.market_id}} @route="rsc.forecast">{{ft "open_trading"}}</LinkTo>{{/if}}<small>{{when request.created_at}}</small></article>{{else}}<p class="forecast-hint">{{ft "no_requests"}}</p>{{/each}}
       {{else if (eq this.section "review")}}
-        {{#each this.pendingRequests key="id" as |request|}}<article class="forecast-position"><div class="forecast-position-heading"><button class="forecast-preview-link" type="button" {{on "click" (fn this.previewCatalog request.external_id)}}>{{request.question}}</button><small>{{when request.created_at}}</small></div><p>{{request.reason}}</p><div class="forecast-review-actions"><input aria-label={{ft "review_reason"}} placeholder={{ft "review_reason"}} value={{request.reviewReason}} {{on "input" (fn this.setReviewReason request.external_id)}} /><button class="btn btn-primary" disabled={{this.reviewDisabled}} type="button" {{on "click" (fn this.reviewListing request.external_id "approved")}}>{{ft "approve"}}</button><button class="btn" disabled={{this.reviewDisabled}} type="button" {{on "click" (fn this.reviewListing request.external_id "rejected")}}>{{ft "reject"}}</button></div></article>{{else}}<p class="forecast-hint">{{ft "no_pending"}}</p>{{/each}}
+        <div class="forecast-auto-review"><label><input type="checkbox" checked={{this.requestData.auto_review_enabled}} disabled={{this.reviewDisabled}} {{on "change" this.toggleAutoReview}} /> {{ft "auto_review"}}</label><p class="forecast-hint">{{ft "auto_review_hint"}}</p></div>
+        {{#each this.pendingRequests key="id" as |request|}}<article class="forecast-position"><div class="forecast-position-heading"><button class="forecast-preview-link" type="button" {{on "click" (fn this.previewCatalog request.external_id)}}>{{request.question}}</button><small>{{when request.created_at}}</small></div><p>{{request.reason}}</p>{{#if request.auto_review.reason}}<p class="forecast-hint">{{request.auto_review.reason}}</p>{{/if}}<div class="forecast-review-actions"><input aria-label={{ft "review_reason"}} placeholder={{ft "review_reason"}} value={{request.reviewReason}} {{on "input" (fn this.setReviewReason request.external_id)}} /><button class="btn btn-primary" disabled={{this.reviewDisabled}} type="button" {{on "click" (fn this.reviewListing request.external_id "approved")}}>{{ft "approve"}}</button><button class="btn" disabled={{this.reviewDisabled}} type="button" {{on "click" (fn this.reviewListing request.external_id "rejected")}}>{{ft "reject"}}</button></div></article>{{else}}<p class="forecast-hint">{{ft "no_pending"}}</p>{{/each}}
       {{else if (eq this.section "holdings")}}
         {{#each this.data.holdings as |position|}}
           <article class="forecast-position">

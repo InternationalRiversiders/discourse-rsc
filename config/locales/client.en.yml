@@ -18,6 +18,8 @@ en:
         stock_refunded: 'Order reservation refunded: %{amount} RSC'
         red_packet_claimed_by: claimed %{amount} RSC from your packet
       forecast_ui:
+        auto_review: "AI automatic review"
+        auto_review_hint: "Only China-related politics are excluded editorially; rules and order books are still checked. Uncertain or failed reviews remain pending. Disable to review new requests manually."
         sort_balanced: "Variety"
         events: "events"
         back_events: "Back to all events"
@@ -47,7 +49,7 @@ en:
         open_trading: "Open trading"
         back_browse: "Back to list"
         apply: "Request listing"
-        apply_hint: "An administrator checks the rules and order books before enabling RSC trading."
+        apply_hint: "RSC trading opens after the request is approved and its rules and order books are verified."
         request_reason: "Why recommend this question?"
         request_sent: "Request submitted. Track it in My requests."
         review_reason: "Review note (required to reject)"

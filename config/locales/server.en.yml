@@ -1,5 +1,7 @@
 en:
   site_settings:
+    rsc_forecast_auto_review_enabled: "AI review of prediction listing requests: reject China-related politics; other questions still require valid rules and order books. Reuses the translation model; failures or uncertainty remain for manual review."
+    rsc_forecast_auto_review_daily_limit: "Maximum new AI listing-review decisions per UTC day; cached verdict checks do not count."
     rsc_forecast_translation_daily_limit: "Maximum prediction-market translation requests per UTC day; cache hits do not count."
     rsc_forecast_translation_model_id: "Discourse AI model ID for Chinese prediction-market translations; 0 disables. Public text only, cached in the background."
     rsc_forecast_enabled: "Enable independent prediction markets: popular Polymarket questions, RSC share trading and final-result settlement"
@@ -66,6 +68,9 @@ en:
       stock_refunded: 'Order reservation refunded: %{amount} RSC'
       red_packet_claimed_by: claimed %{amount} RSC from your packet
     errors:
+      forecast_ai_unconfigured: "Configure an available Discourse AI translation model for prediction markets first."
+      forecast_ai_invalid: "AI review did not return a valid result. The request remains pending."
+      forecast_ai_stale: "Automatic review was disabled or the request or rules changed. Review again."
       forecast_invalid_reference: "Enter a valid Polymarket market ID or market/event link."
       forecast_not_eligible: "This question is outside this site’s listing scope or is no longer trading."
       forecast_request_recent: "This request was recently reviewed. Wait at least one day before reapplying."

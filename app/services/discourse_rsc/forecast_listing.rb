@@ -29,7 +29,7 @@ module DiscourseRsc
       end
     end
 
-    def self.review(actor:, external_id:, decision:, reason:, request_id:)
+    def self.review(actor:, external_id:, decision:, reason:, request_id:, automation: nil)
       raise Error.new('admin_required',status:403) unless Access.admin?(actor)
       Safety.ensure_writable!
       external_id = ForecastCatalog.id(external_id)
@@ -41,8 +41,9 @@ module DiscourseRsc
       raise Error.new('forecast_request_missing') unless ForecastRequest.exists?(external_id:external_id,status:'pending')
       # Check live contract and both order books before taking the transaction lock.
       raw = ForecastCatalog.raw(external_id) if decision=='approved'
+      raw = ForecastAutoReview.source(external_id) if automation && decision=='rejected'
       attrs = ForecastProvider.parse(raw) if raw
-      if attrs
+      if attrs && decision=='approved'
         if ForecastRequest.where(external_id:external_id,status:'pending').where.not(terms_digest:attrs[:terms_digest]).exists?
           raise Error.new('forecast_request_changed')
         end
@@ -58,8 +59,9 @@ module DiscourseRsc
         Commands.lock("forecast-listing:#{external_id}")
         requests=ForecastRequest.where(external_id:external_id,status:'pending').order(:id).lock.to_a
         next({reviewed:0}) if requests.empty?
+        ForecastAutoReview.ensure_current!(automation, attrs, requests) if automation
         raise Error.new('forecast_request_changed') if attrs && requests.any? { |request| request.terms_digest != attrs[:terms_digest] }
-        market=ForecastProvider.ingest(raw,featured: ForecastMarket.exists?(external_id:external_id) ? nil : false) if raw
+        market=ForecastProvider.ingest(raw,featured: ForecastMarket.exists?(external_id:external_id) ? nil : false) if raw && decision=='approved'
         raise Error.new('forecast_closed') if market && market.state!='open'
         requests.each do |request|
           request.update!(status:decision,reviewer_id:actor.id,market_id:market&.id,review_reason:reason)
@@ -70,7 +72,7 @@ module DiscourseRsc
             Notification.create!(user_id:recipient.id,notification_type:Notification.types[:custom],data:{river_app:'rsc',river_text:text,river_path:path,river_icon:'chart-line',topic_title:text}.to_json)
           end
         end
-        Audit.create!(actor_user_id:actor.id,action:'forecast_request_review',details:{external_id:external_id,decision:decision,reason:reason,request_ids:requests.map(&:id),market_id:market&.id},created_at:Time.current)
+        Audit.create!(actor_user_id:actor.id,action:'forecast_request_review',details:{external_id:external_id,decision:decision,reason:reason,request_ids:requests.map(&:id),market_id:market&.id,automated:automation.present?,ai_review:automation},created_at:Time.current)
         {reviewed:requests.size,market_id:market&.id,status:decision}
       end
     end

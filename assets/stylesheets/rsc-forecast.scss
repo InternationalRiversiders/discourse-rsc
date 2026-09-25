@@ -1,4 +1,7 @@
 .rsc-forecast {
+  .forecast-auto-review { padding: 12px 16px; border: 1px solid var(--primary-low); border-radius: 10px; margin-bottom: 16px; }
+  .forecast-auto-review label { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .forecast-auto-review input { margin: 0; }
   --forecast-green: color-mix(in srgb, #188454 70%, var(--primary) 30%);
   --forecast-red: color-mix(in srgb, #ca5368 80%, var(--primary) 20%);
   max-width: 1280px;

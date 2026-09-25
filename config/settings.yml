@@ -1,4 +1,10 @@
 plugins:
+  rsc_forecast_auto_review_enabled:
+    default: false
+  rsc_forecast_auto_review_daily_limit:
+    default: 100
+    min: 1
+    max: 1000
   rsc_forecast_translation_daily_limit:
     default: 256
     min: 24

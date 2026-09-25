@@ -1,5 +1,7 @@
 zh_CN:
   site_settings:
+    rsc_forecast_auto_review_enabled: "AI 自动审核预测市场加入申请：涉及中国政治的不通过，其余通过后仍核验规则和盘口。复用预测市场翻译模型；失败或不确定保留人工审核。"
+    rsc_forecast_auto_review_daily_limit: "AI 自动审核每日最多新判断次数（UTC 日），重复核验缓存结果不计数。"
     rsc_forecast_translation_daily_limit: "预测市场自动翻译每日最多请求次数（UTC 日）；命中缓存不计数。"
     rsc_forecast_translation_model_id: "预测市场中文翻译使用的 Discourse AI 模型 ID；0 关闭。仅翻译公开题目，后台缓存。"
     rsc_forecast_enabled: "启用独立预测市场：同步 Polymarket 热门问题，以 RSC 买卖份额并按最终结果结算"
@@ -66,6 +68,9 @@ zh_CN:
       stock_refunded: 委托结束，退回 %{amount} RSC
       red_packet_claimed_by: 领取了你的红包 %{amount} RSC
     errors:
+      forecast_ai_unconfigured: "请先为预测市场配置可用的 Discourse AI 翻译模型。"
+      forecast_ai_invalid: "AI 审核未返回有效结果，申请仍待审核。"
+      forecast_ai_stale: "自动审核已关闭，或申请及规则已变化，请重新核对。"
       forecast_invalid_reference: "请输入有效的 Polymarket 市场 ID 或市场／事件链接。"
       forecast_not_eligible: "该题目目前不在本站开放范围内，或已停止接受交易。"
       forecast_request_recent: "此申请最近已审核，请至少一天后再提交。"

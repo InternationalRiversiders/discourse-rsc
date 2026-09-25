@@ -12,6 +12,7 @@ DiscourseRsc::Engine.routes.draw do
   get "/forecast/requests" => "forecast#requests"
   post "/forecast/requests" => "forecast#request_listing"
   post "/forecast/requests/review" => "forecast#review_listing"
+  post "/forecast/auto-review-settings" => "forecast#auto_review_settings"
   get "/forecast/state" => "forecast#state"
   get "/forecast/markets/:id" => "forecast#show"
   get "/forecast/markets/:id/history" => "forecast#history"
