@@ -1,4 +1,8 @@
 plugins:
+  rsc_forecast_translation_daily_limit:
+    default: 256
+    min: 24
+    max: 1000
   rsc_forecast_translation_model_id:
     default: 0
     min: 0

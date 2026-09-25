@@ -52,8 +52,10 @@ Data API `/v2/resolutions?condition=...` 提供 `status`、`payouts`、`resolved
 
 ## 中文翻译
 
-`rsc_forecast_translation_model_id` 指定论坛已有 Discourse AI 模型 ID（0 关闭），不复制或新增密钥。每分钟独立任务最多处理两个问题，每 UTC 日最多 96 次请求；失败后每题六小时退避。只发送公开题目、事件名、两项选项、规则，不发送账号、余额、交易或私有论坛内容。
+`rsc_forecast_translation_model_id` 指定论坛已有 Discourse AI 模型 ID（0 关闭），不复制或新增密钥。每分钟独立任务最多处理四个问题，单轮启动预算 60 秒；每 UTC 日最多请求次数由 `rsc_forecast_translation_daily_limit` 控制，默认 256，命中缓存不计数。失败后每题十分钟退避，优先补齐漏译。只发送公开题目、事件名、两项选项、规则，不发送账号、余额、交易或私有论坛内容。
 
 中文正文持久保存在 PluginStore，随论坛数据库备份；源条款摘要和事件名变化后不再使用旧翻译。规则超过 12,000 字符、输出格式不完整或模型失败时保留原文，不截断规则、不阻塞行情及结算。列表、持仓和交易历史使用中文，详情支持中文/原文切换并标明自动翻译。原始 question/rules/outcomes、token、报价条款摘要及结算判断不因翻译改变。
 
 上游 UMA 初始状态 `posed` 表示问题已初始化，允许结合 Gamma 的可交易状态获取报价；不同于 `proposed`。提议、争议、extended review 和未知/缺失状态均暂停交易。依据 https://github.com/Polymarket/resolution-subgraph/blob/main/src/uma-ctf-adapter.ts 及上线前实际返回值补充回归。
+
+翻译版本 2：政治/军事措辞采用一致的中性行动描述，同时保留原始结算事件的范围、意图、领土/岛屿条件。人名采用中文译名，标题与选项保持一致；电竞队名无通行译名时保留原标识。新模型或提示词版本使旧缓存排队更新，原条款未变的旧中文在更新完成前保留显示。DeepSeek V4.1 Flash 使用 API 名 `deepseek-flash`，翻译请求关闭思考模式，只生成译文。

@@ -1,6 +1,7 @@
 en:
   site_settings:
-    rsc_forecast_translation_model_id: "Discourse AI model ID for Chinese prediction-market translations; 0 disables. Public text only, cached in the background, up to 96 requests/day."
+    rsc_forecast_translation_daily_limit: "Maximum prediction-market translation requests per UTC day; cache hits do not count."
+    rsc_forecast_translation_model_id: "Discourse AI model ID for Chinese prediction-market translations; 0 disables. Public text only, cached in the background."
     rsc_forecast_enabled: "Enable independent prediction markets: popular Polymarket questions, RSC share trading and final-result settlement"
     rsc_daily_reward_delay_hours: Hours after the UTC+8 business day ends before daily rewards become payable (legacy default 02:00).
     rsc_campaign_enabled: Automatically issue missing 2026 World Cup rebates and badges after result verification

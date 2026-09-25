@@ -54,4 +54,44 @@ class ForecastTest
   ensure
     R::ForecastTranslation.define_singleton_method(:generate, original)
   end
+  def test_previous_chinese_stays_visible_while_refresh_is_pending
+    old=JSON.parse(translation_result).merge('signature'=>R::ForecastTranslation.signature(@market,version:1))
+    PluginStore.set(R::ForecastTranslation::STORE,@market.id.to_s,old)
+    assert R::ForecastTranslation.cached(@market)
+    refute R::ForecastTranslation.cached(@market,fresh:true)
+    assert_equal '演示会确认“是”吗？',R::ForecastTranslation.presentation(@market)[:question]
+    translated_with(translation_result) { assert R::ForecastTranslation.translate(@market) }
+    assert R::ForecastTranslation.cached(@market,fresh:true)
+    @market.update!(terms_digest:'new terms')
+    refute R::ForecastTranslation.cached(@market)
+  end
+  def test_model_change_invalidates_new_translation
+    previous=SiteSetting.rsc_forecast_translation_model_id
+    translated_with(translation_result) { assert R::ForecastTranslation.translate(@market) }
+    SiteSetting.rsc_forecast_translation_model_id=previous+1
+    refute R::ForecastTranslation.cached(@market,fresh:true)
+  ensure
+    SiteSetting.rsc_forecast_translation_model_id=previous
+  end
+
+  def test_neutral_input_expands_only_explicit_contract_definition
+    @market.question = 'Will Country A invade Country B before 2027?'
+    @market.event_title = @market.question
+    @market.rules = 'Yes if a military offensive intended to establish control over any portion of Country B commences.'
+    source = R::ForecastTranslation.translation_source(@market)
+    assert_includes source['question'], 'intended to establish control over any part of Country B before 2027?'
+    assert_includes @market.question, 'invade'
+    assert_equal @market.rules, source['rules']
+    @market.rules = 'Yes if any attack occurs.'
+    assert_equal @market.question, R::ForecastTranslation.translation_source(@market)['question']
+  end
+
+  def test_loaded_headline_is_not_cached_for_explicit_control_contract
+    @market.update!(question: 'Will A invade B?', event_title: 'Will A invade B?',
+      rules: 'A military offensive intended to establish control over any portion of B.')
+    bad = JSON.parse(translation_result).merge('question' => 'A 会入侵 B 吗？').to_json
+    translated_with(bad) { refute R::ForecastTranslation.translate(@market) }
+    refute R::ForecastTranslation.cached(@market)
+  end
+
 end
