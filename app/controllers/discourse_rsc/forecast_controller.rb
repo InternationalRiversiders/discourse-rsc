@@ -13,7 +13,7 @@ module DiscourseRsc
       trades = ForecastTrade.where(user_id: current_user.id).includes(:market).order(id: :desc).limit(30)
       render_json_dump(markets: scope.limit(24).map { |m| market_view(m) }, balance: wallet.balance,
         read_only: Safety.read_only?, holdings: holdings.limit(100).map { |p| position_view(p) },
-        trades: trades.map { |t| { id: t.id, market_id: t.market_id, question: t.market.question, outcome: t.market.outcomes[t.outcome],
+        trades: trades.map { |t| { id: t.id, market_id: t.market_id, question: ForecastTranslation.presentation(t.market)[:question], outcome: ForecastTranslation.presentation(t.market)[:outcomes][t.outcome],
           side: t.side, outcome_index: t.outcome, shares: Amount.format(t.shares_units), cash: Amount.format(t.cash_units), pnl: Amount.format(t.pnl_units), at: t.created_at } })
     end
 
@@ -51,17 +51,23 @@ module DiscourseRsc
     end
 
     def market_view(m, detail: false)
-      view = { id: m.id, question: m.question, event_title: m.event_title, outcomes: m.outcomes, prices: m.prices,
+      localized = ForecastTranslation.presentation(m)
+      view = { id: m.id, question: localized[:question], event_title: localized[:event_title], outcomes: localized[:outcomes], prices: m.prices,
+        translated: localized[:translated], original_question: m.question,
         volume: m.volume.to_s('F'), liquidity: m.liquidity.to_s('F'), ends_at: m.ends_at, state: m.state,
         synced_at: m.synced_at, confirmed_at: m.confirmed_at, settled_at: m.settled_at,
         payouts: ForecastSettlement.payouts(m.resolution), resolution_status: m.resolution['status'],
         url: "https://polymarket.com/market/#{m.slug}" }
-      view[:rules] = m.rules if detail
+      if detail
+        view[:rules] = localized[:rules]
+        view[:original_rules] = m.rules
+        view[:original_outcomes] = m.outcomes
+      end
       view
     end
 
     def position_view(p)
-      { id: p.id, market_id: p.market_id, question: p.market.question, outcome: p.outcome, label: p.market.outcomes[p.outcome],
+      { id: p.id, market_id: p.market_id, question: ForecastTranslation.presentation(p.market)[:question], outcome: p.outcome, label: ForecastTranslation.presentation(p.market)[:outcomes][p.outcome],
         shares: Amount.format(p.shares_units), cost: Amount.format(p.cost_units), realized: Amount.format(p.realized_units),
         state: p.state, market_state: p.market.state }
     end

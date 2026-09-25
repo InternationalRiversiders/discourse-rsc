@@ -27,6 +27,7 @@ export default class RscForecast extends Component {
   @tracked data;
   @tracked detail;
   @tracked section = "popular";
+  @tracked showOriginal = false;
   @tracked search = "";
   @tracked outcome = 0;
   @tracked side = "buy";
@@ -61,7 +62,7 @@ export default class RscForecast extends Component {
 
   get markets() {
     const query = this.search.trim().toLowerCase();
-    return this.data.markets.filter((m) => !query || `${m.question} ${m.event_title}`.toLowerCase().includes(query));
+    return this.data.markets.filter((m) => !query || `${m.question} ${m.event_title} ${m.original_question || ""}`.toLowerCase().includes(query));
   }
 
   get choices() { return this.detail ? options(this.detail) : []; }
@@ -88,6 +89,12 @@ export default class RscForecast extends Component {
     const sum = values.reduce((a, b) => a + b, 0);
     return values.map((p, index) => `${outcomeLabel(this.detail.outcomes[index])} ${pretty((p / sum).toFixed(6))} RSC`).join(" · ");
   }
+
+  get detailQuestion() { return this.showOriginal ? this.detail.original_question : this.detail.question; }
+  get detailRules() { return this.showOriginal ? this.detail.original_rules : this.detail.rules; }
+
+  @action
+  toggleOriginal() { this.showOriginal = !this.showOriginal; }
 
   @action
   setSection(value) { this.section = value; this.error = ""; }
@@ -199,7 +206,8 @@ export default class RscForecast extends Component {
         <div class="forecast-detail-top"><LinkTo @query={{hash market_id=null}} @route="rsc.forecast">{{dIcon "arrow-left"}} {{ft "back"}}</LinkTo><a href={{this.detail.url}} rel="noopener noreferrer" target="_blank">Polymarket ↗</a></div>
         <div class="forecast-detail">
           <div class="forecast-main">
-            <h1>{{this.detail.question}}</h1>
+            <h1>{{this.detailQuestion}}</h1>
+            {{#if this.detail.translated}}<div class="forecast-translation"><small>{{ft "translated_hint"}}</small><button class="btn btn-flat" type="button" {{on "click" this.toggleOriginal}}>{{#if this.showOriginal}}{{ft "show_chinese"}}{{else}}{{ft "show_original"}}{{/if}}</button></div>{{/if}}
             <div class="forecast-meta"><span>{{status this.detail.state}}</span><span>{{ft "ends"}} {{when this.detail.ends_at}}</span><span>{{ft "volume"}} ${{pretty this.detail.volume 0}}</span><span>{{ft "updated"}} {{when this.detail.synced_at}}</span></div>
             {{#if this.result}}<p class="forecast-notice">{{ft "resolved_payout"}} {{this.result}}</p>{{/if}}
             <div class="forecast-chart">
@@ -215,7 +223,7 @@ export default class RscForecast extends Component {
               {{else}}<div class="forecast-chart-empty">{{ft "no_chart"}}</div>{{/if}}
               <div class="forecast-chart-range"><span>{{this.historyStart}}</span><span>{{this.historyEnd}}</span></div>
             </div>
-            <details class="forecast-rules" open><summary>{{ft "rules"}}</summary><p>{{this.detail.rules}}</p></details>
+            <details class="forecast-rules" open><summary>{{ft "rules"}}</summary><p>{{this.detailRules}}</p></details>
             <p class="forecast-hint forecast-resolution-hint">{{ft "resolution_hint"}}</p>
           </div>
           <aside aria-label={{ft "order"}} class="forecast-order">

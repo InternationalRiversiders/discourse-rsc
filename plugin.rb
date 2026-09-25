@@ -60,6 +60,7 @@ after_initialize do
     app/services/discourse_rsc/exchange
     app/services/discourse_rsc/catalog
     app/services/discourse_rsc/provider_http
+    app/services/discourse_rsc/forecast_translation
     app/services/discourse_rsc/forecast_provider
     app/services/discourse_rsc/forecast_exchange
     app/services/discourse_rsc/forecast_settlement
@@ -91,6 +92,7 @@ after_initialize do
     app/jobs/regular/discourse_rsc_provider_poll
     app/jobs/regular/discourse_rsc_manual_sync
     app/jobs/scheduled/discourse_rsc_sync_data
+    app/jobs/scheduled/discourse_rsc_forecast_translate
     app/jobs/scheduled/discourse_rsc_forecast_tick
     app/jobs/scheduled/discourse_rsc_business_tick
     app/jobs/scheduled/discourse_rsc_trading_tick

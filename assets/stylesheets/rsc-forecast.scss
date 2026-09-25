@@ -94,3 +94,5 @@
     .forecast-resolution-hint { order: 4; }
   }
 }
+
+.rsc-forecast .forecast-translation { display: flex; align-items: center; gap: .5em; flex-wrap: wrap; color: var(--primary-medium); margin-bottom: .5em; }

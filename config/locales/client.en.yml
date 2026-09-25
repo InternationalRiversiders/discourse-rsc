@@ -18,6 +18,9 @@ en:
         stock_refunded: 'Order reservation refunded: %{amount} RSC'
         red_packet_claimed_by: claimed %{amount} RSC from your packet
       forecast_ui:
+        translated_hint: "Automatic translation · Original rules govern settlement"
+        show_chinese: "Show Chinese"
+        show_original: "Show original"
         multiple: "Return multiple (incl. stake)"
         updated: "Updated"
         popular: "Popular"

@@ -18,6 +18,9 @@ zh_CN:
         stock_refunded: 委托结束，退回 %{amount} RSC
         red_packet_claimed_by: 领取了你的红包 %{amount} RSC
       forecast_ui:
+        translated_hint: "自动翻译 · 结算以原文规则为准"
+        show_chinese: "查看中文"
+        show_original: "查看原文"
         multiple: "含本金回报倍数"
         updated: "更新于"
         popular: "热门"

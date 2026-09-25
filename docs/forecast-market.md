@@ -34,7 +34,7 @@ Data API `/v2/resolutions?condition=...` 提供 `status`、`payouts`、`resolved
 
 ## 限制
 
-热门发现不是全站问题镜像；多选项事件目前展示为其独立二元问题。题目和规则保留来源原文，尚未接翻译服务。图表是公共历史价格，成交以确认报价为准。只在隔离库启用并验收，生产默认不开启。
+热门发现不是全站问题镜像；多选项事件目前展示为其独立二元问题。题目和规则保留来源原文，并可后台自动翻译为简体中文。图表是公共历史价格，成交以确认报价为准。开关默认关闭，完成部署和验收后由站点管理员启用。
 
 ## 测试
 
@@ -49,3 +49,9 @@ Data API `/v2/resolutions?condition=...` 提供 `status`、`payouts`、`resolved
 - https://docs.polymarket.com/concepts/resolution
 - https://docs.polymarket.com/market-data/prices-order-books
 - https://docs.polymarket.com/api-reference/rate-limits
+
+## 中文翻译
+
+`rsc_forecast_translation_model_id` 指定论坛已有 Discourse AI 模型 ID（0 关闭），不复制或新增密钥。每分钟独立任务最多处理两个问题，每 UTC 日最多 96 次请求；失败后每题六小时退避。只发送公开题目、事件名、两项选项、规则，不发送账号、余额、交易或私有论坛内容。
+
+中文正文持久保存在 PluginStore，随论坛数据库备份；源条款摘要和事件名变化后不再使用旧翻译。规则超过 12,000 字符、输出格式不完整或模型失败时保留原文，不截断规则、不阻塞行情及结算。列表、持仓和交易历史使用中文，详情支持中文/原文切换并标明自动翻译。原始 question/rules/outcomes、token、报价条款摘要及结算判断不因翻译改变。

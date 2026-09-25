@@ -1,4 +1,7 @@
 plugins:
+  rsc_forecast_translation_model_id:
+    default: 0
+    min: 0
   rsc_forecast_enabled:
     default: false
     client: true

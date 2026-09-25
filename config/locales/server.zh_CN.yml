@@ -1,5 +1,6 @@
 zh_CN:
   site_settings:
+    rsc_forecast_translation_model_id: "预测市场中文翻译使用的 Discourse AI 模型 ID；0 关闭。仅翻译公开题目，后台缓存，每日最多 96 次请求。"
     rsc_forecast_enabled: "启用独立预测市场：同步 Polymarket 热门问题，以 RSC 买卖份额并按最终结果结算"
     rsc_campaign_enabled: 2026 世界杯活动：赛果齐全后自动补发未完成的返利和徽章
     rsc_campaign_silver_badge_id: 绿茵观察家徽章 ID（需名称一致且不可重复授予）
