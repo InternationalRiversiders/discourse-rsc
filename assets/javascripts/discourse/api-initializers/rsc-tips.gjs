@@ -6,7 +6,8 @@ export default apiInitializer((api) => {
     return;
   }
   api.renderAfterWrapperOutlet("post-content-cooked-html", PostTips);
-  api.registerValueTransformer("post-menu-buttons", ({ value: dag }) => {
+  api.registerValueTransformer("post-menu-buttons", ({ value: dag, context: { collapsedButtons } }) => {
     dag.add("rsc-tip", TipButton, { before: "reply" });
+    collapsedButtons.hide("rsc-tip");
   });
 });
