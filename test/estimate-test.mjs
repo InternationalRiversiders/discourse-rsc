@@ -37,6 +37,21 @@ assert.equal(quantityForFraction(null,'1','100',1),null);
 assert.equal(quantityForFraction({quote:{price:'100'},step:'1'},'1','0',4),'0');
 console.log('PASS four allocation fractions respect fees, reservation buffers and quantity steps');
 
+// The reference last price can differ from the actual immediate bid/ask. A
+// full-balance shortcut must include that spread before rounding the quantity.
+const spread = {quote:{price:'100'},execution_prices:{long:'100.5',short:'99.5'},minimum:'0.01',step:'0.01',fee_bps:5,execution_mode:'immediate'};
+for (const side of ['long','short']) {
+  const quantity=quantityForFraction(spread,'3','100',4,side);
+  const gross=atomic(quantity)*atomic(spread.execution_prices[side])/atomic('1');
+  const actualCost=(gross+2n)/3n+gross*5n/10000n;
+  assert.ok(actualCost<=atomic('100'));
+  assert.equal(atomic(estimate(spread,quantity,'3','100',side).reserve),actualCost);
+}
+const oldQuantity=quantityForFraction({...spread,execution_prices:null},'3','100',4);
+assert.ok(atomic(estimate(spread,oldQuantity,'3','100','long').reserve)>atomic('100'));
+assert.equal(estimate({...spread,execution_mode:'delayed_confirmation'},'1','1','100').reserve,'105.0525');
+console.log('PASS immediate buy/sell spreads fit available cash, delayed reservation remains unchanged');
+
 const fx={category:'forex',quote:{price:'0.006289308176100628'},minimum:'0.01',step:'0.01'};
 for (const amount of ['1','10','100.123456789012345678']) {
   const quantity=quantityForNotional(fx,amount);

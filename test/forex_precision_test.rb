@@ -36,6 +36,30 @@ class ForexPrecisionTest < MigrationFeaturesTest
     assert_nil R::MarketData.optional_reciprocal('0')
   end
 
+  def test_forex_immediate_order_preview_matches_execution_spread_and_balance
+    travel_to(Time.utc(2026,10,7,12)) do
+      fund(@alice); fund(@bob)
+      item=forex
+      item.update!(quote:quote('0.0063').merge('pricing_method'=>R::MarketData::FX_PRICING),history:Array.new(20) { |n| {'price'=>n.even? ? '0.0063' : '0.0064'} })
+      preview=R::MarketListing.execution_prices(item)
+      assert_equal '0.0063315',preview['long']
+      assert_equal '0.0062685',preview['short']
+      assert_equal preview,R::MarketListing.rows([item]).first[:execution_prices]
+      [['long',@alice],['short',@bob]].each do |side,user|
+        order=R::Exchange.submit(actor:user,instrument_id:item.id,side:side,quantity:'100',leverage:1,request_id:SecureRandom.uuid)
+        row=R::Order.find(order['order_id'])
+        assert_equal 'filled',row.status
+        assert_equal preview[side],row.details['price']
+      end
+      item.update!(quote:item.quote.merge('ask'=>'0.00634','bid'=>'0.00626'))
+      assert_equal({'long'=>'0.00634','short'=>'0.00626'},R::MarketListing.execution_prices(item))
+      item.update!(quote:item.quote.merge('delay_seconds'=>900))
+      assert_nil R::MarketListing.execution_prices(item)
+      item.update!(category:'crypto')
+      assert_nil R::MarketListing.execution_prices(item)
+    end
+  end
+
   def test_forex_old_aliases_do_not_create_duplicate_markets
     item=forex;SiteSetting.rsc_market_data_enabled=true
     assert_equal ['yahoo','JPY=X'],R::Catalog.provider({'symbol'=>'FX:JPY'})

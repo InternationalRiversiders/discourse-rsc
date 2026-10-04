@@ -134,7 +134,7 @@ export default class RscDashboard extends Component {
   get tradingDisabled() {
     return (
       this.data.read_only ||
-      this.busy || this.highRiskStatus.blocked || !!this.quantityError ||
+      this.busy || this.highRiskStatus.blocked || !!this.quantityError || !!this.positionConflict ||
       !this.selectedMarket?.tradable ||
       this.data.wallet.status !== "active" ||
       (this.side !== "close" && this.selected?.close_only)
@@ -186,7 +186,14 @@ export default class RscDashboard extends Component {
       this.leverage = "10";
     }
   }
-  get estimate() { return estimate(this.selected, this.quantity, this.leverage, this.data.wallet.balance); }
+  get estimate() { return estimate(this.selected, this.quantity, this.leverage, this.data.wallet.balance, this.side); }
+  get positionConflict() {
+    const position = this.data.positions.find((item) => String(item.instrument_id) === this.selectedId);
+    if (position && (position.side !== this.side || Number(position.leverage) !== Number(this.leverage))) {
+      return `已有${position.side === "long" ? "做多" : "做空"} ${position.leverage}× 仓位，加仓需保持相同方向和杠杆；如需切换，请先平仓。`;
+    }
+    return "";
+  }
   get quantityError() {
     if (!this.selected) { return ""; }
     const quantity = atomic(this.quantity);
@@ -197,7 +204,7 @@ export default class RscDashboard extends Component {
     return "";
   }
   @action allocate(quarters) {
-    const quantity = quantityForFraction(this.selected, this.leverage, this.data.wallet.balance, quarters);
+    const quantity = quantityForFraction(this.selected, this.leverage, this.data.wallet.balance, quarters, this.side);
     if (quantity === null || atomic(quantity) < (atomic(this.selected?.minimum) || 1n)) {
       this.error = "该比例的余额不足以满足最小建仓数量。";
       return;
@@ -708,6 +715,7 @@ export default class RscDashboard extends Component {
                   {{#if this.selected.close_only}}<p class="alert alert-info">此杠杆/反向产品目前仅可平仓。</p>{{/if}}
                   <div class="rsc-fields"><label>{{uiText "take_profit"}}<input inputmode="decimal" value={{this.takeProfit}} {{on "input" (fn this.set "takeProfit")}} /></label><label>{{uiText "stop_loss"}}<input inputmode="decimal" value={{this.stopLoss}} {{on "input" (fn this.set "stopLoss")}} /></label></div>
                   {{#if this.quantityError}}<p class="alert alert-error" role="alert">{{this.quantityError}}</p>{{/if}}
+                  {{#if this.positionConflict}}<p class="alert alert-info" role="alert">{{this.positionConflict}}</p>{{/if}}
                   {{#if this.estimate}}<div class="rsc-order-estimate"><p>名义金额 {{formatAmount this.estimate.gross}} · 保证金 {{formatAmount this.estimate.margin}}</p><p>手续费 {{formatAmount this.estimate.fee}} · 预计占用 {{formatAmount this.estimate.reserve}} RSC</p><small>可用余额上限 {{formatQuantity this.estimate.maximum}} · 成交仍须通过风控检查。</small></div>{{/if}}
                   <button class="btn btn-primary" type="submit" disabled={{this.tradingDisabled}}>{{uiText "submit_order"}}</button>
                   <details class="rsc-trading-help"><summary>交易规则 · 数量步进 {{formatQuantity this.selected.step}}</summary><p class="rsc-muted">{{#if (eq this.selected.execution_mode "immediate")}}按当前可用行情成交。{{else if (eq this.selected.execution_mode "crypto_confirmation")}}开仓等待 30–90 秒报价确认，初始两分钟不可撤单；手动平仓至少持有五分钟。{{else}}等待后续报价确认；提交后 10 秒内可撤单，成交后至少持有两分钟。{{/if}}</p><p class="rsc-muted">最小数量 {{formatQuantity this.selected.minimum}}。四档比例按可用余额估算，包含手续费及预占空间；仍受单仓和组合限额约束。</p></details>
