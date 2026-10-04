@@ -187,6 +187,9 @@ module DiscourseRsc
 
     def self.price!(instrument, trading: false)
       quote = instrument.quote
+      if trading && MarketData.forex_base(instrument) && quote["pricing_method"] != MarketData::FX_PRICING
+        raise Error.new("quote_stale", status: 409)
+      end
       raise Error.new("quote_stale", status: 409) if quote["legacy_snapshot"]
       raise Error.new("quote_unavailable", status: 409) unless instrument.active && quote["price"] && quote["received_at"] && quote["source_time"]
       now = Time.current

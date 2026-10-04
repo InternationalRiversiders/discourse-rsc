@@ -10,6 +10,7 @@ module DiscourseRsc
         metadata = legacy[item.symbol] || {}
         { id: item.id, symbol: item.symbol, display_symbol: metadata["display_symbol"].presence || item.symbol,
           exchange: metadata["exchange"], currency: item.currency, name: item.name, category: item.category, quote: item.quote, market_closed: MarketSessions.closed?(item, schedules: schedules),
+          minimum_notional: TradingRules.stock?(item) ? "1" : nil,
           popularity: counts.fetch(item.id, 0), last_order_at: last[item.id], catalog_rank: metadata["catalog_rank"], catalog_id: metadata["id"] || item.id,
           fee_bps: item.fee_bps, close_only: TradingRules.close_only?(item), execution_mode: item.category == "crypto" ? "crypto_confirmation" : (TradingRules.delayed?(item) ? "delayed_confirmation" : "immediate"), history: item.history.last(16), minimum: Amount.format(item.minimum_units), step: Amount.format(item.step_units) }
       end.sort_by do |row|

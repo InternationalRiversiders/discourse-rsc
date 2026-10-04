@@ -18,15 +18,20 @@ export function marketView(item, now = Date.now()) {
     (!item.market_closed && now >= Date.parse(quote.session_start) &&
       now < Date.parse(quote.session_end));
   const available = typeof quote.price === "string" && Number(quote.price) > 0;
+  const knownClosed = item.category !== "crypto" &&
+    (item.market_closed || (Number.isFinite(Date.parse(quote.session_start)) &&
+      Number.isFinite(Date.parse(quote.session_end)) && !open));
   const status = !available
     ? "no_quote"
-    : !fresh
-      ? "stale_quote"
-      : !open
-        ? "session_closed"
-        : delay > 120
-          ? "delayed_quote"
-          : "session_open";
+    : knownClosed
+      ? "session_closed"
+      : !fresh
+        ? "stale_quote"
+        : !open
+          ? "session_closed"
+          : delay > 120
+            ? "delayed_quote"
+            : "session_open";
   // Daily change needs a previous-close value, never the first chart sample.
   const previous = Number(quote.previous_close);
   const change =

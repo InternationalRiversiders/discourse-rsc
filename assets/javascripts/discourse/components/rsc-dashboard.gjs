@@ -26,7 +26,7 @@ import {
   formatPrice,
   signedAmount,
 } from "../lib/rsc-format";
-import { estimate, payout, quantityForFraction, atomic } from "../lib/rsc-estimate";
+import { estimate, payout, quantityForFraction, quantityForNotional, notionalForQuantity, openingQuantity, atomic } from "../lib/rsc-estimate";
 import { marketView } from "../lib/rsc-market";
 import { i18n } from "discourse-i18n";
 
@@ -67,6 +67,7 @@ export default class RscDashboard extends Component {
   @tracked recipient = "";
   @tracked amount = "";
   @tracked quantity = "1";
+  @tracked notional = "";
   @tracked leverage = "1";
   @tracked side = "long";
   @tracked highRisk = false;
@@ -133,7 +134,7 @@ export default class RscDashboard extends Component {
   get tradingDisabled() {
     return (
       this.data.read_only ||
-      this.busy || this.highRiskStatus.blocked ||
+      this.busy || this.highRiskStatus.blocked || !!this.quantityError ||
       !this.selectedMarket?.tradable ||
       this.data.wallet.status !== "active" ||
       (this.side !== "close" && this.selected?.close_only)
@@ -143,7 +144,8 @@ export default class RscDashboard extends Component {
     this.selectedId = String(id);
     this.marketDetailOpen = true;
     this.orderTicketOpen = false;
-    this.quantity = this.selected?.minimum || "1";
+    this.quantity = openingQuantity(this.selected);
+    this.notional = notionalForQuantity(this.selected, this.quantity) || "";
     const position = this.data.positions.find((item) => String(item.instrument_id) === String(id));
     this.leverage = String(position?.leverage || 1);
     this.side = position?.side || "long";
@@ -185,6 +187,15 @@ export default class RscDashboard extends Component {
     }
   }
   get estimate() { return estimate(this.selected, this.quantity, this.leverage, this.data.wallet.balance); }
+  get quantityError() {
+    if (!this.selected) { return ""; }
+    const quantity = atomic(this.quantity);
+    if (quantity === null || quantity <= 0n) { return "请输入大于 0 的数量，最多支持 18 位小数。"; }
+    const minimum = atomic(this.selected.minimum), step = atomic(this.selected.step);
+    if (minimum && quantity < minimum) { return `数量不能小于 ${this.selected.minimum}。`; }
+    if (step && quantity % step !== 0n) { return `数量须为 ${this.selected.step} 的整数倍。`; }
+    return "";
+  }
   @action allocate(quarters) {
     const quantity = quantityForFraction(this.selected, this.leverage, this.data.wallet.balance, quarters);
     if (quantity === null || atomic(quantity) < (atomic(this.selected?.minimum) || 1n)) {
@@ -193,6 +204,15 @@ export default class RscDashboard extends Component {
     }
     this.error = "";
     this.quantity = quantity;
+    this.notional = notionalForQuantity(this.selected, quantity) || "";
+  }
+  @action changeQuantity(event) {
+    this.quantity = event.target.value;
+    this.notional = notionalForQuantity(this.selected, this.quantity) ?? "";
+  }
+  @action changeNotional(event) {
+    this.notional = event.target.value;
+    this.quantity = quantityForNotional(this.selected, this.notional) ?? "";
   }
   get highRiskStatus() {
     const status = this.data.high_risk || {};
@@ -654,11 +674,12 @@ export default class RscDashboard extends Component {
                   >{{uiText this.selectedMarket.status}}</span><button type="button" class="btn btn-flat rsc-back" {{on "click" this.backToMarkets}}>{{dIcon "arrow-left"}}<span>返回列表</span></button></div></div>
                 <div class="rsc-quote-hero"><strong
                     class="rsc-price"
-                  >{{formatPrice this.selected.quote.price}}
+                  title={{this.selected.quote.price}}>{{formatPrice this.selected.quote.price}}
                     <small>RSC</small></strong><span
                     class="rsc-change-pill {{this.selectedMarket.tone}}"
                   >{{this.selectedMarket.changeText}}</span></div>
                 <p class="rsc-muted rsc-change-basis">{{this.changeLabel}} · 价格单位 RSC</p>
+                {{#if this.selected.quote.inverse_rate}}<p class="rsc-muted">1 RSC ≈ <span title={{this.selected.quote.inverse_rate}}>{{formatPrice this.selected.quote.inverse_rate}}</span> {{this.selected.quote.base_currency}}</p>{{/if}}
                 <dl class="rsc-quote-stats">{{#each this.quoteStats key="label" as |stat|}}<div><dt>{{stat.label}}</dt><dd title={{stat.value}}>{{formatPrice stat.value}}</dd></div>{{/each}}</dl>
                 {{#each
                   (array this.selected) key="id"
@@ -673,8 +694,9 @@ export default class RscDashboard extends Component {
                 <div class="rsc-ticket-heading"><h2>{{uiText "order"}}</h2><span>{{this.selected.symbol}}</span><button class="btn btn-flat rsc-close-order" type="button" {{on "click" this.closeOrderTicket}}>收起下单</button></div>
                 <form {{on "submit" this.trade}}>
                   <label>{{uiText "direction"}}<select {{on "change" (fn this.set "side")}}><option value="long" selected={{eq this.side "long"}}>{{uiText "long"}}</option><option value="short" selected={{eq this.side "short"}}>{{uiText "short"}}</option></select></label>
+                  {{#if (eq this.selected.category "forex")}}<label>RSC 名义金额<input inputmode="decimal" value={{this.notional}} {{on "input" this.changeNotional}} /></label><p class="rsc-muted">按交易总额换算货币数量，按数量步进向下取整；保证金另按杠杆计算，以当前数量提交。</p>{{/if}}
                   <div class="rsc-fields rsc-ticket-inputs">
-                    <div><label>{{uiText "quantity"}}<input required inputmode="decimal" value={{this.quantity}} {{on "input" (fn this.set "quantity")}} /></label>
+                    <div><label>{{uiText "quantity"}}<input required inputmode="decimal" value={{this.quantity}} {{on "input" this.changeQuantity}} /></label>
                       <span class="rsc-allocation-buttons">{{#each (array 1 2 3 4) as |quarter|}}<button type="button" class="btn btn-small" {{on "click" (fn this.allocate quarter)}}>{{#if (eq quarter 4)}}全仓{{else if (eq quarter 2)}}1/2{{else}}{{quarter}}/4{{/if}}</button>{{/each}}</span>
                     </div>
                     <div><label>{{uiText "leverage"}} <output>{{this.leverage}}×</output><input class="rsc-leverage-range" aria-label="杠杆滑块" type="range" min="1" max={{this.maxLeverage}} step="1" value={{this.leverage}} {{on "input" (fn this.set "leverage")}} /></label><input aria-label="杠杆倍数" required type="number" min="1" max={{this.maxLeverage}} step="1" value={{this.leverage}} {{on "input" (fn this.set "leverage")}} /></div>
@@ -685,6 +707,7 @@ export default class RscDashboard extends Component {
                   {{/if}}{{/if}}
                   {{#if this.selected.close_only}}<p class="alert alert-info">此杠杆/反向产品目前仅可平仓。</p>{{/if}}
                   <div class="rsc-fields"><label>{{uiText "take_profit"}}<input inputmode="decimal" value={{this.takeProfit}} {{on "input" (fn this.set "takeProfit")}} /></label><label>{{uiText "stop_loss"}}<input inputmode="decimal" value={{this.stopLoss}} {{on "input" (fn this.set "stopLoss")}} /></label></div>
+                  {{#if this.quantityError}}<p class="alert alert-error" role="alert">{{this.quantityError}}</p>{{/if}}
                   {{#if this.estimate}}<div class="rsc-order-estimate"><p>名义金额 {{formatAmount this.estimate.gross}} · 保证金 {{formatAmount this.estimate.margin}}</p><p>手续费 {{formatAmount this.estimate.fee}} · 预计占用 {{formatAmount this.estimate.reserve}} RSC</p><small>可用余额上限 {{formatQuantity this.estimate.maximum}} · 成交仍须通过风控检查。</small></div>{{/if}}
                   <button class="btn btn-primary" type="submit" disabled={{this.tradingDisabled}}>{{uiText "submit_order"}}</button>
                   <details class="rsc-trading-help"><summary>交易规则 · 数量步进 {{formatQuantity this.selected.step}}</summary><p class="rsc-muted">{{#if (eq this.selected.execution_mode "immediate")}}按当前可用行情成交。{{else if (eq this.selected.execution_mode "crypto_confirmation")}}开仓等待 30–90 秒报价确认，初始两分钟不可撤单；手动平仓至少持有五分钟。{{else}}等待后续报价确认；提交后 10 秒内可撤单，成交后至少持有两分钟。{{/if}}</p><p class="rsc-muted">最小数量 {{formatQuantity this.selected.minimum}}。四档比例按可用余额估算，包含手续费及预占空间；仍受单仓和组合限额约束。</p></details>

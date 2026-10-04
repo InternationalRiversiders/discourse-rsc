@@ -16,7 +16,7 @@ module DiscourseRsc
         INDICES.fetch(code, code)
       elsif exchange == "FX"
         pair = code.delete('/')
-        "#{pair.length == 3 ? "#{pair}USD" : pair}=X"
+        "#{pair.delete_suffix('USD')}=X"
       elsif exchange == "HKEX"
         "#{code.rjust(4, '0')}.HK"
       elsif exchange == "EURONEXT"
@@ -38,8 +38,13 @@ module DiscourseRsc
         elsif requested_code.include?(':'); provider({'symbol'=>requested_code}).last
         else requested_code; end
       code = MarketData.symbol(code)
-      code = "#{code.delete_suffix('=X')}USD=X" if /\A[A-Z]{3}=X\z/.match?(code)
-      find_existing = -> { Instrument.find_by(symbol: requested_code) || Instrument.find_by(symbol: code) || Instrument.find_by(provider_symbol: code) }
+      code = code.sub(/\A([A-Z]{3})USD=X\z/, '\1=X')
+      aliases = [requested_code, code]
+      if /\A(?!USD)[A-Z]{3}=X\z/.match?(code)
+        base = code.delete_suffix('=X')
+        aliases += ["#{base}USD=X", "FX:#{base}"]
+      end
+      find_existing = -> { Instrument.find_by(symbol: aliases) || Instrument.find_by(provider_symbol: aliases) }
       # Remote I/O must never hold the global trade lock or a money transaction.
       candidate = external_candidate(code) unless find_existing.call
       Commands.run(user_id: actor.id, action: 'market_approve', request_id: request_id, input: [requested_code, reason.strip]) do
@@ -51,7 +56,7 @@ module DiscourseRsc
         else
           item = Instrument.create!(candidate)
         end
-        MarketRequest.where(symbol: [requested_code, code, item.symbol], status: 'pending').update_all(status: 'approved', updated_at: Time.current)
+        MarketRequest.where(symbol: aliases + [item.symbol], status: 'pending').update_all(status: 'approved', updated_at: Time.current)
         Audit.create!(actor_user_id: actor.id, action: 'market_approve', details: { symbol: code, instrument_id: item.id, reason: reason.strip }, created_at: Time.current)
         { instrument_id: item.id, existing: existed }
       end

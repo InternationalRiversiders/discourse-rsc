@@ -31,7 +31,7 @@ export function formatPrice(value) {
       ? 6
       : /[1-9]/.test(fraction.slice(0, 4))
         ? 8
-        : 10;
+        : Math.min(18, Math.max(10, fraction.search(/[1-9]/) + 4));
   return formatAmount(value, digits);
 }
 export const valueTone = (value) =>

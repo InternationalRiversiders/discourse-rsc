@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const { atomic, decimal, estimate, payout, quantityForFraction } = await import(`data:text/javascript;base64,${Buffer.from(fs.readFileSync(new URL('../assets/javascripts/discourse/lib/rsc-estimate.js', import.meta.url))).toString('base64')}`);
+const { atomic, decimal, estimate, payout, quantityForFraction, quantityForNotional, notionalForQuantity, openingQuantity } = await import(`data:text/javascript;base64,${Buffer.from(fs.readFileSync(new URL('../assets/javascripts/discourse/lib/rsc-estimate.js', import.meta.url))).toString('base64')}`);
 assert.equal(atomic('0.000000000000000001'), 1n);
 assert.equal(atomic('1e5'), null);
 assert.equal(decimal(atomic('10000000000000000.000000000000000001')), '10000000000000000.000000000000000001');
@@ -36,3 +36,23 @@ for (const execution_mode of ['immediate','crypto_confirmation','delayed_confirm
 assert.equal(quantityForFraction(null,'1','100',1),null);
 assert.equal(quantityForFraction({quote:{price:'100'},step:'1'},'1','0',4),'0');
 console.log('PASS four allocation fractions respect fees, reservation buffers and quantity steps');
+
+const fx={category:'forex',quote:{price:'0.006289308176100628'},minimum:'0.01',step:'0.01'};
+for (const amount of ['1','10','100.123456789012345678']) {
+  const quantity=quantityForNotional(fx,amount);
+  assert.equal(atomic(quantity)%atomic(fx.step),0n);
+  assert.ok(atomic(notionalForQuantity(fx,quantity))<=atomic(amount));
+  assert.ok(atomic(notionalForQuantity(fx,decimal(atomic(quantity)+atomic(fx.step))))>atomic(amount));
+}
+assert.equal(quantityForNotional(fx,'0.000000000000000001'),'0');
+assert.equal(quantityForNotional(fx,''),null);
+assert.equal(quantityForNotional(fx,'1e3'),null);
+assert.equal(notionalForQuantity(fx,''),null);
+for (const category of ['forex','us','cn']) {
+  const item={...fx,category};
+  const units=openingQuantity(item);
+  assert.ok(atomic(notionalForQuantity(item,units))>=atomic('1'));
+  assert.ok(atomic(notionalForQuantity(item,decimal(atomic(units)-atomic(item.step))))<atomic('1'));
+}
+assert.equal(openingQuantity({...fx,category:'crypto'}),'0.01');
+console.log('PASS exact FX notional conversion, step rounding, invalid drafts and minimum opening sizes');

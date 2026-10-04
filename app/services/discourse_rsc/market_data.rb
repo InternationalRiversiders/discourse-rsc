@@ -2,6 +2,34 @@
 module DiscourseRsc
   class MarketData
     RANGES = { "1d" => "5m", "5d" => "30m", "1mo" => "1d", "6mo" => "1d", "1y" => "1wk", "5y" => "1mo" }.freeze
+    FX_PRICING = "fx_reciprocal_v1"
+
+    # Existing rows may still use JPYUSD=X. Resolve at read time so deploying
+    # this correction never rewrites positions, their cost basis or the ledger.
+    def self.forex_base(instrument)
+      return unless instrument.category == "forex" && instrument.provider == "yahoo"
+      code = instrument.provider_symbol.presence || instrument.symbol
+      match = /\A(?!USD)([A-Z]{3})(?:USD)?=X\z/.match(code)
+      match && match[1]
+    end
+
+    def self.yahoo_symbol(instrument)
+      base = forex_base(instrument)
+      base ? "#{base}=X" : (instrument.provider_symbol.presence || instrument.symbol)
+    end
+
+    def self.reciprocal(value)
+      units = Amount.positive(decimal(value))
+      result = Amount::UNIT * Amount::UNIT / units
+      raise Error.new("provider_invalid_price", status: 503) unless result.positive?
+      Amount.format(result)
+    end
+
+    def self.optional_reciprocal(value)
+      reciprocal(value) if value.present?
+    rescue Error, ArgumentError
+      nil
+    end
     CATEGORIES = %w[indices forex metals us cn hk jp eu ca au sg in crypto].freeze
     def self.decimal(value)
       number = BigDecimal(value.to_s)
@@ -48,11 +76,11 @@ module DiscourseRsc
       # Yahoo prices British shares in pence, rather than pounds.
       base = currency == "GBp" || currency == "GBX" ? "GBP" : currency
       raise Error.new("provider_currency") unless /\A[A-Z]{3}\z/.match?(base)
-      value = Discourse.cache.fetch("rsc:fx:#{base}", expires_in: 10.minutes) do
-        data = yahoo_chart("#{base}USD=X")
+      value = Discourse.cache.fetch("rsc:fx:v2:#{base}", expires_in: 10.minutes) do
+        data = yahoo_chart("#{base}=X")
         meta = data.fetch("meta")
         raise Error.new("fx_stale", status: 503) if Time.at(meta.fetch("regularMarketTime")) < 4.days.ago
-        decimal(meta.fetch("regularMarketPrice"))
+        reciprocal(meta.fetch("regularMarketPrice"))
       end
       BigDecimal(value) / (base == currency ? 1 : 100)
     end
@@ -90,7 +118,7 @@ module DiscourseRsc
           "source_time" => Time.at(BigDecimal(ticker.fetch("ts")) / 1000).utc.iso8601(6), "delay_seconds" => 0, "source" => "okx", "local_currency" => "USDT", "local_price" => decimal(ticker.fetch("last")) }
       when "yahoo", "twelve_data"
         # Yahoo supplies the authoritative exchange session boundaries for both adapters.
-        chart = yahoo_chart(code)
+        chart = yahoo_chart(yahoo_symbol(instrument))
         meta = chart.fetch("meta")
         session = meta.dig("currentTradingPeriod", "regular") || {}
         currency = meta.fetch("currency", instrument.currency)
@@ -110,6 +138,16 @@ module DiscourseRsc
           # Never silently reinterpret delayed account data as real-time.
           delay = [delay, SiteSetting.rsc_twelve_data_delay_seconds].max
         end
+        base = forex_base(instrument)
+        fx_details = {}
+        if base
+          fx_details = { "pricing_method" => FX_PRICING, "base_currency" => base, "inverse_rate" => decimal(raw) }
+          raw = reciprocal(raw)
+          previous = optional_reciprocal(previous)
+          stats = { "open" => optional_reciprocal(stats["open"]),
+            "high" => optional_reciprocal(stats["low"]), "low" => optional_reciprocal(stats["high"]) }
+          currency = "USD"
+        end
         rate = usd_rate(currency)
         { "price" => decimal(BigDecimal(decimal(raw)) * rate),
           "previous_close" => previous && decimal(BigDecimal(decimal(previous)) * rate),
@@ -118,7 +156,7 @@ module DiscourseRsc
           "source_time" => source.iso8601, "delay_seconds" => delay,
           "delay_reported" => instrument.provider != 'yahoo' || !meta['exchangeDataDelayedBy'].nil?,
           "session_start" => session["start"] && Time.at(session["start"]).utc.iso8601,
-          "session_end" => session["end"] && Time.at(session["end"]).utc.iso8601, "source" => instrument.provider }
+          "session_end" => session["end"] && Time.at(session["end"]).utc.iso8601, "source" => instrument.provider }.merge(fx_details)
       else
         raise Error.new("provider_not_configured", status: 503)
       end.merge("received_at" => Time.current.iso8601(6))
@@ -189,13 +227,15 @@ module DiscourseRsc
     end
 
     def self.refresh_due?(instrument, purpose: :read, schedules: nil)
-      return false if MarketSessions.closed?(instrument, schedules: schedules) && instrument.quote['price'].present?
       q = instrument.quote
+      correction = forex_base(instrument) && q['pricing_method'] != FX_PRICING
+      return false if !correction && MarketSessions.closed?(instrument, schedules: schedules) && q['price'].present?
       received = Time.iso8601(q['received_at']) rescue nil
       # Failures do not manufacture a fresh quote. Provider-wide cooldown is an
       # additional guard and is shared even when different symbols are requested.
       retry_age = instrument.provider_error == 'provider_busy' ? 15 : 120
       return false if instrument.provider_error.present? && instrument.synced_at && instrument.synced_at > retry_age.seconds.ago
+      return true if correction
       age = case purpose
       when :trade then q['source'] == 'coinbase_ws' ? 3 : 20
       when :fast then 15
@@ -317,7 +357,8 @@ module DiscourseRsc
     def self.history_uncached(instrument, range)
       raise Error.new("invalid_range") unless RANGES.key?(range)
       cache = HistoryCache.find_by(instrument_id: instrument.id, range: range)
-      if cache && (cache.updated_at > (range == "1d" ? 2.minutes.ago : 10.minutes.ago) || MarketSessions.closed?(instrument) || (!SiteSetting.rsc_market_data_enabled && cache.source == "legacy"))
+      correction = forex_base(instrument) && cache&.source == "provider"
+      if cache && !correction && (cache.updated_at > (range == "1d" ? 2.minutes.ago : 10.minutes.ago) || MarketSessions.closed?(instrument) || (!SiteSetting.rsc_market_data_enabled && cache.source == "legacy"))
         return { candles: cache.candles, currency: cache.currency || instrument.currency, updated_at: cache.updated_at, archived: cache.source == "legacy" }
       end
       if instrument.provider == "manual"
@@ -351,16 +392,21 @@ module DiscourseRsc
         raise Error.new("provider_no_data") unless data["code"] == "0"
         candles = data.fetch("data").map { |at, open, high, low, close, volume, *rest| { at: Time.at(BigDecimal(at) / 1000).utc.iso8601, open: decimal(open), high: decimal(high), low: decimal(low), close: decimal(close), volume: volume.to_s } }.reverse
       else
-        chart = yahoo_chart(instrument.provider_symbol || instrument.symbol, range)
-        chart_currency = chart.dig("meta", "currency").presence || instrument.currency
+        chart = yahoo_chart(yahoo_symbol(instrument), range)
+        inverted = forex_base(instrument)
+        chart_currency = inverted ? "USD" : (chart.dig("meta", "currency").presence || instrument.currency)
         quote = chart.dig("indicators", "quote", 0) || {}
         candles = Array(chart["timestamp"]).each_with_index.filter_map do |at, index|
           next unless %w[open high low close].all? { |key| quote.dig(key, index) }
-          { at: Time.at(at).utc.iso8601, open: decimal(quote["open"][index]), high: decimal(quote["high"][index]), low: decimal(quote["low"][index]), close: decimal(quote["close"][index]), volume: quote.dig("volume", index)&.to_s }
+          { at: Time.at(at).utc.iso8601,
+            open: inverted ? reciprocal(quote["open"][index]) : decimal(quote["open"][index]),
+            high: inverted ? reciprocal(quote["low"][index]) : decimal(quote["high"][index]),
+            low: inverted ? reciprocal(quote["high"][index]) : decimal(quote["low"][index]),
+            close: inverted ? reciprocal(quote["close"][index]) : decimal(quote["close"][index]), volume: quote.dig("volume", index)&.to_s }
         end
       end
       cache ||= HistoryCache.new(instrument_id: instrument.id, range: range)
-      cache.update!(candles: candles, currency: chart_currency, source: "provider", updated_at: Time.current)
+      cache.update!(candles: candles, currency: chart_currency, source: forex_base(instrument) ? FX_PRICING : "provider", updated_at: Time.current)
       { candles: candles, currency: chart_currency, updated_at: cache.updated_at }
     rescue Error => error
       raise unless cache && cache.candles.present?

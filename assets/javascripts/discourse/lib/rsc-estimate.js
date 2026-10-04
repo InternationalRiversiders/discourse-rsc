@@ -38,3 +38,31 @@ export function quantityForFraction(instrument, leverage, balance, quarters) {
   const result = estimate(instrument, instrument?.minimum || instrument?.step || "1", leverage, budget);
   return result?.maximum ?? null;
 }
+
+// Notional is the face value of the trade, not margin. Never exceed the entered
+// amount or manufacture a minimum-sized order when the amount is too small.
+export function quantityForNotional(instrument, amount) {
+  const price = atomic(instrument?.quote?.price), notional = atomic(amount);
+  const step = atomic(instrument?.step);
+  if (!price || notional === null || !step) { return null; }
+  return decimal((notional * U / price / step) * step);
+}
+
+export function notionalForQuantity(instrument, quantity) {
+  const price = atomic(instrument?.quote?.price), units = atomic(quantity);
+  return price && units !== null ? decimal(price * units / U) : null;
+}
+
+// Stock-like products require at least 1 RSC notional; FX uses the same useful
+// initial size instead of defaulting to a near-zero 0.01 currency-unit order.
+export function openingQuantity(instrument) {
+  const price = atomic(instrument?.quote?.price), step = atomic(instrument?.step);
+  const minimum = atomic(instrument?.minimum);
+  if (!price || !step || !minimum || !(instrument?.minimum_notional || ["forex", "stock", "us", "cn", "hk", "jp", "eu", "ca", "au", "sg", "in"].includes(instrument?.category))) {
+    return instrument?.minimum || "1";
+  }
+  const target = atomic(instrument.minimum_notional || "1") || U;
+  const sized = ceil(target * U, price * step) * step;
+  const floor = ceil(minimum, step) * step;
+  return decimal(sized > floor ? sized : floor);
+}

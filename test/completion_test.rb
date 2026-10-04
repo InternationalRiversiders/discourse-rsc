@@ -129,14 +129,14 @@ class CompletionTest < NativeBusinessTest
   end
 
   def test_currency_units_keep_the_legacy_usd_valuation_direction
-    assert_equal ['yahoo','EURUSD=X'],R::Catalog.provider({'symbol'=>'FX:EUR'})
-    assert_equal ['yahoo','JPYUSD=X'],R::Catalog.provider({'symbol'=>'FX:JPY'})
+    assert_equal ['yahoo','EUR=X'],R::Catalog.provider({'symbol'=>'FX:EUR'})
+    assert_equal ['yahoo','JPY=X'],R::Catalog.provider({'symbol'=>'FX:JPY'})
     data=JSON.parse(File.read('/rsc/test/fixtures/yahoo-chart.json'))
     meta=data['chart']['result'].first['meta']
-    meta.merge!('symbol'=>'JPYUSD=X','currency'=>'USD','instrumentType'=>'CURRENCY','regularMarketPrice'=>'0.0067','chartPreviousClose'=>'0.0066')
+    meta.merge!('symbol'=>'JPY=X','currency'=>'JPY','instrumentType'=>'CURRENCY','regularMarketPrice'=>'160','chartPreviousClose'=>'162')
     with_provider(data) do
-      item=R::Catalog.external_candidate('JPYUSD=X')
-      assert_equal '0.0067',item[:quote]['price']
+      item=R::Catalog.external_candidate('JPY=X')
+      assert_equal '0.00625',item[:quote]['price']
       assert_equal 'USD',item[:quote]['local_currency']
       assert_equal 'forex',item[:category]
     end

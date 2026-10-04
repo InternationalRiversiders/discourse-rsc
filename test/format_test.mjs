@@ -20,3 +20,6 @@ assert.equal(signedAmount('0'), '0');
 assert.equal(signedAmount(null), '—');
 assert.equal(signedAmount('0.000000000000000001'), '<0.0001');
 console.log('Display precision and signed amounts passed');
+
+assert.equal(formatPrice('0.0000000123456'), '0.00000001234');
+assert.equal(formatPrice('0.000000000000000001'), '0.000000000000000001');
