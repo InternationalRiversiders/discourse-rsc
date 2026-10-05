@@ -75,6 +75,39 @@ plugins:
   rsc_high_risk_enabled:
     default: false
     client: true
+  rsc_standard_position_limits_enabled:
+    default: false
+    client: true
+  rsc_high_risk_margin_percent:
+    default: 25
+    min: 1
+    max: 100
+    client: true
+  rsc_high_risk_cooldown_seconds:
+    default: 300
+    min: 0
+    max: 86400
+    client: true
+  rsc_high_risk_hold_seconds:
+    default: 60
+    min: 0
+    max: 3600
+    client: true
+  rsc_crypto_daily_open_limit:
+    default: 0
+    min: 0
+    max: 100000
+  rsc_crypto_symbol_daily_open_limit:
+    default: 0
+    min: 0
+    max: 100000
+  rsc_crypto_confirmation_delay_seconds:
+    default: 0
+    min: 0
+    max: 300
+    client: true
+  rsc_crypto_extra_slippage_enabled:
+    default: false
   rsc_market_sync_batch:
     default: 100
     min: 1

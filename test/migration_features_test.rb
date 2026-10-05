@@ -23,6 +23,7 @@ class MigrationFeaturesTest < NativeBusinessTest
     fill(coin, R::Order.find(closing["order_id"]))
     error = assert_raises(R::Error) { R::Exchange.submit(actor: @alice, instrument_id: coin.id, side: "long", quantity: "1", leverage: 100, high_risk: true, request_id: "risk-cooldown") }
     assert_equal "high_risk_cooldown", error.code
+    SiteSetting.rsc_standard_position_limits_enabled = true
     error = assert_raises(R::Error) { R::Exchange.submit(actor: @alice, instrument_id: coin.id, side: "long", quantity: "90", leverage: 10, request_id: "risk-over-budget") }
     assert_equal "position_risk_limit", error.code
   end

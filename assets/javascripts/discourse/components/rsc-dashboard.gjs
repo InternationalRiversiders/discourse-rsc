@@ -56,6 +56,7 @@ const points = (history) => {
 
 export default class RscDashboard extends Component {
   @service router;
+  @service siteSettings;
   @tracked snapshot;
   @tracked busy = false;
   @tracked notice = "";
@@ -246,6 +247,18 @@ export default class RscDashboard extends Component {
       this.selected?.category === "crypto"
       ? 100
       : 10;
+  }
+  get executionHint() {
+    if (this.selected?.execution_mode === "immediate") { return "按当前可用行情成交。"; }
+    if (this.selected?.execution_mode !== "crypto_confirmation") { return "等待提交之后的新报价确认；提交后 10 秒内可撤单。普通仓位成交后没有额外持仓锁定。"; }
+    const delay = this.siteSettings.rsc_crypto_confirmation_delay_seconds;
+    const hold = this.siteSettings.rsc_high_risk_hold_seconds;
+    return `${delay > 0 ? `至少等待 ${delay} 秒，并等到` : "等待"}提交之后的新报价确认；成交前可撤单。${Number(this.leverage) > 10 && hold > 0 ? `高杠杆仓位从开仓提交起锁定 ${hold} 秒。` : "没有额外持仓锁定。"}`;
+  }
+  get positionLimitHint() {
+    return Number(this.leverage) > 10
+      ? `高杠杆单品种初始保证金最多占账户权益 ${this.siteSettings.rsc_high_risk_margin_percent}%，同时只可持有一个高杠杆品种，仍需通过组合额度检查。`
+      : this.siteSettings.rsc_standard_position_limits_enabled ? "虚拟币和延迟行情仍受单仓比例与组合额度限制。" : "普通杠杆不设额外单仓比例与组合额度限制，余额须足够支付保证金和手续费。";
   }
   @action marginDraft(id, event) {
     this.margins = { ...this.margins, [id]: event.target.value };
@@ -718,7 +731,7 @@ export default class RscDashboard extends Component {
                   {{#if this.positionConflict}}<p class="alert alert-info" role="alert">{{this.positionConflict}}</p>{{/if}}
                   {{#if this.estimate}}<div class="rsc-order-estimate"><p>名义金额 {{formatAmount this.estimate.gross}} · 保证金 {{formatAmount this.estimate.margin}}</p><p>手续费 {{formatAmount this.estimate.fee}} · 预计占用 {{formatAmount this.estimate.reserve}} RSC</p><small>可用余额上限 {{formatQuantity this.estimate.maximum}} · 成交仍须通过风控检查。</small></div>{{/if}}
                   <button class="btn btn-primary" type="submit" disabled={{this.tradingDisabled}}>{{uiText "submit_order"}}</button>
-                  <details class="rsc-trading-help"><summary>交易规则 · 数量步进 {{formatQuantity this.selected.step}}</summary><p class="rsc-muted">{{#if (eq this.selected.execution_mode "immediate")}}按当前可用行情成交。{{else if (eq this.selected.execution_mode "crypto_confirmation")}}开仓等待 30–90 秒报价确认，初始两分钟不可撤单；手动平仓至少持有五分钟。{{else}}等待后续报价确认；提交后 10 秒内可撤单，成交后至少持有两分钟。{{/if}}</p><p class="rsc-muted">最小数量 {{formatQuantity this.selected.minimum}}。四档比例按可用余额估算，包含手续费及预占空间；仍受单仓和组合限额约束。</p></details>
+                  <details class="rsc-trading-help"><summary>交易规则 · 数量步进 {{formatQuantity this.selected.step}}</summary><p class="rsc-muted">{{this.executionHint}}</p><p class="rsc-muted">最小数量 {{formatQuantity this.selected.minimum}}。四档比例按可用余额估算，包含手续费及预占空间；{{this.positionLimitHint}}</p></details>
                 </form>
               </section>{{/if}}
 </div>

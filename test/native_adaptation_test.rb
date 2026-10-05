@@ -14,8 +14,7 @@ class NativeAdaptationTest < NativeBusinessTest
 
   def test_crypto_cancellation_window_and_provider_error
     fund;stock=instrument;stock.update!(category:"crypto");pending=order(stock)
-    assert_code("cancellation_locked") { R::Exchange.cancel(actor:@alice,order_id:pending.id,request_id:SecureRandom.uuid) }
-    pending.update!(created_at:121.seconds.ago)
+    assert R::Views.order(pending)[:can_cancel]
     R::Exchange.cancel(actor:@alice,order_id:pending.id,request_id:SecureRandom.uuid)
     assert_equal "canceled",pending.reload.status
     pending=order(stock);stock.update!(provider_error:"provider_http_429")
@@ -23,12 +22,12 @@ class NativeAdaptationTest < NativeBusinessTest
     assert_equal "1000",R::Account.wallet(@alice.id).balance
   end
 
-  def test_crypto_hold_uses_latest_open_order_time
+  def test_crypto_standard_hold_is_removed
     fund;stock=instrument;stock.update!(category:"crypto");pending=order(stock)
     pending.update!(created_at:2.minutes.ago,execute_at:1.second.ago);stock.update!(quote:quote("100"));R::Exchange.process(stock.id)
-    position=R::Position.first;assert_operator position.hold_until,:>,Time.current
-    assert_code("position_locked") { R::Exchange.submit(actor:@alice,instrument_id:stock.id,side:"close",quantity:"1",leverage:1,request_id:SecureRandom.uuid) }
-    assert_in_delta (pending.created_at+5.minutes).to_f,position.hold_until.to_f,0.01
+    position=R::Position.first;assert_nil position.hold_until
+    result=R::Exchange.submit(actor:@alice,instrument_id:stock.id,side:"close",quantity:"1",leverage:1,request_id:SecureRandom.uuid)
+    assert_equal "pending",result["status"]
   end
 
   def test_protection_must_be_profitable_and_precede_liquidation
@@ -70,7 +69,8 @@ class NativeAdaptationTest < NativeBusinessTest
     assert_equal "filled",order(stock,quantity:"0.01").status
   end
 
-  def test_delayed_stocks_use_portfolio_cap_including_120_second_boundary
+  def test_delayed_stocks_use_configurable_portfolio_cap_including_120_second_boundary
+    SiteSetting.rsc_standard_position_limits_enabled=true
     fund;stock=instrument;stock.update!(quote:stock.quote.merge("delay_seconds"=>120))
     assert R::TradingRules.delayed?(stock)
     assert_code("position_risk_limit") { order(stock,quantity:"50",leverage:10) }

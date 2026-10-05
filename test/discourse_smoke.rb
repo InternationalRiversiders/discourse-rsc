@@ -17,6 +17,14 @@ class DiscourseSmokeTest < Minitest::Test
     SiteSetting.rsc_market_data_enabled = false
     SiteSetting.rsc_sports_data_enabled = false
     SiteSetting.rsc_high_risk_enabled = false
+    SiteSetting.rsc_standard_position_limits_enabled = false
+    SiteSetting.rsc_high_risk_margin_percent = 25
+    SiteSetting.rsc_high_risk_cooldown_seconds = 300
+    SiteSetting.rsc_high_risk_hold_seconds = 60
+    SiteSetting.rsc_crypto_daily_open_limit = 0
+    SiteSetting.rsc_crypto_symbol_daily_open_limit = 0
+    SiteSetting.rsc_crypto_confirmation_delay_seconds = 0
+    SiteSetting.rsc_crypto_extra_slippage_enabled = false
     SiteSetting.rsc_native_trial_enabled = true
     SiteSetting.rsc_sports_settlement_delay_seconds = 300
     SiteSetting.rsc_read_only = false

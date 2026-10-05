@@ -23,7 +23,7 @@ module DiscourseRsc
         if side != "close" && leverage > 10 && (instrument.category != "crypto" || !high_risk || !SiteSetting.rsc_high_risk_enabled)
           raise Error.new("high_risk_disabled", status: 403)
         end
-        Risk.daily!(actor.id, instrument)
+        Risk.daily!(actor.id, instrument, side: side)
         price = price!(instrument, trading: true)
         raise Error.new("invalid_quantity") unless units >= instrument.minimum_units && (units % instrument.step_units.to_i).zero?
         raise Error.new("order_pending", status: 409) if Order.exists?(user_id: actor.id, instrument_id: instrument.id, status: "pending")
@@ -31,7 +31,8 @@ module DiscourseRsc
         position = Position.find_by(user_id: actor.id, instrument_id: instrument.id)
         if side == "close"
           raise Error.new("position_unavailable") unless position && position.quantity_units >= units
-          raise Error.new("position_locked", status: 409) if position.hold_until && position.hold_until > Time.current
+          hold_until = Risk.hold_until(position)
+          raise Error.new("position_locked", status: 409) if hold_until && hold_until > Time.current
           leverage = position.leverage
         elsif position && (position.side != side || position.leverage != leverage)
           raise Error.new("position_conflict", status: 409)
@@ -40,7 +41,7 @@ module DiscourseRsc
         raise Error.new("wallet_frozen", status: 403) unless wallet.status == "active"
         delay = instrument.quote.fetch("delay_seconds", 0).to_i
         delayed = instrument.category == "crypto" || TradingRules.delayed?(instrument)
-        wait = instrument.category == "crypto" ? (side == "close" ? 0 : SecureRandom.random_number(61) + 30) : [[delay - 30, 30].max, 1800].min
+        wait = instrument.category == "crypto" ? (side == "close" ? 0 : SiteSetting.rsc_crypto_confirmation_delay_seconds) : [[delay - 30, 30].max, 1800].min
         order = Order.create!(user_id: actor.id, instrument_id: instrument.id, side: side, leverage: leverage,
                               status: delayed ? "pending" : "executing", quantity_units: units,
                               execute_at: Time.current + wait.seconds, expires_at: Time.current + (instrument.category == "crypto" ? 15 : 30).minutes,
@@ -79,7 +80,7 @@ module DiscourseRsc
         Risk.lock(actor.id)
         order = Order.lock.find(candidate.id)
         raise Error.new("order_not_pending", status: 409) unless order.status == "pending"
-        window_open = instrument.category == "crypto" ? Time.current >= order.created_at + 2.minutes : Time.current <= order.created_at + 10.seconds
+        window_open = instrument.category == "crypto" || Time.current <= order.created_at + 10.seconds
         unless window_open || order.expires_at <= Time.current || instrument.provider_error.present? || order.details["error"].present?
           raise Error.new("cancellation_locked", status: 409)
         end
@@ -236,7 +237,7 @@ module DiscourseRsc
       existing = position.quantity_units.to_i
       position.update!(quantity_units: existing + quantity, average_units: (existing * position.average_units.to_i + quantity * price) / (existing + quantity),
                        margin_units: position.margin_units.to_i + margin, take_profit_units: tp || position.take_profit_units, stop_loss_units: sl || position.stop_loss_units,
-                       hold_until: instrument.category == "crypto" ? [order.created_at + 5.minutes, position.hold_until].compact.max : (order.details["delayed"] ? Time.current + 2.minutes : position.hold_until))
+                       hold_until: instrument.category == "crypto" && order.leverage > 10 && SiteSetting.rsc_high_risk_hold_seconds.positive? ? order.created_at + SiteSetting.rsc_high_risk_hold_seconds.seconds : nil)
       Commands.move(user_id: order.user_id, action: "stock_fill", request_id: "order-fill-#{order.id}", settlement: true,
                     postings: { Account.internal("order:#{order.id}").id => -reserve, Account.internal("position:#{position.id}").id => margin,
                                 Account.internal("system:exchange", kind: "system").id => fee, Account.wallet(order.user_id).id => reserve - margin - fee },
@@ -266,7 +267,7 @@ module DiscourseRsc
       buy = side == "long"
       market = instrument.quote[buy ? "ask" : "bid"]
       execution = market.present? ? Amount.positive(market) : price
-      if instrument.category == "crypto"
+      if instrument.category == "crypto" && (SiteSetting.rsc_crypto_extra_slippage_enabled || !reliable_book?(instrument.quote))
         bps = 2 + SecureRandom.random_number(4)
         execution = execution * (buy ? 10_000 + bps : 10_000 - bps) / 10_000
       elsif market.blank?
@@ -279,6 +280,14 @@ module DiscourseRsc
         end
       end
       [execution, 1].max
+    end
+
+    def self.reliable_book?(quote)
+      bid = Amount.positive(quote["bid"])
+      ask = Amount.positive(quote["ask"])
+      bid <= ask
+    rescue Error
+      false
     end
 
     def self.refund_locked(order, status, error = nil)

@@ -26,6 +26,14 @@ zh_CN:
     rsc_twelve_data_api_key: Twelve Data 服务端 API 密钥
     rsc_sports_leagues: 同步的联赛，格式 sport:league
     rsc_high_risk_enabled: 允许虚拟币高风险模式（最高 100 倍；仍需用户单独选择）
+    rsc_standard_position_limits_enabled: "对虚拟币和延迟行情的普通杠杆（1–10 倍）启用原有单仓比例与组合额度限制；默认关闭。余额、保证金和强平检查始终保留。"
+    rsc_high_risk_margin_percent: "高杠杆（11–100 倍）单品种初始保证金占账户权益的上限百分比；仍限一个高杠杆品种并检查组合额度。"
+    rsc_high_risk_cooldown_seconds: "高杠杆平仓后重新开高杠杆仓位的冷却秒数，默认 300；0 关闭。现有同品种高杠杆仓位可继续加仓。"
+    rsc_high_risk_hold_seconds: "高杠杆虚拟币仓位从最近开仓提交起的最短手动平仓等待秒数，默认 60；0 关闭。适用于已有仓位，自动止盈止损和强平不受影响。"
+    rsc_crypto_daily_open_limit: "每人每天虚拟币开仓/加仓次数上限（北京时间）；0 不限制。平仓永不占用或受限；已撤销开仓仍计数。"
+    rsc_crypto_symbol_daily_open_limit: "每人每天每个虚拟币品种的开仓/加仓次数上限；0 不限制，平仓不受限。"
+    rsc_crypto_confirmation_delay_seconds: "虚拟币开仓确认的额外等待秒数，默认 0；无论设置多少，仍须取得源时间晚于提交时间的新鲜报价。平仓不增加此等待。"
+    rsc_crypto_extra_slippage_enabled: "已有有效买卖报价时，是否仍额外附加 0.02%–0.05% 随机不利滑点；默认关闭。缺少有效买卖报价时仍使用原有保守滑点。"
     rsc_market_sync_batch: 每次后台同步的标的数量上限
     rsc_twelve_data_delay_seconds: Twelve Data 订阅所提供的报价延迟（秒），按实际套餐填写
   discourse_rsc:
@@ -141,7 +149,7 @@ zh_CN:
       high_risk_cooldown: 高风险仓位平仓后需等待 30 分钟才能再次开仓。
       position_risk_limit: 超过该标的允许使用的保证金比例。
       portfolio_risk_limit: 超过账户组合的保证金风险上限。
-      crypto_daily_limit: 已达到今日虚拟币下单次数上限。
+      crypto_daily_limit: 已达到今日虚拟币开仓／加仓次数上限，平仓不受此限制。
       invalid_symbol: 标的代码格式不正确。
       invalid_search: 请输入 2 至 60 个字符搜索标的。
       provider_disabled: 行情同步尚未启用。

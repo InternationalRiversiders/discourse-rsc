@@ -23,7 +23,7 @@ class TradingWorkspaceTest < MigrationFeaturesTest
     assert status[:positions].first[:hold_until]
     result=R::Exchange.submit(actor:@alice,instrument_id:stock.id,side:'close',quantity:'1',leverage:100,request_id:SecureRandom.uuid)
     fill(stock,R::Order.find(result['order_id']))
-    until_at=R::Order.find(result['order_id']).updated_at+30.minutes
+    until_at=R::Order.find(result['order_id']).updated_at+SiteSetting.rsc_high_risk_cooldown_seconds.seconds
     assert_in_delta until_at.to_f,R::Risk.high_risk_status(@alice.id)[:cooldown_until].to_f,0.01
     assert_equal 'high_risk_cooldown',assert_raises(R::Error) { R::Risk.check!(@alice.id,stock,100,R::Amount.parse('1')) }.code
     R::Order.find(result['order_id']).update_columns(updated_at:31.minutes.ago)

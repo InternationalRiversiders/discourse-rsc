@@ -26,6 +26,14 @@ en:
     rsc_twelve_data_api_key: Server-side Twelve Data API key
     rsc_sports_leagues: Leagues to synchronize as sport:league
     rsc_high_risk_enabled: Allow crypto high risk mode up to 100×, with user opt-in
+    rsc_standard_position_limits_enabled: "Enable legacy position and portfolio percentage caps for 1–10× crypto/delayed-market orders. Balance, margin and liquidation checks always remain."
+    rsc_high_risk_margin_percent: "Maximum initial margin for one high-risk (11–100×) instrument as a percent of equity. Single high-risk instrument and portfolio checks still apply."
+    rsc_high_risk_cooldown_seconds: "Cooldown in seconds after a high-risk close; default 300, 0 disables it. Existing high-risk positions may still be increased."
+    rsc_high_risk_hold_seconds: "Minimum seconds from the latest opening submission before manually closing high-risk crypto, default 60; 0 disables it. Applies to existing holdings; automated exits remain available."
+    rsc_crypto_daily_open_limit: "Crypto opening/increase orders per member per UTC+8 day; 0 is unlimited. Closes never count or block; canceled opening orders count."
+    rsc_crypto_symbol_daily_open_limit: "Crypto opening/increase orders per member and instrument per UTC+8 day; 0 is unlimited. Closes are exempt."
+    rsc_crypto_confirmation_delay_seconds: "Extra seconds before confirming crypto openings, default 0. Execution always requires a fresh source quote newer than submission. No extra delay for closes."
+    rsc_crypto_extra_slippage_enabled: "Add 0.02%–0.05% random adverse slippage even with a valid bid/ask book; default off. Missing/invalid books retain conservative slippage."
     rsc_market_sync_batch: Maximum instruments per background sync batch
     rsc_twelve_data_delay_seconds: Quote delay in seconds for your Twelve Data subscription
   discourse_rsc:
@@ -142,7 +150,7 @@ en:
       high_risk_cooldown: High risk cooldown.
       position_risk_limit: Position risk limit.
       portfolio_risk_limit: Portfolio risk limit.
-      crypto_daily_limit: Crypto daily limit.
+      crypto_daily_limit: Crypto daily opening limit reached. Closing positions is exempt.
       invalid_symbol: Invalid symbol.
       invalid_search: Invalid search.
       provider_disabled: Provider disabled.
