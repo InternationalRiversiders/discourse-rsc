@@ -26,7 +26,7 @@ module DiscourseRsc
       focused = Order.where(user_id: current_user.id).includes(:instrument).find_by(id: positive_id(:order_id)) if market && params[:order_id].present?
       orders.unshift(focused) if focused && orders.none? { |o| o.id == focused.id }
       listing = MarketListing.page(params) if section == 'market'
-      instruments = full ? MarketListing.catalog : []
+      instruments = full ? MarketListing.rows(Instrument.where(active: true).order(:symbol).to_a) : []
       if listing
         # Keep selected/held instruments available even outside the current results page.
         ids = positions.map { |p| p[:instrument_id] }

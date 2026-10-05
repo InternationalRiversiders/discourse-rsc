@@ -17,7 +17,7 @@ module DiscourseRsc
         columns = Instrument.column_names.reject { |column| column == 'history' }
         items = Instrument.where(active: true).select(*columns)
           .select(Arel.sql("jsonb_path_query_array(history, '$[last - 59 to last]') AS history")).order(:symbol).to_a
-        rows(items)
+        rows(items, execution: false)
       end
     end
 
@@ -54,11 +54,13 @@ module DiscourseRsc
       end
       pages = [(found.size / 20.0).ceil, 1].max
       page = [[params[:market_page].to_i, 1].max, pages].min
-      { rows: found.slice((page - 1) * 20, 20), categories: categories, category: category, search: query, sort: sort,
+      page_ids = found.slice((page - 1) * 20, 20).map { |row| row[:id] }
+      current = rows(Instrument.where(id: page_ids).to_a).index_by { |row| row[:id] }
+      { rows: page_ids.filter_map { |id| current[id] }, categories: categories, category: category, search: query, sort: sort,
         pagination: { total: found.size, page: page, pages: pages, scope: "#{query}/#{category}/#{sort}" } }
     end
 
-    def self.rows(instruments)
+    def self.rows(instruments, execution: true)
       schedules = MarketSessions.hours
       counts = Order.group(:instrument_id).count
       last = Order.group(:instrument_id).maximum(:created_at)
@@ -73,7 +75,7 @@ module DiscourseRsc
         { id: item.id, symbol: item.symbol, display_symbol: metadata["display_symbol"].presence || item.symbol,
           exchange: metadata["exchange"], currency: item.currency, name: item.name, category: item.category, quote: item.quote, market_closed: MarketSessions.closed?(item, schedules: schedules),
           minimum_notional: TradingRules.stock?(item) ? "1" : nil,
-          execution_prices: execution_prices(item),
+          execution_prices: execution ? execution_prices(item) : nil,
           popularity: counts.fetch(item.id, 0), last_order_at: last[item.id], catalog_rank: metadata["catalog_rank"]&.to_i, catalog_id: metadata["id"]&.to_i || item.id,
           fee_bps: item.fee_bps, close_only: TradingRules.close_only?(item), execution_mode: item.category == "crypto" ? "crypto_confirmation" : (TradingRules.delayed?(item) ? "delayed_confirmation" : "immediate"), history: item.history.last(16), minimum: Amount.format(item.minimum_units), step: Amount.format(item.step_units) }
       end.sort_by do |row|

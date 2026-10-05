@@ -152,6 +152,14 @@ class LoadingAndTeamTest < MigrationFeaturesTest
     assert_equal '0.000000012345678901',row[:quote]['price']
     assert_equal history,item.reload.history
   end
+  def test_loading_catalog_skips_execution_estimates_but_page_keeps_them
+    item=instrument
+    item.update!(quote:item.quote.merge('bid'=>'99.5','ask'=>'100.5'))
+    assert_nil R::MarketListing.catalog.first[:execution_prices]
+    data=state('market',market_category:'all')
+    assert_equal({'long'=>'100.5','short'=>'99.5'},data[:instruments].first[:execution_prices])
+    assert_equal({'long'=>'100.5','short'=>'99.5'},state[:instruments].first[:execution_prices])
+  end
   def test_loading_tradable_filter_and_change_sort
     build_catalog
     rows=R::Instrument.order(:id).to_a
