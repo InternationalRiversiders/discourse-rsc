@@ -7,7 +7,7 @@ export default class extends DiscourseRoute {
     if (!this.currentUser?.rsc_member) {
       return ajax(`/rsc/packet/${encodeURIComponent(params.token)}/public.json`);
     }
-    const state = await ajax("/rsc/state.json");
+    const state = await ajax("/rsc/state.json", { data: { section: "packet" } });
     state.packet = await ajax(
       `/rsc/packet/${encodeURIComponent(params.token)}.json`
     );

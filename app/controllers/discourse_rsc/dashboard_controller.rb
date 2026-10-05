@@ -10,28 +10,49 @@ module DiscourseRsc
     end
 
     def state
+      section = params[:section].to_s
+      raise Error.new('invalid_request') unless ['', 'wallet', 'market', 'sports', 'packet'].include?(section)
+      full = section.empty? # Compatibility for existing clients during an A/B switch.
+      market = full || section == 'market'
+      sports = full || section == 'sports'
+      wallet_page = full || section == 'wallet'
       wallet = Account.wallet_snapshot(current_user.id)
-      instruments = Instrument.where(active: true).order(:symbol).to_a
-      positions = Position.where(user_id: current_user.id).includes(:instrument).order(:id).map { |position| Views.position(position) }
-      margin = positions.sum { |position| Amount.parse(position[:margin]) }
+      positions = market ? Position.where(user_id: current_user.id).includes(:instrument).order(:id).map { |p| Views.position(p) } : []
+      margin = positions.sum { |p| Amount.parse(p[:margin]) }
       profits = positions.map { |p| p[:pnl] && BigDecimal(p[:pnl]) }
       pnl = profits.none?(&:nil?) ? (profits.sum * Amount::UNIT).to_i : nil
-      predictions = Prediction.where(user_id: current_user.id).includes(:sport_match).order(id: :desc).limit(100)
-      pending = Order.where(user_id: current_user.id,status:"pending")
-      orders=Order.where(user_id:current_user.id).includes(:instrument).order(id: :desc).limit(50).to_a
-      focused=Order.where(user_id:current_user.id).includes(:instrument).find_by(id:positive_id(:order_id)) if params[:order_id].present?
-      orders.unshift(focused) if focused && orders.none? { |o| o.id==focused.id }
-      entries = Entry.where(account_id: wallet.id).includes(:journal).order(id: :desc).limit(30)
+      reserved = Order.where(user_id: current_user.id, status: 'pending').sum(:reserved_units)
+      orders = market ? Order.where(user_id: current_user.id).includes(:instrument).order(id: :desc).limit(50).to_a : []
+      focused = Order.where(user_id: current_user.id).includes(:instrument).find_by(id: positive_id(:order_id)) if market && params[:order_id].present?
+      orders.unshift(focused) if focused && orders.none? { |o| o.id == focused.id }
+      listing = MarketListing.page(params) if section == 'market'
+      instruments = full ? MarketListing.catalog : []
+      if listing
+        # Keep selected/held instruments available even outside the current results page.
+        ids = positions.map { |p| p[:instrument_id] }
+        ids << positive_id(:instrument_id) if params[:instrument_id].present?
+        ids << focused.instrument_id if focused
+        selected = MarketListing.rows(Instrument.where(id: ids.uniq).to_a)
+        instruments = (selected + listing[:rows]).uniq { |row| row[:id] }
+      end
+      entries = wallet_page ? Entry.where(account_id: wallet.id).includes(:journal).order(id: :desc).limit(30) : []
+      team_names = SportsTeamTranslation.names if sports
+      predictions = sports ? Prediction.where(user_id: current_user.id).includes(:sport_match).order(id: :desc).limit(100) : []
       render_json_dump(
-        market_data_enabled: SiteSetting.rsc_market_data_enabled, high_risk: Risk.high_risk_status(current_user.id),
-        read_only: Safety.read_only?, reward: Rewards.today(current_user.id), demo: instruments.present? && instruments.all? { |item| item.quote["demo"] }, admin: Access.admin?(current_user), high_risk_enabled: SiteSetting.rsc_high_risk_enabled, trial: true, odds_max_age_hours: SiteSetting.rsc_odds_max_age_hours, wallet: { balance: wallet.balance, status: wallet.status, status_reason: wallet.status_reason, reserved: Amount.format(pending.sum(:reserved_units)) },
-        instruments: MarketListing.rows(instruments),
-        positions: positions,
-        portfolio: { notional: Amount.format(positions.sum { |p| Amount.parse(p[:quantity])*Amount.parse(p[:average])/Amount::UNIT }), reserved: Amount.format(pending.sum(:reserved_units)), margin: Amount.format(margin), pnl: pnl && Amount.format(pnl), equity: pnl && Amount.format(margin + pnl) },
+        market_data_enabled: SiteSetting.rsc_market_data_enabled,
+        high_risk: market ? Risk.high_risk_status(current_user.id) : { positions: [], pending: [] },
+        read_only: Safety.read_only?, reward: wallet_page ? Rewards.today(current_user.id) : {},
+        demo: instruments.present? && instruments.all? { |item| item[:quote]['demo'] },
+        admin: Access.admin?(current_user), high_risk_enabled: SiteSetting.rsc_high_risk_enabled,
+        trial: true, odds_max_age_hours: SiteSetting.rsc_odds_max_age_hours,
+        wallet: { balance: wallet.balance, status: wallet.status, status_reason: wallet.status_reason, reserved: Amount.format(reserved) },
+        instruments: instruments, market_page: listing, positions: positions,
+        portfolio: { notional: Amount.format(positions.sum { |p| Amount.parse(p[:quantity]) * Amount.parse(p[:average]) / Amount::UNIT }),
+          reserved: Amount.format(reserved), margin: Amount.format(margin), pnl: pnl && Amount.format(pnl), equity: pnl && Amount.format(margin + pnl) },
         orders: orders.map { |item| Views.order(item) },
-        matches: Views.matches(current_user.id, focus: params[:match_id].present? ? positive_id(:match_id) : nil),
-        predictions: predictions.map { |item| Views.prediction(item) },
-        packets: Packet.where(user_id: current_user.id).includes(:claims).order(id: :desc).limit(30).map { |item| packet_json(item) },
+        matches: sports ? Views.matches(current_user.id, focus: params[:match_id].present? ? positive_id(:match_id) : nil) : [],
+        predictions: predictions.map { |item| Views.prediction(item, names: team_names) },
+        packets: wallet_page ? Packet.where(user_id: current_user.id).includes(:claims).order(id: :desc).limit(30).map { |item| packet_json(item) } : [],
         entries: entries.map { |item| { id: item.id, operation: item.journal.operation, amount: Amount.format(item.units), balance: Amount.format(item.balance_after_units), created_at: item.created_at } },
       )
     end

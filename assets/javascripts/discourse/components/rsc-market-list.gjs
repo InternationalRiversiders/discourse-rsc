@@ -16,8 +16,17 @@ export default class extends Component {
   @tracked category = "all";
   @tracked page = 1;
   @tracked sort = "popular";
+  @tracked loading = false;
+  queryGeneration = 0;
   constructor() {
     super(...arguments);
+    if (this.args.pageData) {
+      this.category = this.args.pageData.category;
+      this.search = this.args.pageData.search;
+      this.sort = this.args.pageData.sort;
+      this.page = this.args.pageData.pagination.page;
+      return;
+    }
     this.category = this.args.instruments.some((item) => marketView(item, Date.now()).tradable) ? "tradable" : "all";
     try {
       const saved = JSON.parse(
@@ -59,7 +68,7 @@ export default class extends Component {
     return [
       "all",
       "tradable",
-      ...new Set(this.args.instruments.map((item) => item.category)),
+      ...new Set(this.args.pageData?.categories || this.args.instruments.map((item) => item.category)),
     ].map((id) => ({
       id,
       name: i18n(`discourse_rsc.ui.category_${id}`, {
@@ -68,6 +77,7 @@ export default class extends Component {
     }));
   }
   get filtered() {
+    if (this.args.pageData) { return this.args.pageData.rows.map((item) => marketView(item, this.args.now)); }
     const query = this.search.trim().toLocaleLowerCase();
     const result = this.args.instruments
       .filter(
@@ -93,20 +103,22 @@ export default class extends Component {
     return result;
   }
   get pageCount() {
-    return Math.max(1, Math.ceil(this.filtered.length / 20));
+    return this.args.pageData?.pagination.pages || Math.max(1, Math.ceil(this.filtered.length / 20));
   }
   get currentPage() {
-    return Math.min(this.page, this.pageCount);
+    return this.args.pageData?.pagination.page || Math.min(this.page, this.pageCount);
   }
   get rows() {
+    if (this.args.pageData) { return this.filtered; }
     return this.filtered.slice(
       (this.currentPage - 1) * 20,
       this.currentPage * 20
     );
   }
-  get pagination() { return { scope: `${this.search}/${this.category}/${this.sort}`, total: this.filtered.length, page: this.currentPage, pages: this.pageCount }; }
+  get resultCount() { return this.args.pageData?.pagination.total ?? this.filtered.length; }
+  get pagination() { return this.args.pageData?.pagination || { scope: `${this.search}/${this.category}/${this.sort}`, total: this.filtered.length, page: this.currentPage, pages: this.pageCount }; }
   @action changePage(page) {
-    this.page = page; this.remember();
+    this.page = page; this.remember(); this.loadPage();
     requestAnimationFrame(() => document.querySelector("#rsc-markets")?.scrollIntoView({ block: "start" }));
   }
   get firstPage() {
@@ -120,23 +132,32 @@ export default class extends Component {
     this.searchTimer = debounce(this, this.recordSearch, 1200);
     this.page = 1;
     this.remember();
+    this.pageTimer = debounce(this, this.loadPage, 300);
   }
   recordSearch() {
     const query = this.search.trim();
     if (this.args.readOnly || query.length < 2) { return; }
     // Analytics must not interrupt market browsing when unavailable.
-    ajax("/rsc/search-events.json", { type: "POST", data: { q: query, result_count: this.filtered.length } }).catch(() => {});
+    ajax("/rsc/search-events.json", { type: "POST", data: { q: query, result_count: this.resultCount } }).catch(() => {});
   }
-  willDestroy() { super.willDestroy(...arguments); cancel(this.searchTimer); }
+  willDestroy() { super.willDestroy(...arguments); cancel(this.searchTimer); cancel(this.pageTimer); }
+  async loadPage() {
+    if (!this.args.pageData) { return; }
+    cancel(this.pageTimer);
+    const generation = ++this.queryGeneration;
+    this.loading = true;
+    try { await this.args.onQuery({ market_category: this.category, market_search: this.search, market_sort: this.sort, market_page: this.page }); }
+    finally { if (!this.isDestroying && !this.isDestroyed && generation === this.queryGeneration) { this.loading = false; } }
+  }
   @action chooseCategory(category) {
     this.category = category;
     this.page = 1;
-    this.remember();
+    this.remember(); this.loadPage();
   }
   @action changeSort(event) {
     this.sort = event.target.value;
     this.page = 1;
-    this.remember();
+    this.remember(); this.loadPage();
   }
   @action previous() {
     this.page = Math.max(1, this.currentPage - 1);
@@ -151,7 +172,7 @@ export default class extends Component {
       <div class="rsc-board-heading"><div><p class="rsc-eyebrow">MARKETS</p><h2
           >{{uiText "market_quotes"}}</h2></div><span
           class="rsc-count"
-        >{{this.filtered.length}} {{uiText "instruments_count"}}</span></div>
+        >{{this.resultCount}} {{uiText "instruments_count"}}</span></div>
       <div
         class="rsc-category-strip"
         aria-label={{uiText "market_categories"}}
@@ -189,7 +210,8 @@ export default class extends Component {
           }}</span><span>{{uiText "latest_price"}}</span><span>{{uiText
             "daily_change"
           }}</span></div>{{/each}}</div>
-      <div class="rsc-quote-list">{{#each this.rows key="id" as |item|}}
+      {{#if this.loading}}<p class="rsc-muted" role="status">加载行情中…</p>{{/if}}
+      <div class="rsc-quote-list" aria-busy={{this.loading}}>{{#each this.rows key="id" as |item|}}
           <div class="rsc-quote-item"><button
               type="button"
               class="rsc-quote-row {{if (eq @selectedId item.id) 'selected'}}"

@@ -1,3 +1,4 @@
+import { savedMarketQuery } from "../../lib/rsc-market-query";
 import RscMemberRoute from "../../lib/rsc-member-route";
 import { ajax } from "discourse/lib/ajax";
 
@@ -15,7 +16,7 @@ export default class extends RscMemberRoute {
   }
 
   async model(params) {
-    const state = await ajax("/rsc/state.json", { data: params });
+    const state = await ajax("/rsc/state.json", { data: { ...params, section: "market", ...savedMarketQuery() } });
     return { ...state, focus: params };
   }
 }

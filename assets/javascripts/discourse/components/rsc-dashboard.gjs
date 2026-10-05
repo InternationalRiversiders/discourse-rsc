@@ -89,12 +89,16 @@ export default class RscDashboard extends Component {
   @tracked stopLoss = "";
   @tracked sport = "all";
   @tracked matchFilter = "open";
+  @tracked marketQuery = {};
+  stateGeneration = 0;
   timer;
   clockTimer;
   requestIds = new Map();
 
   constructor() {
     super(...arguments);
+    const page = this.args.model.market_page;
+    if (page) { this.marketQuery = { market_category: page.category, market_search: page.search, market_sort: page.sort, market_page: page.pagination.page }; }
     const requested = this.args.model.focus?.instrument_id;
     if (requested && this.args.model.instruments.some((item) => String(item.id) === requested)) { this.selectMarket(requested); }
     if (this.args.model.focus?.match_id) { this.matchFilter = "all"; }
@@ -106,7 +110,7 @@ export default class RscDashboard extends Component {
         this.quoteClock = Date.now();
         this.refresh().catch(() => {});
       }
-    }, 15000);
+    }, this.args.section === "market" ? 15000 : 60000);
   }
   willDestroy() {
     super.willDestroy(...arguments);
@@ -361,18 +365,26 @@ export default class RscDashboard extends Component {
       this.refreshing = null;
     }
   }
-  async loadState() {
-    if (this.args.section === "market" && this.marketDetailOpen &&
+  @action async queryMarkets(query) {
+    this.marketQuery = query;
+    try { await this.loadState(false); } catch (error) { this.error = extractError(error); }
+  }
+  async loadState(refreshQuote = true) {
+    const generation = ++this.stateGeneration;
+    if (refreshQuote && this.args.section === "market" && this.marketDetailOpen &&
         this.selected && this.data.market_data_enabled && !this.data.read_only) {
       await ajax(`/rsc/instruments/${this.selected.id}/refresh.json`, { type: "POST" }).catch(() => {});
     }
-    const state = await ajax("/rsc/state.json", { data: this.args.model.focus || {} });
+    const state = await ajax("/rsc/state.json", { data: {
+      ...(this.args.model.focus || {}), section: this.args.section === "market" ? "market" : this.args.section === "sports" ? "sports" : this.args.section === "packet" ? "packet" : "wallet",
+      ...this.marketQuery, ...(this.selectedId ? { instrument_id: this.selectedId } : {}),
+    } });
     if (this.args.model.packet) {
       state.packet = await ajax(
         `/rsc/packet/${this.args.model.packet.token}.json`
       );
     }
-    if (!this.isDestroying && !this.isDestroyed) {
+    if (!this.isDestroying && !this.isDestroyed && generation === this.stateGeneration) {
       this.snapshot = state;
     }
   }
@@ -679,6 +691,8 @@ export default class RscDashboard extends Component {
             >{{uiText "no_positions"}}</p>{{/each}}</section>
           <RscMarketList
             @instruments={{this.data.instruments}}
+            @pageData={{this.data.market_page}}
+            @onQuery={{this.queryMarkets}}
             @now={{this.quoteClock}}
             @selectedId={{this.selected.id}}
             @onSelect={{this.selectMarket}}

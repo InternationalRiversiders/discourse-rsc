@@ -11,6 +11,10 @@ CreateRscAccounting.new.migrate(:up) unless ActiveRecord::Base.connection.table_
 class DiscourseSmokeTest < Minitest::Test
   def setup
     Discourse.cache.delete('rsc:trading-hours')
+    %w[rsc:market:catalog:v1 rsc:market:metadata:v1 rsc:sports:team-dictionary:v1].each { |key| Rails.cache.delete(key) }
+    SiteSetting.rsc_sports_team_translation_enabled = false
+    SiteSetting.rsc_sports_team_name_overrides = '{}'
+
     ActiveRecord::Base.connection.execute("TRUNCATE discourse_rsc_events, discourse_rsc_entries, discourse_rsc_journals, discourse_rsc_accounts RESTART IDENTITY CASCADE")
     ActiveRecord::Base.connection.execute("TRUNCATE discourse_rsc_commands, discourse_rsc_instruments, discourse_rsc_positions, discourse_rsc_orders, discourse_rsc_sport_matches, discourse_rsc_predictions, discourse_rsc_packets, discourse_rsc_packet_claims RESTART IDENTITY CASCADE")
     ActiveRecord::Base.connection.execute("TRUNCATE discourse_rsc_searches, discourse_rsc_audits, discourse_rsc_market_requests, discourse_rsc_history_caches, discourse_rsc_exemptions, discourse_rsc_legacy_records RESTART IDENTITY CASCADE")

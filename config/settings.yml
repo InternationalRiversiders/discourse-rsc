@@ -1,4 +1,13 @@
 plugins:
+  rsc_sports_team_translation_enabled:
+    default: false
+  rsc_sports_team_translation_daily_limit:
+    default: 48
+    min: 1
+    max: 500
+  rsc_sports_team_name_overrides:
+    default: "{}"
+    textarea: true
   rsc_forecast_auto_review_enabled:
     default: false
   rsc_forecast_auto_review_daily_limit:

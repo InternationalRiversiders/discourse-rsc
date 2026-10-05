@@ -22,8 +22,8 @@ module DiscourseRsc
       I18n.locale.to_s.start_with?("zh")
     end
 
-    def self.team(name)
-      chinese? ? TEAMS.fetch(name.to_s.downcase, name) : name
+    def self.team(name, sport: nil, names: nil)
+      chinese? ? (SportsTeamTranslation.lookup(name, sport: sport, names: names) || name) : name
     end
 
     def self.stage(value)

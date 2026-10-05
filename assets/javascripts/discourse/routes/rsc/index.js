@@ -13,7 +13,7 @@ export default class extends RscMemberRoute {
   }
 
   async model(params) {
-    const state = await ajax("/rsc/state.json", { data: params });
+    const state = await ajax("/rsc/state.json", { data: { ...params, section: "wallet" } });
     return { ...state, focus: params };
   }
 }

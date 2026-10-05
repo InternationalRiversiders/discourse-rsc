@@ -41,3 +41,5 @@ bundle exec rails runner /rsc/test/trading_workspace_test.rb -n "/test_workspace
 bundle exec rails runner /rsc/test/forex_precision_test.rb -n "/test_forex/"
 
 bundle exec rails runner /rsc/test/trading_policy_test.rb -n "/test_policy/"
+
+bundle exec rails runner /rsc/test/loading_and_team_test.rb -n '/test_loading/'
