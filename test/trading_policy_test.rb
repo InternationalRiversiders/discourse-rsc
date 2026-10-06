@@ -116,15 +116,18 @@ class TradingPolicyTest < MigrationFeaturesTest
     end
   end
 
-  def test_policy_high_risk_single_instrument_and_margin_caps_remain
+  def test_policy_high_risk_shared_budget_replaces_symbol_and_weighted_caps
     fund;SiteSetting.rsc_high_risk_enabled=true;first=coin('FIRST');second=coin('SECOND')
-    assert_equal 'position_risk_limit',assert_raises(R::Error) { R::Risk.check!(@alice.id,first,100,R::Amount.parse('251')) }.code
+    assert_equal 'high_risk_budget',assert_raises(R::Error) { R::Risk.check!(@alice.id,first,100,R::Amount.parse('251')) }.code
     SiteSetting.rsc_high_risk_margin_percent=30
     R::Risk.check!(@alice.id,first,100,R::Amount.parse('251'))
     submit(first,leverage:100)
-    assert_equal 'high_risk_position_limit',assert_raises(R::Error) { submit(second,leverage:100) }.code
+    assert_equal 'pending',submit(second,leverage:100).status
+    budget=R::Risk.high_risk_status(@alice.id)[:budget]
+    assert_equal '2',budget[:used_margin]
+    assert_equal '298',budget[:available_margin]
     # Ordinary positions remain available even with a high-risk position pending.
-    assert_equal 'pending',submit(second,quantity:'60').status
+    assert_equal 'pending',submit(coin('THIRD'),quantity:'60').status
   end
 
   def test_policy_delayed_markets_still_wait_for_source_timestamp_after_order

@@ -139,7 +139,7 @@ export default class RscDashboard extends Component {
   get tradingDisabled() {
     return (
       this.data.read_only ||
-      this.busy || this.highRiskStatus.blocked || !!this.quantityError || !!this.positionConflict ||
+      this.busy || this.highRiskStatus.blocked || !!this.quantityError || !!this.budgetError || !!this.positionConflict ||
       !this.selectedMarket?.tradable ||
       this.data.wallet.status !== "active" ||
       (this.side !== "close" && this.selected?.close_only)
@@ -191,7 +191,14 @@ export default class RscDashboard extends Component {
       this.leverage = "10";
     }
   }
-  get estimate() { return estimate(this.selected, this.quantity, this.leverage, this.data.wallet.balance, this.side); }
+  get marginLimit() {
+    return Number(this.leverage) > 10 ? (this.data.high_risk?.budget?.available_margin ?? "0") : null;
+  }
+  get estimate() { return estimate(this.selected, this.quantity, this.leverage, this.data.wallet.balance, this.side, this.marginLimit); }
+  get budgetError() {
+    const available = this.estimate?.maximum;
+    return available && atomic(this.quantity) > atomic(available) ? "数量超出当前可建仓额度，请使用下方比例按钮重新填入。" : "";
+  }
   get positionConflict() {
     const position = this.data.positions.find((item) => String(item.instrument_id) === this.selectedId);
     if (position && (position.side !== this.side || Number(position.leverage) !== Number(this.leverage))) {
@@ -209,9 +216,9 @@ export default class RscDashboard extends Component {
     return "";
   }
   @action allocate(quarters) {
-    const quantity = quantityForFraction(this.selected, this.leverage, this.data.wallet.balance, quarters, this.side);
+    const quantity = quantityForFraction(this.selected, this.leverage, this.data.wallet.balance, quarters, this.side, this.marginLimit);
     if (quantity === null || atomic(quantity) < (atomic(this.selected?.minimum) || 1n)) {
-      this.error = "该比例的余额不足以满足最小建仓数量。";
+      this.error = "该比例的余额或剩余额度不足以满足最小建仓数量。";
       return;
     }
     this.error = "";
@@ -231,11 +238,10 @@ export default class RscDashboard extends Component {
     const positions = status.positions || [], pending = status.pending || [];
     const occupying = [...new Set([...positions, ...pending].map(p => p.symbol))].join("、");
     const samePosition = positions.find(p => p.instrument_id === this.selected?.id);
-    const elsewhere = [...positions, ...pending].some(p => p.instrument_id !== this.selected?.id);
     const seconds = status.cooldown_until ? Math.max(0, Math.ceil((Date.parse(status.cooldown_until) - this.quoteClock) / 1000)) : 0;
     const hold = samePosition?.hold_until ? Math.max(0, Math.ceil((Date.parse(samePosition.hold_until) - this.quoteClock) / 1000)) : 0;
     return { occupying, seconds, countdown: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`, hold,
-      blocked: Number(this.leverage) > 10 && (elsewhere || (!samePosition && seconds > 0)) };
+      blocked: Number(this.leverage) > 10 && (!samePosition && seconds > 0) };
   }
   get quoteStats() {
     const q = this.selected?.quote || {};
@@ -243,7 +249,10 @@ export default class RscDashboard extends Component {
       ? [{ label: "24h 最高", value: q.high }, { label: "24h 最低", value: q.low }]
       : [{ label: "开盘", value: q.open }, { label: "前收", value: q.previous_close }, { label: "最高", value: q.high }, { label: "最低", value: q.low }];
   }
-  get changeLabel() { return this.selectedMarket?.changeLabel; }
+  get changeLabel() {
+    const basis = this.selectedMarket?.changeLabel;
+    return this.selected?.quote?.pricing_method === "order_book_midpoint" ? `${basis} · 盘口中间价` : basis;
+  }
   @action closeQuantity(id, event) { this.closeQuantities = { ...this.closeQuantities, [id]: event.target.value }; }
   get maxLeverage() {
     return this.highRisk &&
@@ -261,7 +270,7 @@ export default class RscDashboard extends Component {
   }
   get positionLimitHint() {
     return Number(this.leverage) > 10
-      ? `高杠杆单品种初始保证金最多占账户权益 ${this.siteSettings.rsc_high_risk_margin_percent}%，同时只可持有一个高杠杆品种，仍需通过组合额度检查。`
+      ? `多个高杠杆品种共用账户权益 ${this.data.high_risk?.margin_percent ?? this.siteSettings.rsc_high_risk_margin_percent}% 的初始保证金额度，不再限制品种数。`
       : this.siteSettings.rsc_standard_position_limits_enabled ? "虚拟币和延迟行情仍受单仓比例与组合额度限制。" : "普通杠杆不设额外单仓比例与组合额度限制，余额须足够支付保证金和手续费。";
   }
   @action marginDraft(id, event) {
@@ -737,15 +746,16 @@ export default class RscDashboard extends Component {
                   </div>
                   {{#if this.data.high_risk_enabled}}{{#if (eq this.selected.category "crypto")}}
                     <label class="rsc-checkbox"><input type="checkbox" checked={{this.highRisk}} {{on "change" this.toggleHighRisk}} />{{uiText "high_risk_mode"}}</label>
-                    <div class="rsc-risk-status"><strong>高杠杆（11–100×）</strong><span>{{#if this.highRiskStatus.occupying}}占用中：{{this.highRiskStatus.occupying}}{{else}}名额空闲{{/if}}</span>{{#if this.highRiskStatus.seconds}}<span>冷却倒计时 <b>{{this.highRiskStatus.countdown}}</b>（现有同标的高杠杆仓位可继续加仓）</span>{{else}}<span>当前无冷却</span>{{/if}}{{#if this.highRiskStatus.hold}}<span>当前仓位还需 {{this.highRiskStatus.hold}} 秒可手动平仓</span>{{/if}}</div>
+                    <div class="rsc-risk-status"><strong>高杠杆（11–100×）</strong>{{#if this.data.high_risk.budget}}<span>剩余保证金额度 {{formatAmount this.data.high_risk.budget.available_margin}} / {{formatAmount this.data.high_risk.budget.maximum_margin}} RSC</span>{{/if}}<span>{{#if this.highRiskStatus.occupying}}已持有：{{this.highRiskStatus.occupying}}{{else}}暂无高杠杆仓位{{/if}}</span>{{#if this.highRiskStatus.seconds}}<span>冷却倒计时 <b>{{this.highRiskStatus.countdown}}</b>（现有同标的高杠杆仓位可继续加仓）</span>{{else}}<span>当前无冷却</span>{{/if}}{{#if this.highRiskStatus.hold}}<span>当前仓位还需 {{this.highRiskStatus.hold}} 秒可手动平仓</span>{{/if}}</div>
                   {{/if}}{{/if}}
                   {{#if this.selected.close_only}}<p class="alert alert-info">此杠杆/反向产品目前仅可平仓。</p>{{/if}}
                   <div class="rsc-fields"><label>{{uiText "take_profit"}}<input inputmode="decimal" value={{this.takeProfit}} {{on "input" (fn this.set "takeProfit")}} /></label><label>{{uiText "stop_loss"}}<input inputmode="decimal" value={{this.stopLoss}} {{on "input" (fn this.set "stopLoss")}} /></label></div>
                   {{#if this.quantityError}}<p class="alert alert-error" role="alert">{{this.quantityError}}</p>{{/if}}
+                  {{#if this.budgetError}}<p class="alert alert-error" role="alert">{{this.budgetError}}</p>{{/if}}
                   {{#if this.positionConflict}}<p class="alert alert-info" role="alert">{{this.positionConflict}}</p>{{/if}}
-                  {{#if this.estimate}}<div class="rsc-order-estimate"><p>名义金额 {{formatAmount this.estimate.gross}} · 保证金 {{formatAmount this.estimate.margin}}</p><p>手续费 {{formatAmount this.estimate.fee}} · 预计占用 {{formatAmount this.estimate.reserve}} RSC</p><small>可用余额上限 {{formatQuantity this.estimate.maximum}} · 成交仍须通过风控检查。</small></div>{{/if}}
+                  {{#if this.estimate}}<div class="rsc-order-estimate"><p>名义金额 {{formatAmount this.estimate.gross}} · 保证金 {{formatAmount this.estimate.margin}}</p><p>开仓手续费 {{formatAmount this.estimate.fee}} · 预计占用 {{formatAmount this.estimate.reserve}} RSC</p><small>当前可建仓数量 {{formatQuantity this.estimate.maximum}} · 平仓另收手续费，费用按名义金额计算；实际成交前会复核额度。</small></div>{{/if}}
                   <button class="btn btn-primary" type="submit" disabled={{this.tradingDisabled}}>{{uiText "submit_order"}}</button>
-                  <details class="rsc-trading-help"><summary>交易规则 · 数量步进 {{formatQuantity this.selected.step}}</summary><p class="rsc-muted">{{this.executionHint}}</p><p class="rsc-muted">最小数量 {{formatQuantity this.selected.minimum}}。四档比例按可用余额估算，包含手续费及预占空间；{{this.positionLimitHint}}</p></details>
+                  <details class="rsc-trading-help"><summary>交易规则 · 数量步进 {{formatQuantity this.selected.step}}</summary><p class="rsc-muted">{{this.executionHint}}</p><p class="rsc-muted">最小数量 {{formatQuantity this.selected.minimum}}。四档比例按可用余额与剩余额度共同估算，包含手续费及预占空间；{{this.positionLimitHint}}</p></details>
                 </form>
               </section>{{/if}}
 </div>

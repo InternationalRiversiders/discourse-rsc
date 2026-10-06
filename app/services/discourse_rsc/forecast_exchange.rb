@@ -74,8 +74,8 @@ module DiscourseRsc
         else
           raise Error.new('insufficient_balance', status: 409) if Account.wallet_snapshot(actor.id).balance_units < cash
         end
-        # A new quote supersedes old quotes for this member.
-        ForecastQuote.where(user_id: actor.id, used_at: nil).where('expires_at > ?', Time.current).update_all(expires_at: Time.current)
+        # A new quote supersedes this member's quotes for the same market only.
+        ForecastQuote.where(user_id: actor.id, market_id: market.id, used_at: nil).where('expires_at > ?', Time.current).update_all(expires_at: Time.current)
         item = ForecastQuote.create!(market_id: market.id, user_id: actor.id, token: SecureRandom.hex(24), outcome: outcome, side: side,
           shares_units: shares, cash_units: cash, terms_digest: market.terms_digest, expires_at: 15.seconds.from_now)
         quote_view(item)

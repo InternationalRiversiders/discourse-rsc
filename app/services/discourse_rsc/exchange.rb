@@ -161,7 +161,7 @@ module DiscourseRsc
               Risk.check!(order.user_id, instrument, order.leverage, ceil_div(order.quantity_units.to_i * price / U, order.leverage), excluding_order: order.id)
               open_locked(instrument, order, position, price)
             rescue Error => error
-              raise unless %w[position_risk_limit portfolio_risk_limit high_risk_cooldown high_risk_position_limit high_risk_disabled quote_stale quote_unavailable market_opening_disabled order_notional_below_min market_liquidity_limit invalid_protection take_profit_not_profitable stop_loss_beyond_liquidation].include?(error.code)
+              raise unless %w[position_risk_limit portfolio_risk_limit high_risk_budget high_risk_cooldown high_risk_position_limit high_risk_disabled quote_stale quote_unavailable market_opening_disabled order_notional_below_min market_liquidity_limit invalid_protection take_profit_not_profitable stop_loss_beyond_liquidation].include?(error.code)
               refund_locked(order, "rejected", error.code)
             end
           end
@@ -194,6 +194,7 @@ module DiscourseRsc
       raise Error.new("quote_stale", status: 409) if quote["legacy_snapshot"]
       raise Error.new("quote_unavailable", status: 409) unless instrument.active && quote["price"] && quote["received_at"] && quote["source_time"]
       now = Time.current
+      raise Error.new("market_closed", status: 409) if trading && instrument.category != "crypto" && MarketSessions.closed?(instrument, now)
       received = Time.iso8601(quote["received_at"])
       source = Time.iso8601(quote["source_time"])
       delay = quote.fetch("delay_seconds", 0).to_i
@@ -222,6 +223,7 @@ module DiscourseRsc
       gross = quantity * price / U
       margin = ceil_div(gross, order.leverage)
       fee = gross * instrument.fee_bps / 10_000
+      Risk.check!(order.user_id, instrument, order.leverage, margin, excluding_order: order.id)
       reserve = order.reserved_units.to_i
       if margin + fee > reserve || (position && (position.side != order.side || position.leverage != order.leverage))
         refund_locked(order, "rejected", margin + fee > reserve ? "insufficient_balance" : "position_conflict")

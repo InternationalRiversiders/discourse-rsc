@@ -90,6 +90,23 @@ class ForecastTest < Minitest::Test
     assert_equal first['trade_id'],R::ForecastTrade.first.id
     assert_equal 0,R::Account.sum(:balance_units)
   end
+  def test_quotes_for_different_markets_do_not_invalidate_each_other
+    first = quote
+    raw, market = @raw, @market
+    @raw = raw.merge('id'=>'101','conditionId'=>'0x'+'2'*64,'slug'=>'second-demo','clobTokenIds'=>'["201","202"]')
+    @market = R::ForecastProvider.ingest(@raw)
+    second = quote
+    assert_operator R::ForecastQuote.find_by!(token:first[:token]).expires_at,:>,Time.current
+    @raw, @market = raw, market
+    replacement = quote
+    assert_operator R::ForecastQuote.find_by!(token:first[:token]).expires_at,:<=,Time.current
+    assert_operator R::ForecastQuote.find_by!(token:second[:token]).expires_at,:>,Time.current
+    execute(replacement)
+    execute(second)
+    assert_equal 2,R::ForecastTrade.count
+    assert_equal 0,R::Entry.sum(:units)
+  end
+
   def test_depth_weighted_quote_and_insufficient_depth
     @asks=[{'price'=>'0.6','size'=>'100'},{'price'=>'0.5','size'=>'10'}]
     q=quote('buy','11')

@@ -9,9 +9,36 @@ module DiscourseRsc
     def self.check!(user_id, instrument, leverage, margin, excluding_order: nil)
       return unless instrument.category == "crypto" || TradingRules.delayed?(instrument)
       return if leverage <= 10 && !SiteSetting.rsc_standard_position_limits_enabled
+      positions, pending, equity = portfolio(user_id, excluding_order: excluding_order)
+      if leverage > 10
+        raise Error.new("high_risk_disabled", status: 403) unless SiteSetting.rsc_high_risk_enabled
+        unless positions.any? { |p| p.instrument_id == instrument.id && p.leverage > 10 }
+          raise Error.new("high_risk_cooldown", status: 429) if high_risk_cooldown_until(user_id)
+        end
+        budget = high_risk_budget(positions, pending, equity)
+        raise Error.new("high_risk_budget", status: 409) if margin > budget[:available_margin]
+        return
+      end
+      crypto_market = instrument.category == "crypto"
+      crypto = positions.select { |p| crypto_market ? p.instrument.category == "crypto" : TradingRules.delayed?(p.instrument) }
+      crypto_orders = pending.select { |o| crypto_market ? o.instrument.category == "crypto" : TradingRules.delayed?(o.instrument) }
+      existing = crypto.select { |p| p.instrument_id == instrument.id }.sum { |p| TradingRules.initial_margin(p) }
+      existing += crypto_orders.select { |p| p.instrument_id == instrument.id }.sum { |p| TradingRules.order_margin(p) }
+      single_bps = leverage <= 1 ? 10_000 : (leverage <= 5 ? 5000 : 2500)
+      raise Error.new("position_risk_limit", status: 409) if (existing + margin) * 10_000 > equity * single_bps
+      risk = (crypto + crypto_orders).sum do |p|
+        value = p.is_a?(Position) ? TradingRules.initial_margin(p) : TradingRules.order_margin(p)
+        weighted(value, p.leverage)
+      end + weighted(margin, leverage)
+      raise Error.new("portfolio_risk_limit", status: 409) if risk > equity
+    end
+
+    # One shared high-risk budget replaces per-symbol, symbol-count and weighted
+    # caps. Ordinary positions do not consume it; all positions inform equity.
+    def self.portfolio(user_id, excluding_order: nil)
       positions = Position.where(user_id: user_id).includes(:instrument).to_a
       pending = Order.where(user_id: user_id, status: "pending").where.not(side: "close").includes(:instrument).to_a
-      equity = Account.wallet(user_id).balance_units.to_i + pending.sum { |o| o.reserved_units.to_i }
+      equity = Account.wallet_snapshot(user_id).balance_units.to_i + pending.sum { |o| o.reserved_units.to_i }
       positions.each do |position|
         begin
           equity += [position.margin_units.to_i + Exchange.pnl(position, Exchange.price!(position.instrument)), 0].max
@@ -22,26 +49,15 @@ module DiscourseRsc
         end
       end
       pending.reject! { |o| o.id == excluding_order }
-      crypto_market = instrument.category == "crypto"
-      crypto = positions.select { |p| crypto_market ? p.instrument.category == "crypto" : TradingRules.delayed?(p.instrument) }
-      crypto_orders = pending.select { |o| crypto_market ? o.instrument.category == "crypto" : TradingRules.delayed?(o.instrument) }
-      if leverage > 10
-        raise Error.new("high_risk_disabled", status: 403) unless SiteSetting.rsc_high_risk_enabled
-        raise Error.new("high_risk_position_limit", status: 409) if (crypto + crypto_orders).any? { |p| p.leverage > 10 && p.instrument_id != instrument.id }
-        unless crypto.any? { |p| p.instrument_id == instrument.id && p.leverage > 10 }
-          recent = high_risk_cooldown_until(user_id)
-          raise Error.new("high_risk_cooldown", status: 429) if recent
-        end
-      end
-      existing = crypto.select { |p| p.instrument_id == instrument.id }.sum { |p| TradingRules.initial_margin(p) }
-      existing += crypto_orders.select { |p| p.instrument_id == instrument.id }.sum { |p| TradingRules.order_margin(p) }
-      single_bps = leverage > 10 ? SiteSetting.rsc_high_risk_margin_percent * 100 : (leverage <= 1 ? 10_000 : (leverage <= 5 ? 5000 : 2500))
-      raise Error.new("position_risk_limit", status: 409) if (existing + margin) * 10_000 > equity * single_bps
-      risk = (crypto + crypto_orders).sum do |p|
-        value = p.is_a?(Position) ? TradingRules.initial_margin(p) : TradingRules.order_margin(p)
-        weighted(value, p.leverage)
-      end + weighted(margin, leverage)
-      raise Error.new("portfolio_risk_limit", status: 409) if risk > equity
+      [positions, pending, equity]
+    end
+
+    def self.high_risk_budget(positions, pending, equity)
+      high_positions = positions.select { |p| p.instrument.category == "crypto" && p.leverage > 10 }
+      high_orders = pending.select { |p| p.instrument.category == "crypto" && p.leverage > 10 }
+      used = high_positions.sum { |p| TradingRules.initial_margin(p) } + high_orders.sum { |p| TradingRules.order_margin(p) }
+      maximum = equity * SiteSetting.rsc_high_risk_margin_percent / 100
+      { equity: equity, maximum_margin: maximum, used_margin: used, available_margin: [maximum - used, 0].max }
     end
 
     # Read-only status for the order ticket; execution still checks under lock.
@@ -66,7 +82,8 @@ module DiscourseRsc
       positions = Position.where(user_id: user_id).where("leverage > 10").includes(:instrument).select { |p| p.instrument.category == "crypto" }
       pending = Order.where(user_id: user_id, status: "pending").where.not(side: "close")
         .where("leverage > 10").includes(:instrument).select { |p| p.instrument.category == "crypto" }
-      { cooldown_until: high_risk_cooldown_until(user_id),
+      budget = high_risk_budget(*portfolio(user_id)).transform_values { |value| Amount.format(value) }
+      { budget: budget, margin_percent: SiteSetting.rsc_high_risk_margin_percent, cooldown_until: high_risk_cooldown_until(user_id),
         positions: positions.map { |p| { instrument_id: p.instrument_id, symbol: p.instrument.symbol, hold_until: hold_until(p) } },
         pending: pending.map { |p| { instrument_id: p.instrument_id, symbol: p.instrument.symbol } } }
     end

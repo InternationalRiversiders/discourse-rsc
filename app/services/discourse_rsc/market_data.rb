@@ -85,6 +85,26 @@ module DiscourseRsc
       BigDecimal(value) / (base == currency ? 1 : 100)
     end
 
+    # A quiet market can have a current order book but an old last trade.
+    # Use a provider-timestamped, two-sided book for both mark and execution;
+    # never relabel the old trade with our local fetch time.
+    def self.book_quote(quote, bids:, asks:, at:)
+      source = Time.iso8601(at)
+      raise Error.new("quote_stale", status: 409) unless source >= 120.seconds.ago && source <= 5.seconds.from_now
+      bid = Amount.positive(decimal(bids.fetch(0).fetch(0)))
+      ask = Amount.positive(decimal(asks.fetch(0).fetch(0)))
+      Amount.positive(decimal(bids.fetch(0).fetch(1)))
+      Amount.positive(decimal(asks.fetch(0).fetch(1)))
+      # A crossed or very wide book is not a dependable mark for liquidations.
+      raise Error.new("quote_unavailable", status: 409) unless ask >= bid && (ask - bid) * 100 <= bid * 2
+      price = Amount.format((bid + ask) / 2)
+      quote.merge("last_trade_price" => quote.fetch("price"), "last_trade_at" => quote.fetch("source_time"),
+        "price" => price, "local_price" => price, "bid" => Amount.format(bid), "ask" => Amount.format(ask),
+        "source_time" => source.iso8601(6), "pricing_method" => "order_book_midpoint")
+    rescue ArgumentError, KeyError, IndexError, TypeError
+      raise Error.new("quote_unavailable", status: 409)
+    end
+
     def self.fetch_quote(instrument)
       code = instrument.provider_symbol.presence || instrument.symbol
       case instrument.provider
@@ -92,11 +112,17 @@ module DiscourseRsc
         raise Error.new("invalid_symbol") unless /\A[A-Z0-9]+-USD\z/.match?(code)
         ticker = ProviderHttp.get("api.exchange.coinbase.com", "/products/#{code}/ticker")
         stats = ProviderHttp.get("api.exchange.coinbase.com", "/products/#{code}/stats")
-        { "price" => decimal(ticker.fetch("price")), "previous_close" => decimal(stats.fetch("open")), "change_basis" => "24h",
+        quote = { "price" => decimal(ticker.fetch("price")), "previous_close" => decimal(stats.fetch("open")), "change_basis" => "24h",
           "high" => optional_price(stats["high"]), "low" => optional_price(stats["low"]),
           "bid" => decimal(ticker.fetch("bid")), "ask" => decimal(ticker.fetch("ask")),
           "source_time" => Time.iso8601(ticker.fetch("time")).iso8601(6), "delay_seconds" => 0,
           "local_price" => decimal(ticker.fetch("price")), "local_currency" => "USD", "source" => "coinbase" }
+        if Time.iso8601(quote.fetch("source_time")) < 120.seconds.ago
+          book = ProviderHttp.get("api.exchange.coinbase.com", "/products/#{code}/book", level: 1)
+          raise Error.new("quote_unavailable", status: 409) if book["auction_mode"]
+          quote = book_quote(quote, bids: book.fetch("bids"), asks: book.fetch("asks"), at: book.fetch("time"))
+        end
+        quote
       when "kraken"
         raise Error.new("invalid_symbol") unless /\A[A-Z0-9]+USD\z/.match?(code)
         data = ProviderHttp.get("api.kraken.com", "/0/public/Ticker", pair: code)
@@ -104,9 +130,18 @@ module DiscourseRsc
         ticker = data.fetch("result").values.first
         trades = ProviderHttp.get("api.kraken.com", "/0/public/Trades", pair: code, count: 1).fetch("result").reject { |key, _| key == "last" }.values.first
         source_time = Time.at(BigDecimal(trades.last.fetch(2).to_s)).utc
-        { "price" => decimal(ticker.fetch("c").first), "previous_close" => decimal(ticker.fetch("o")), "change_basis" => "utc_open",
+        quote = { "price" => decimal(ticker.fetch("c").first), "previous_close" => decimal(ticker.fetch("o")), "change_basis" => "utc_open",
           "high" => optional_price(ticker.dig("h", 1)), "low" => optional_price(ticker.dig("l", 1)), "bid" => decimal(ticker.fetch("b").first), "ask" => decimal(ticker.fetch("a").first),
           "source_time" => source_time.iso8601(6), "delay_seconds" => 0, "source" => "kraken", "local_currency" => "USD", "local_price" => decimal(ticker.fetch("c").first) }
+        if source_time < 120.seconds.ago
+          depth = ProviderHttp.get("api.kraken.com", "/0/public/Depth", pair: code, count: 1)
+          raise Error.new("provider_no_data") if depth.fetch("error", []).present?
+          book = depth.fetch("result").values.first
+          bids, asks = book.fetch("bids"), book.fetch("asks")
+          updated = [bids.fetch(0).fetch(2), asks.fetch(0).fetch(2)].map { |value| BigDecimal(value.to_s) }.max
+          quote = book_quote(quote, bids: bids, asks: asks, at: Time.at(updated).utc.iso8601(6))
+        end
+        quote
       when "okx"
         raise Error.new("invalid_symbol") unless /\A[A-Z0-9]+-USDT-SWAP\z/.match?(code)
         data = ProviderHttp.get("www.okx.com", "/api/v5/market/ticker", instId: code)
@@ -151,7 +186,7 @@ module DiscourseRsc
         rate = usd_rate(currency)
         { "price" => decimal(BigDecimal(decimal(raw)) * rate),
           "previous_close" => previous && decimal(BigDecimal(decimal(previous)) * rate),
-          "local_price" => decimal(raw), "local_currency" => currency, "fx_rate" => rate.to_s("F"),
+          "local_price" => decimal(raw), "local_currency" => currency, "fx_rate" => decimal(rate),
           "open" => optional_price(stats["open"], rate), "high" => optional_price(stats["high"], rate), "low" => optional_price(stats["low"], rate), "change_basis" => "previous_close",
           "source_time" => source.iso8601, "delay_seconds" => delay,
           "delay_reported" => instrument.provider != 'yahoo' || !meta['exchangeDataDelayedBy'].nil?,

@@ -68,7 +68,7 @@ module DiscourseRsc
       # changing the original error returned to the member.
       begin
         Audit.create!(actor_user_id: current_user.id, action: "order_rejected", created_at: Time.current,
-          details: params.permit(:instrument_id, :side, :quantity, :leverage, :request_id).to_h.transform_values { |value| value.to_s.first(100) }.merge("error" => error.code))
+          details: params.permit(:instrument_id, :side, :quantity, :leverage, :take_profit, :stop_loss, :request_id).to_h.transform_values { |value| value.to_s.first(100) }.merge("error" => error.code))
       rescue ActiveRecord::ActiveRecordError => audit_error
         Rails.logger.warn("RSC rejected-order audit failed: #{audit_error.class}")
       end

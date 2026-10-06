@@ -85,7 +85,7 @@ module DiscourseRsc
     end
 
     def quote
-      RateLimiter.new(current_user, 'rsc-forecast-quote', 6, 1.minute).performed!
+      RateLimiter.new(current_user, 'rsc-forecast-quote', 12, 1.minute).performed!
       render_json_dump(ForecastExchange.quote(actor: current_user, market_id: positive_id(:id), outcome: outcome,
         side: params.require(:side), amount: params.require(:amount)))
     end

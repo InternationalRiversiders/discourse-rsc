@@ -26,7 +26,8 @@ module DiscourseRsc
       # their currency and must be converted using the quote's trusted FX rate.
       cache = HistoryCache.where(instrument_id: instrument.id, range: %w[1mo 6mo]).order(updated_at: :desc).first
       return unless cache
-      rate = cache.currency == "RSC" || cache.currency == "USD" ? U : Amount.parse(instrument.quote.fetch("fx_rate", "0"))
+      fx_rate = instrument.quote.fetch("fx_rate", "0")
+      rate = cache.currency == "RSC" || cache.currency == "USD" ? U : (fx_rate == "0" ? 0 : Amount.parse(MarketData.decimal(fx_rate)))
       return if rate.zero?
       turnovers = cache.candles.last(20).filter_map do |c|
         next unless c["volume"].present? && c["close"].present?

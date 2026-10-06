@@ -7,19 +7,21 @@ export function decimal(value) {
   return `${value / U}.${(value % U).toString().padStart(18, "0")}`.replace(/\.?0+$/, "");
 }
 const ceil = (a, b) => (a + b - 1n) / b;
-export function estimate(instrument, quantity, leverage, balance, side = "long") {
+export function estimate(instrument, quantity, leverage, balance, side = "long", marginLimit = null) {
   try {
     const pending = instrument?.execution_mode !== "immediate";
     const price = atomic((!pending && instrument?.execution_prices?.[side]) || instrument?.quote?.price), qty = atomic(quantity), available = atomic(balance);
     if (!price || !qty || available === null || !/^[1-9][0-9]{0,2}$/.test(String(leverage))) { return null; }
     const lev = BigInt(leverage), feeBps = BigInt(instrument.fee_bps ?? 5);
     const step = atomic(instrument.step) || U;
+    const limit = marginLimit === null ? null : atomic(marginLimit);
+    if (marginLimit !== null && limit === null) { return null; }
     const cost = (units) => {
       const gross = units * price / U;
       return pending ? ceil(gross * 105n, 100n * lev) + ceil(gross * 105n * feeBps, 1000000n) : ceil(gross, lev) + gross * feeBps / 10000n;
     };
     let low = 0n, high = available * lev * U / price / step + 1n;
-    while (low + 1n < high) { const mid = (low + high) / 2n; if (cost(mid * step) <= available) { low = mid; } else { high = mid; } }
+    while (low + 1n < high) { const mid = (low + high) / 2n; if (cost(mid * step) <= available && (limit === null || (pending ? ceil((mid * step * price / U) * 105n, 100n * lev) : ceil(mid * step * price / U, lev)) <= limit)) { low = mid; } else { high = mid; } }
     const gross = qty * price / U;
     return { gross: decimal(gross), margin: decimal(ceil(gross, lev)), fee: decimal(gross * feeBps / 10000n), reserve: decimal(cost(qty)), maximum: decimal(low * step) };
   } catch { return null; }
@@ -31,11 +33,13 @@ export function payout(stake, odds) {
 
 // Allocate a fraction of available cash, rounding down to the instrument step.
 // Independent of the quantity draft, so shortcuts work after clearing the field.
-export function quantityForFraction(instrument, leverage, balance, quarters, side = "long") {
+export function quantityForFraction(instrument, leverage, balance, quarters, side = "long", marginLimit = null) {
   const available = atomic(balance);
   if (available === null || ![1, 2, 3, 4].includes(quarters)) { return null; }
   const budget = decimal(available * BigInt(quarters) / 4n);
-  const result = estimate(instrument, instrument?.minimum || instrument?.step || "1", leverage, budget, side);
+  const limit = marginLimit === null ? null : atomic(marginLimit);
+  if (marginLimit !== null && limit === null) { return null; }
+  const result = estimate(instrument, instrument?.minimum || instrument?.step || "1", leverage, budget, side, limit === null ? null : decimal(limit * BigInt(quarters) / 4n));
   return result?.maximum ?? null;
 }
 

@@ -30,9 +30,9 @@ zh_CN:
     rsc_sports_leagues: 同步的联赛，格式 sport:league
     rsc_high_risk_enabled: 允许虚拟币高风险模式（最高 100 倍；仍需用户单独选择）
     rsc_standard_position_limits_enabled: "对虚拟币和延迟行情的普通杠杆（1–10 倍）启用原有单仓比例与组合额度限制；默认关闭。余额、保证金和强平检查始终保留。"
-    rsc_high_risk_margin_percent: "高杠杆（11–100 倍）单品种初始保证金占账户权益的上限百分比；仍限一个高杠杆品种并检查组合额度。"
-    rsc_high_risk_cooldown_seconds: "高杠杆平仓后重新开高杠杆仓位的冷却秒数，默认 300；0 关闭。现有同品种高杠杆仓位可继续加仓。"
-    rsc_high_risk_hold_seconds: "高杠杆虚拟币仓位从最近开仓提交起的最短手动平仓等待秒数，默认 60；0 关闭。适用于已有仓位，自动止盈止损和强平不受影响。"
+    rsc_high_risk_margin_percent: "多个高杠杆（11–100 倍）品种共用的初始保证金额度，占账户权益的百分比。"
+    rsc_high_risk_cooldown_seconds: "高杠杆平仓后再次开仓的冷却秒数，默认 0（关闭）。"
+    rsc_high_risk_hold_seconds: "高杠杆最短手动平仓等待秒数，默认 0（关闭）；自动止盈止损和强平不受影响。"
     rsc_crypto_daily_open_limit: "每人每天虚拟币开仓/加仓次数上限（北京时间）；0 不限制。平仓永不占用或受限；已撤销开仓仍计数。"
     rsc_crypto_symbol_daily_open_limit: "每人每天每个虚拟币品种的开仓/加仓次数上限；0 不限制，平仓不受限。"
     rsc_crypto_confirmation_delay_seconds: "虚拟币开仓确认的额外等待秒数，默认 0；无论设置多少，仍须取得源时间晚于提交时间的新鲜报价。平仓不增加此等待。"
@@ -148,8 +148,9 @@ zh_CN:
       packet_expired: 红包已过期。
       invalid_reward_date: 奖励日期必须早于今天。
       high_risk_disabled: 高风险模式未启用，或尚未勾选高风险选项。
+      high_risk_budget: 高杠杆剩余保证金额度不足，请减少数量或使用比例按钮重新填入。
       high_risk_position_limit: 一次只能在一个虚拟币标的上持有或挂出高风险仓位。
-      high_risk_cooldown: 高风险仓位平仓后需等待 30 分钟才能再次开仓。
+      high_risk_cooldown: "高杠杆开仓仍在冷却中，请参考下单栏倒计时。"
       position_risk_limit: 超过该标的允许使用的保证金比例。
       portfolio_risk_limit: 超过账户组合的保证金风险上限。
       crypto_daily_limit: 已达到今日虚拟币开仓／加仓次数上限，平仓不受此限制。

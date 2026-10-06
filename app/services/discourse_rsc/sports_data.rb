@@ -34,8 +34,8 @@ module DiscourseRsc
           data = ProviderHttp.get("site.api.espn.com", "/apis/site/v2/sports/#{sport}/#{league}/scoreboard", dates: dates, limit: 500)
           Array(data["events"]).each { |event| ingest(event, sport: sport, league: league) }
           result[source] = result.fetch(source, true)
-        rescue Error, KeyError, ArgumentError
-          Audit.create!(action: "sports_sync_failed", details: { source: source }, created_at: Time.current)
+        rescue Error, KeyError, ArgumentError => error
+          Audit.create!(action: "sports_sync_failed", details: { source: source, dates: dates, error: error.respond_to?(:code) ? error.code : error.class.name }, created_at: Time.current)
           result[source] = false
         ensure
           Discourse.redis.set('rsc:sports-next-source', (tasks.index([source, dates]) + 1) % tasks.size)

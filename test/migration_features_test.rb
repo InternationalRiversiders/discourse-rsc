@@ -235,7 +235,7 @@ class MigrationFeaturesTest < NativeBusinessTest
     assert_equal ["okx", "SNDK-USDT-SWAP"], R::Catalog.provider({ "symbol" => "CRYPTO:SNDK/USD", "market_category" => "crypto" })
     stock = instrument
     stock.update!(provider: "coinbase", provider_symbol: "BTC-USD", category: "crypto")
-    ticker = JSON.parse(File.read("/rsc/test/fixtures/coinbase-ticker.json"))
+    ticker = JSON.parse(File.read("/rsc/test/fixtures/coinbase-ticker.json")).merge("time" => Time.current.iso8601(6))
     stats = JSON.parse(File.read("/rsc/test/fixtures/coinbase-stats.json"))
     with_provider(->(host, path, *args) { path.end_with?("stats") ? stats : ticker }) do
       quote = R::MarketData.fetch_quote(stock)

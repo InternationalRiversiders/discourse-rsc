@@ -71,3 +71,17 @@ for (const category of ['forex','us','cn']) {
 }
 assert.equal(openingQuantity({...fx,category:'crypto'}),'0.01');
 console.log('PASS exact FX notional conversion, step rounding, invalid drafts and minimum opening sizes');
+
+// A high-risk allocation must fit both cash and the remaining aggregate budget,
+// including the same 5% price headroom used to reserve delayed orders.
+for (const quarters of [1,2,3,4]) {
+  const item={quote:{price:'0.0000058'},minimum:'0.000001',step:'0.000001',fee_bps:10,execution_mode:'crypto_confirmation'};
+  const qty=quantityForFraction(item,'100','1000',quarters,'long','25');
+  const result=estimate(item,qty,'100','1000','long','25');
+  const gross=atomic(result.gross),ceiling=atomic('25')*BigInt(quarters)/4n;
+  assert.ok((gross*105n+9999n)/10000n<=ceiling);
+  assert.ok(atomic(result.reserve)<=atomic('1000')*BigInt(quarters)/4n);
+  assert.equal(atomic(qty)%atomic(item.step),0n);
+}
+assert.equal(quantityForFraction({quote:{price:'100'},step:'0.01'},'100','1000',4,'long','0'),'0');
+console.log('PASS high-risk allocation respects combined margin budget and 5% execution headroom');

@@ -93,12 +93,12 @@ plugins:
     max: 100
     client: true
   rsc_high_risk_cooldown_seconds:
-    default: 300
+    default: 0
     min: 0
     max: 86400
     client: true
   rsc_high_risk_hold_seconds:
-    default: 60
+    default: 0
     min: 0
     max: 3600
     client: true
