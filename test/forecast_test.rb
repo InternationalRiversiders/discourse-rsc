@@ -1,5 +1,5 @@
 # frozen_string_literal: true
-abort 'Disposable database only' unless ENV['RIVER_DISPOSABLE'] == '1' && GlobalSetting.db_name == 'river_community_test'
+abort 'Disposable database only' unless (ENV['RIVER_DISPOSABLE'] == '1' && GlobalSetting.db_name == 'river_community_test') || (ENV['RSC_DISPOSABLE_CONTAINER'] == '1' && GlobalSetting.db_name == 'rsc_discourse_smoke')
 require 'minitest/autorun'
 
 class ForecastTest < Minitest::Test
@@ -43,6 +43,8 @@ class ForecastTest < Minitest::Test
       when R::ForecastProvider::CLOB
         if path == '/book'
           { 'market'=>market.condition_id, 'asset_id'=>query[:token_id], 'timestamp'=>(Time.current.to_f*1000).to_i.to_s, 'asks'=>asks, 'bids'=>bids }
+        elsif path.start_with?('/markets/')
+          { 'condition_id'=>market.condition_id, 'closed'=>true, 'tokens'=>market.token_ids.each_with_index.map { |id,i| { 'token_id'=>id, 'winner'=>i==0 } } }
         else
           { 'history'=>[{ 't'=>1,'p'=>'0.4' },{ 't'=>2,'p'=>'0.5' }] }
         end
@@ -298,6 +300,80 @@ class ForecastTest < Minitest::Test
       assert_equal 'awaiting', @market.reload.state
       assert_equal 0, R::ForecastSettlement.settle(@market)
     end
+  end
+
+  def uma(price='1000000000000000000')
+    { 'condition_id'=>@market.condition_id, 'question_id'=>'0x'+'a'*64,
+      'status'=>'resolved', 'extended_review'=>false, 'price'=>price,
+      'transaction_hash'=>'0x'+'b'*64, 'log_index'=>'0',
+      'last_update_timestamp'=>5.minutes.ago.to_i.to_s }
+  end
+
+  def test_uma_actual_resolution_schema_pays_once_after_two_observations
+    execute(quote)
+    @raw['closed']=true
+    @resolution=uma
+    Discourse.redis.setex('rsc:forecast:discovered',600,'1')
+    provider { R::ForecastSettlement.tick }
+    assert_equal 'awaiting',@market.reload.state
+    assert_equal '90',R::Account.wallet(@alice.id).balance
+    @market.update!(resolution_seen_at:3.minutes.ago)
+    provider { R::ForecastSettlement.tick }
+    assert_equal 'settled',R::ForecastPosition.first.state
+    assert_equal '110',R::Account.wallet(@alice.id).balance
+    assert_equal 1,R::ForecastTrade.where(side:'settlement').count
+    provider { R::ForecastSettlement.tick }
+    assert_equal 1,R::ForecastTrade.where(side:'settlement').count
+    assert_equal 0,R::Account.sum(:balance_units)
+    assert_equal 0,R::Account.where(kind:'escrow').sum(:balance_units)
+    assert_equal 1,R::Event.where(kind:'forecast_settled').count
+  end
+
+  def test_uma_invalid_provenance_and_unfinalized_results_never_pay
+    row=uma
+    assert_equal [1,0],R::ForecastSettlement.payouts(row)
+    assert_equal [0,1],R::ForecastSettlement.payouts(uma('0'))
+    assert_equal [1,1],R::ForecastSettlement.payouts(uma('500000000000000000'))
+    assert_equal [1,0],R::ForecastSettlement.payouts(row.merge('last_update_timestamp'=>5.minutes.ago.iso8601))
+    [ {'status'=>'proposed'}, {'status'=>'disputed'}, {'extended_review'=>true},
+      {'price'=>'69'}, {'price'=>'0.99'}, {'price'=>1}, {'question_id'=>nil},
+      {'transaction_hash'=>nil}, {'log_index'=>'-1'}, {'last_update_timestamp'=>'0'},
+      {'last_update_timestamp'=>1.hour.from_now.to_i.to_s}, {'payouts'=>[1,2,3]},
+      {'last_update_timestamp'=>'nonsense'} ].each do |change|
+      assert_nil R::ForecastSettlement.payouts(row.merge(change)),change.inspect
+    end
+    execute(quote)
+    R::ForecastSettlement.observe(@market,row)
+    @market.update!(resolution_seen_at:3.minutes.ago)
+    R::ForecastSettlement.observe(@market,row.merge('transaction_hash'=>'0x'+'c'*64))
+    assert_nil @market.reload.confirmed_at
+    assert_equal 0,R::ForecastSettlement.settle(@market)
+  end
+
+  def test_uma_provider_rejects_disagreement_or_wrong_token_ids
+    @resolution=uma('0') # mocked CLOB says outcome 0 won; reject disagreement
+    provider { assert_raises(R::Error) { R::ForecastProvider.resolution(@market) } }
+    @resolution=uma
+    original=R::ForecastProvider.method(:get)
+    row=@resolution
+    R::ForecastProvider.define_singleton_method(:get) do |host,*_|
+      host == R::ForecastProvider::DATA ? {'data'=>[row]} : {'condition_id'=>row['condition_id'],'closed'=>true,'tokens'=>[{'token_id'=>'999','winner'=>true},{'token_id'=>'456','winner'=>false}]}
+    end
+    assert_raises(R::Error) { R::ForecastProvider.resolution(@market) }
+  ensure
+    R::ForecastProvider.define_singleton_method(:get,original) if original
+  end
+
+  def test_uma_loser_and_split_settlement_use_share_payout_not_stake_refund
+    @asks=[{'price'=>'0.25','size'=>'1000'}]
+    execute(quote) # 40 shares bought for 10
+    row=uma('500000000000000000')
+    R::ForecastSettlement.observe(@market,row)
+    @market.update!(resolution_seen_at:3.minutes.ago)
+    R::ForecastSettlement.observe(@market,row)
+    assert_equal 1,R::ForecastSettlement.settle(@market)
+    assert_equal '110',R::Account.wallet(@alice.id).balance
+    assert_equal 0,R::Account.sum(:balance_units)
   end
 
 end

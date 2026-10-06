@@ -25,7 +25,7 @@ module DiscourseRsc
       return "/rsc/sports?match_id=#{payload['match_id'].to_i}#rsc-match-#{payload['match_id'].to_i}" if event.kind == "prediction_settled" && payload["match_id"]
       return "/rsc/sports" if event.kind == "prediction_settled"
       return "/rsc/forecast?market_id=#{payload['forecast_market_id'].to_i}" if event.kind == "forecast_settled"
-      "/rsc?journal_id=#{event.journal_id}#rsc-entry-#{event.journal_id}"
+      "/rsc/account?journal_id=#{event.journal_id}#rsc-entry-#{event.journal_id}"
     end
 
     def self.deliver(event)

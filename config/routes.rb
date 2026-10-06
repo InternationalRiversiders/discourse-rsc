@@ -5,6 +5,7 @@ DiscourseRsc::Engine.routes.draw do
   get "/admin" => "dashboard#index"
   get "/leaderboard" => "dashboard#index"
   get "/market" => "dashboard#index"
+  get "/account" => "dashboard#index"
   get "/sports" => "dashboard#index"
   get "/forecast" => "forecast#index"
   get "/forecast/catalog" => "forecast#catalog"

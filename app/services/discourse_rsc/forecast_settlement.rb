@@ -1,17 +1,35 @@
 # frozen_string_literal: true
 module DiscourseRsc
   module ForecastSettlement
-    # Resolution amounts are ratios (currently e.g. [1000000, 0]), not prices.
-    # Never infer a payout from last-traded price, closed, or endDate.
+    # Native V2/CTF rows carry payouts and block finality. UMA rows instead
+    # carry the oracle's FINAL fixed-point settlement price and event provenance.
+    # This is not a traded price or a Gamma outcomePrices probability.
+    UMA_PAYOUTS = { '0' => [0, 1], '500000000000000000' => [1, 1],
+                    '1000000000000000000' => [1, 0] }.freeze
     def self.payouts(row)
-      values = row && row['payouts']
-      return unless row && row['status'] == 'resolved' && row['extended_review'] != true && values.is_a?(Array) && values.size == 2
-      return unless values.all? { |v| v.is_a?(Integer) && v >= 0 && v <= 10**18 } && values.sum.positive?
-      time = Time.iso8601(row.fetch('resolved_at'))
-      return unless time <= Time.current && row['resolved_block'].to_i.positive?
+      return unless row.is_a?(Hash) && row['status'] == 'resolved' && row['extended_review'] == false
+      if row['payouts'].nil?
+        values = UMA_PAYOUTS[row['price']]
+        return unless values && %w[condition_id question_id transaction_hash].all? { |key| /\A0x[0-9a-fA-F]{64}\z/.match?(row[key].to_s) }
+        return unless /\A[0-9]+\z/.match?(row['log_index'].to_s)
+        stamp = row.fetch('last_update_timestamp')
+        time = /\A[0-9]+\z/.match?(stamp.to_s) ? Time.at(Integer(stamp)).utc : Time.iso8601(stamp)
+      else
+        values = row['payouts']
+        return unless values.is_a?(Array) && values.size == 2
+        return unless values.all? { |v| v.is_a?(Integer) && v >= 0 && v <= 10**18 } && values.sum.positive?
+        time = Time.iso8601(row.fetch('resolved_at'))
+        return unless row['resolved_block'].is_a?(Integer) && row['resolved_block'].positive?
+      end
+      return unless time > Time.at(0) && time <= Time.current
       values
-    rescue KeyError, ArgumentError, TypeError
+    rescue KeyError, ArgumentError, TypeError, RangeError
       nil
+    end
+
+    def self.resolution_identity(row, values)
+      provenance = row['payouts'].nil? ? row.values_at('question_id', 'transaction_hash', 'log_index', 'last_update_timestamp') : row.values_at('resolved_at', 'resolved_block')
+      Digest::SHA256.hexdigest(JSON.generate([row['condition_id'], values, provenance]))
     end
 
     def self.observe(market, row)
@@ -19,22 +37,26 @@ module DiscourseRsc
       market.with_lock do
         values = payouts(row)
         if market.settled_at
-          if values && values != market.resolution['payouts']
+          if values && values != payouts(market.resolution)
             Audit.create!(action: 'forecast_resolution_changed', details: { market_id: market.id }, created_at: Time.current)
           end
           return
         end
         return if market.state == 'review'
         if values
-          digest = Digest::SHA256.hexdigest(JSON.generate([market.condition_id, values, row['resolved_at'], row['resolved_block']]))
+          digest = resolution_identity(row, values)
           if market.resolution_digest == digest && market.resolution_seen_at && market.resolution_seen_at <= 2.minutes.ago
             market.update!(state: 'resolved', resolution: row, confirmed_at: Time.current)
           else
             market.update!(state: 'awaiting', resolution: row, resolution_digest: digest,
               resolution_seen_at: market.resolution_digest == digest ? market.resolution_seen_at : Time.current, confirmed_at: nil)
           end
+        # An unfamiliar final-result shape must be visible to operators.
         # UMA's initialized question is 'posed', distinct from a proposed result.
         elsif row['extended_review'] == true || !%w[posed unresolved open].include?(row['status'])
+          if row['status'] == 'resolved' && market.resolution != row
+            Rails.logger.warn("RSC forecast market=#{market.id}: unsupported_resolution")
+          end
           market.update!(state: 'awaiting', resolution: row, resolution_digest: nil, resolution_seen_at: nil, confirmed_at: nil)
         else
           market.update!(resolution: row, resolution_digest: nil, resolution_seen_at: nil, confirmed_at: nil)

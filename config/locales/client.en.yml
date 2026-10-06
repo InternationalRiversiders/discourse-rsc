@@ -126,7 +126,7 @@ en:
         source_hint: "Popular questions are selected by upstream 24h volume. Prices come from Polymarket; RSC trades take place in this forum."
         success: "Trade completed. Balance and positions updated."
       ui:
-        forecast: Predictions
+        forecast: Event predictions
         forecast_buy: Prediction shares bought
         forecast_sell: Prediction shares sold
         forecast_settlement: Prediction market settlement
@@ -179,8 +179,8 @@ en:
         available: Available balance
         trial: Native preview · Test environment with demo quotes and matches
         navigation: RSC navigation
-        wallet: Wallet & packets
-        market: Markets
+        wallet: RSC Wallet
+        market: Market trading
         sports: Predictions
         transfer: Transfer
         recipient: Recipient username

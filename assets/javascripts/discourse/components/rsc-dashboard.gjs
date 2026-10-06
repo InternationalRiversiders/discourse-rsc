@@ -497,7 +497,7 @@ export default class RscDashboard extends Component {
       >{{uiText "read_only"}}</p>{{/if}}
     <main class="rsc-app" data-section={{@section}}>
       {{#if (eq @section "packet")}}
-        <nav class="rsc-packet-nav" aria-label="红包导航"><LinkTo @route="rsc.index">← RS Coin</LinkTo><span>{{uiText "available"}} {{displayAmount this.data.wallet.balance}} RSC</span></nav>
+        <nav class="rsc-packet-nav" aria-label="红包导航"><LinkTo @route="rsc.wallet">← {{uiText "wallet"}}</LinkTo><span>{{uiText "available"}} {{displayAmount this.data.wallet.balance}} RSC</span></nav>
       {{else}}
         <RscNavigation />
       {{/if}}

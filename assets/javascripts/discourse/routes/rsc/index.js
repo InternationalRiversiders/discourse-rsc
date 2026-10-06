@@ -1,19 +1,16 @@
 import RscMemberRoute from "../../lib/rsc-member-route";
-import { ajax } from "discourse/lib/ajax";
 
 export default class extends RscMemberRoute {
-  queryParams = {
-    journal_id: { refreshModel: true },
-  };
+  queryParams = { journal_id: { refreshModel: true } };
 
-  resetController(controller, isExiting) {
-    if (isExiting) {
-      controller.journal_id = null;
+  beforeModel(transition) {
+    super.beforeModel(transition);
+    if (transition.isAborted) {
+      return;
     }
-  }
-
-  async model(params) {
-    const state = await ajax("/rsc/state.json", { data: { ...params, section: "wallet" } });
-    return { ...state, focus: params };
+    const journal = transition.to.queryParams.journal_id;
+    return journal
+      ? this.router.replaceWith("rsc.wallet", { queryParams: { journal_id: journal } })
+      : this.router.replaceWith("rsc.market");
   }
 }

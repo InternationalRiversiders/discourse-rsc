@@ -85,6 +85,21 @@ module DiscourseRsc
       raise Error.new('forecast_unavailable', status: 503) unless rows.is_a?(Array)
       row = rows.find { |r| r['condition_id'] == market.condition_id }
       raise Error.new('forecast_unavailable', status: 503) if rows.any? && !row
+      # UMA and neg-risk adapters can expose different question IDs for the
+      # same condition. Match the CONDITION and held token IDs, never names.
+      if row && row['payouts'].nil? && (values = ForecastSettlement.payouts(row))
+        resolved = get(CLOB, "/markets/#{market.condition_id}")
+        tokens = resolved.is_a?(Hash) && resolved['tokens']
+        valid = resolved.is_a?(Hash) && resolved['condition_id'] == market.condition_id && resolved['closed'] == true &&
+          tokens.is_a?(Array) && tokens.size == 2 && tokens.all? { |token| token.is_a?(Hash) } &&
+          tokens.map { |token| token['token_id'] }.sort == market.token_ids.sort
+        if valid
+          winners = market.token_ids.map { |id| tokens.find { |token| token['token_id'] == id }['winner'] }
+          expected = values == [1, 1] ? [false, false] : values.map { |value| value == 1 }
+          valid = winners == expected
+        end
+        raise Error.new('forecast_unavailable', status: 503) unless valid
+      end
       row
     end
 

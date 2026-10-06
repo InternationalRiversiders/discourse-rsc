@@ -1,6 +1,7 @@
 export default function () {
   this.route("rsc", { path: "/rsc" }, function () {
     this.route("market");
+    this.route("wallet", { path: "/account" });
     this.route("leaderboard");
     this.route("admin");
     this.route("sports");

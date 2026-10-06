@@ -126,10 +126,10 @@ zh_CN:
         source_hint: "热门问题按上游近 24 小时成交量筛选；价格来自 Polymarket，RSC 交易在论坛内完成。"
         success: "交易成功，余额与持仓已更新。"
       ui:
-        forecast: 预测市场
+        forecast: 事件预测
         forecast_buy: 预测份额买入
         forecast_sell: 预测份额卖出
-        forecast_settlement: 预测市场结算
+        forecast_settlement: 事件预测结算
         reset_mode: "重置方式（cash 为余额，total_equity 为总资产）"
         packet_membership_required: "领取红包需要加入 RSC 使用组。"
         packet_login_required: "登录论坛后领取红包。"
@@ -174,8 +174,8 @@ zh_CN:
         available: 可用余额
         trial: 原生试用 · 当前为测试环境，行情和赛事为演示数据
         navigation: RSC 导航
-        wallet: 钱包与红包
-        market: 股市
+        wallet: RSC钱包
+        market: 行情交易
         sports: 赛事预测
         transfer: 转账
         recipient: 接收人用户名
