@@ -1,8 +1,8 @@
 import RscMemberRoute from "../../lib/rsc-member-route";
 
 export default class extends RscMemberRoute {
-  queryParams = { journal_id: { refreshModel: true } };
-
+  // The destination owns journal_id. Registering it here too lets an aborted
+  // index transition reset the wallet query parameter during the redirect.
   beforeModel(transition) {
     super.beforeModel(transition);
     if (transition.isAborted) {
