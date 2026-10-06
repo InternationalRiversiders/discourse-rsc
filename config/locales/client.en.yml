@@ -19,7 +19,7 @@ en:
         red_packet_claimed_by: claimed %{amount} RSC from your packet
       forecast_ui:
         auto_review: "AI automatic review"
-        auto_review_hint: "China-related politics, provider content filtering and explicit refusals are rejected. Rules and order books are still checked. Uncertainty or technical failures remain pending. Disable to review new requests manually."
+        auto_review_hint: "After a listing request, one AI call translates and reviews the event. China-related politics, provider content filtering and explicit refusals are rejected. Rules and order books are still checked. Uncertainty or technical failures remain pending. Disable to review new requests manually."
         sort_balanced: "Variety"
         events: "events"
         back_events: "Back to all events"

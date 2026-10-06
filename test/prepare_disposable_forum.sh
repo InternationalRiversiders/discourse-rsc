@@ -44,6 +44,6 @@ bundle exec rails runner /rsc/test/trading_policy_test.rb -n "/test_policy/"
 
 bundle exec rails runner /rsc/test/loading_and_team_test.rb -n '/test_loading/'
 
-bundle exec rails runner /rsc/test/forecast_catalog_translation_test.rb
+bundle exec rails runner /rsc/test/forecast_combined_translation_test.rb
 
 bundle exec rails runner /rsc/test/trading_ux_test.rb -n "/test_ux/"

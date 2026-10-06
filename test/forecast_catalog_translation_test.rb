@@ -8,26 +8,19 @@ class ForecastTest
     Discourse.redis.del(R::ForecastTranslation::PREVIEW_QUEUE)
   end
 
-  def catalog_translation_result(rows)
-    { markets: rows.map { |row| { external_id: row['external_id'], question: '新的太空任务会发射吗？',
-      event_title: '太空任务', outcomes: %w[是 否] } } }.to_json
-  end
-
-  def translated_catalog_with(value)
-    original = R::ForecastCatalogTranslation.method(:generate)
-    R::ForecastCatalogTranslation.define_singleton_method(:generate) { |_rows| value }
-    yield
-  ensure
-    R::ForecastCatalogTranslation.define_singleton_method(:generate, original)
+  def cache_catalog(rows)
+    rows.each do |row|
+      PluginStore.set(R::ForecastCatalogTranslation::STORE, row['external_id'],
+        { question: '新的太空任务会发射吗？', event_title: '太空任务', outcomes: %w[是 否],
+          signature: R::ForecastCatalogTranslation.signature(row) })
+    end
   end
 
   def test_catalog_translation_covers_unlisted_search_and_event_title_without_listing
     row = R::ForecastCatalog.entry(catalog_raw)
     R::ForecastCatalog.publish([row])
     before = R::Journal.count
-    translated_catalog_with(catalog_translation_result([row])) do
-      assert_equal 1, R::ForecastCatalogTranslation.translate([row])
-    end
+    cache_catalog([row])
     result = R::ForecastCatalog.browse(actor: @alice, query: '太空')
     assert_equal 1, result[:total]
     assert_equal '太空任务', result[:markets].first['event_title']
@@ -43,30 +36,9 @@ class ForecastTest
     assert_equal preview.rules, view[:rules]
   end
 
-  def test_catalog_translation_keys_by_id_not_response_order_and_rejects_duplicates
-    rows = [R::ForecastCatalog.entry(catalog_raw), R::ForecastCatalog.entry(catalog_raw.merge('id' => '902'))]
-    data = JSON.parse(catalog_translation_result(rows))
-    data['markets'].reverse!
-    data['markets'].first['question'] = '第二个事件是否成立？'
-    translated_catalog_with(data.to_json) { assert_equal 2, R::ForecastCatalogTranslation.translate(rows) }
-    assert_equal '第二个事件是否成立？', R::ForecastCatalogTranslation.cached(rows.last)['question']
-    data['markets'] << data['markets'].first.dup
-    data['markets'].last['question'] = '重复编号不可覆盖'
-    translated_catalog_with(data.to_json) { assert_equal 1, R::ForecastCatalogTranslation.translate(rows) }
-    assert_equal '第二个事件是否成立？', R::ForecastCatalogTranslation.cached(rows.last)['question']
-  end
-
-  def test_catalog_translation_rejects_empty_english_and_truncated_response
-    row = R::ForecastCatalog.entry(catalog_raw)
-    ['bad', '{}', '{"markets":[]}', {markets: [{external_id:'901',question:'English',event_title:'Event',outcomes:['Yes','No']} ]}.to_json].each do |value|
-      translated_catalog_with(value) { assert_equal 0, R::ForecastCatalogTranslation.translate([row]) }
-    end
-    refute R::ForecastCatalogTranslation.cached(row)
-  end
-
   def test_catalog_translation_invalidates_changed_source_and_model
     row = R::ForecastCatalog.entry(catalog_raw)
-    translated_catalog_with(catalog_translation_result([row])) { R::ForecastCatalogTranslation.translate([row]) }
+    cache_catalog([row])
     refute R::ForecastCatalogTranslation.cached(row.merge('question' => 'Changed terms?'))
     previous = SiteSetting.rsc_forecast_translation_model_id
     SiteSetting.rsc_forecast_translation_model_id = previous + 1
@@ -109,17 +81,34 @@ class ForecastTest
     Discourse.redis.del(key)
   end
 
-  def test_preview_translation_queue_is_deduplicated_and_bounded
+  def test_automatic_tick_ignores_unlisted_catalog_and_unapproved_markets
+    R::ForecastCatalog.publish([R::ForecastCatalog.entry(catalog_raw)])
+    R::ForecastProvider.ingest(catalog_raw, featured: false)
+    enabled = R::ForecastTranslation.method(:enabled?)
+    attempt = R::ForecastTranslation.method(:translate_attempt)
+    called = []
+    R::ForecastTranslation.define_singleton_method(:enabled?) { true }
+    R::ForecastTranslation.define_singleton_method(:translate_attempt) { |market| called << market.id }
+    R::ForecastTranslation.tick
+    assert_equal [@market.id], called
+    assert_empty PluginStoreRow.where(plugin_name: R::ForecastCatalogTranslation::STORE)
+  ensure
+    R::ForecastTranslation.define_singleton_method(:enabled?, enabled)
+    R::ForecastTranslation.define_singleton_method(:translate_attempt, attempt)
+  end
+
+  def test_unlisted_preview_does_not_enqueue_ai_translation
     original = R::ForecastTranslation.method(:enabled?)
     R::ForecastTranslation.define_singleton_method(:enabled?) { true }
-    260.times do |i|
-      market = R::ForecastMarket.new(R::ForecastProvider.parse(catalog_raw.merge('id' => (900+i).to_s)))
-      assert R::ForecastTranslation.enqueue(market)
-    end
-    assert_equal 256, Discourse.redis.zcard(R::ForecastTranslation::PREVIEW_QUEUE)
     market = R::ForecastMarket.new(R::ForecastProvider.parse(catalog_raw))
+    refute R::ForecastTranslation.enqueue(market)
+    assert_equal 0, Discourse.redis.zcard(R::ForecastTranslation::PREVIEW_QUEUE)
+    market = R::ForecastProvider.ingest(catalog_raw, featured: false)
+    refute R::ForecastTranslation.enqueue(market)
+    market.update!(featured: true)
     assert R::ForecastTranslation.enqueue(market)
-    assert_equal 256, Discourse.redis.zcard(R::ForecastTranslation::PREVIEW_QUEUE)
+    assert R::ForecastTranslation.enqueue(market)
+    assert_equal 1, Discourse.redis.zcard(R::ForecastTranslation::PREVIEW_QUEUE)
     translated_with(translation_result) { assert R::ForecastTranslation.translate(market) }
     refute R::ForecastTranslation.enqueue(market)
   ensure

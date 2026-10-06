@@ -97,7 +97,9 @@ module DiscourseRsc
 
     private
     def request_view(row)
-      { id: row.id, external_id: row.external_id, question: row.question, status: row.status,
+      market = ForecastMarket.find_by(id: row.market_id) if row.market_id
+      question = market && market.question == row.question ? ForecastTranslation.presentation(market)[:question] : row.question
+      { id: row.id, external_id: row.external_id, question: question, status: row.status,
         reason: row.reason, review_reason: row.review_reason, market_id: row.market_id, created_at: row.created_at,
         auto_review: ForecastAutoReview.presentation(row) }
     end

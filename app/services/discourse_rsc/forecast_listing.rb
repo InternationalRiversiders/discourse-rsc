@@ -63,11 +63,25 @@ module DiscourseRsc
         raise Error.new('forecast_request_changed') if attrs && requests.any? { |request| request.terms_digest != attrs[:terms_digest] }
         market=ForecastProvider.ingest(raw,featured: ForecastMarket.exists?(external_id:external_id) ? nil : false) if raw && decision=='approved'
         raise Error.new('forecast_closed') if market && market.state!='open'
+        if market && automation
+          unless ForecastTranslation.store(market, automation[:translation], expected: automation[:translation_signature])
+            raise Error.new('forecast_ai_invalid')
+          end
+        elsif market
+          # A later manual approval can reuse a complete translation from the
+          # same review, provided both the original source and model still match.
+          requests.each do |request|
+            cached = ForecastAutoReview.receipt(request)
+            next unless cached && cached['source_digest'] == ForecastAutoReview.source_digest(attrs)
+            translation = cached.dig('verdict', 'translation')
+            break if ForecastTranslation.store(market, translation)
+          end
+        end
         requests.each do |request|
           request.update!(status:decision,reviewer_id:actor.id,market_id:market&.id,review_reason:reason)
           if SiteSetting.rsc_notifications_enabled
             recipient=User.find(request.user_id)
-            text=I18n.t("discourse_rsc.notifications.forecast_request_#{decision}",locale:recipient.effective_locale,question:request.question)
+            text=I18n.t("discourse_rsc.notifications.forecast_request_#{decision}",locale:recipient.effective_locale,question:market ? ForecastTranslation.presentation(market)[:question] : request.question)
             path=market ? "/rsc/forecast?market_id=#{market.id}" : '/rsc/forecast?section=requests'
             Notification.create!(user_id:recipient.id,notification_type:Notification.types[:custom],data:{river_app:'rsc',river_text:text,river_path:path,river_icon:'chart-line',topic_title:text}.to_json)
           end

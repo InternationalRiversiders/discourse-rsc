@@ -11,7 +11,11 @@ class ForecastTest
     Discourse.redis.del("rsc:forecast:auto-review-budget:#{Time.now.utc.strftime('%Y%m%d')}")
   end
 
-  def auto_model(result = {decision:'approve',reason:'普通科学问题，不涉及中国政治。'}.to_json)
+  def approval_payload(reason = '普通科学问题，不涉及中国政治。')
+    { decision: 'approve', reason: reason, translation: JSON.parse(translation_result) }
+  end
+
+  def auto_model(result = approval_payload.to_json)
     original_generate = R::ForecastAutoReview.method(:generate)
     original_configured = R::ForecastAutoReview.method(:configured?)
     @ai_calls = []
@@ -111,7 +115,7 @@ class ForecastTest
     SiteSetting.rsc_forecast_auto_review_enabled = true
     catalog_provider do
       request_catalog
-      auto_model(->(_attrs) { SiteSetting.rsc_forecast_auto_review_enabled=false; {decision:'approve',reason:'可通过。'}.to_json }) { R::ForecastAutoReview.tick }
+      auto_model(->(_attrs) { SiteSetting.rsc_forecast_auto_review_enabled=false; approval_payload('可通过。').to_json }) { R::ForecastAutoReview.tick }
       assert_equal 'pending', R::ForecastRequest.first.status
       assert_nil R::ForecastMarket.find_by(external_id:'901')
     end
@@ -122,7 +126,7 @@ class ForecastTest
     raw = catalog_raw
     catalog_provider(raw) do
       request_catalog
-      auto_model(->(_attrs) { raw['events'][0]['title']='Different event context'; {decision:'approve',reason:'可通过。'}.to_json }) { R::ForecastAutoReview.tick }
+      auto_model(->(_attrs) { raw['events'][0]['title']='Different event context'; approval_payload('可通过。').to_json }) { R::ForecastAutoReview.tick }
       assert_equal 'pending', R::ForecastRequest.first.status
       assert_nil R::ForecastMarket.find_by(external_id:'901')
     end
@@ -132,7 +136,7 @@ class ForecastTest
     SiteSetting.rsc_forecast_auto_review_enabled = true
     catalog_provider do
       request_catalog
-      auto_model(->(_attrs) { review_catalog('rejected'); {decision:'approve',reason:'可通过。'}.to_json }) { R::ForecastAutoReview.tick }
+      auto_model(->(_attrs) { review_catalog('rejected'); approval_payload('可通过。').to_json }) { R::ForecastAutoReview.tick }
       assert_equal 'rejected', R::ForecastRequest.first.status
       assert_equal @admin.id, R::ForecastRequest.first.reviewer_id
       assert_nil R::ForecastMarket.find_by(external_id:'901')

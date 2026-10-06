@@ -3,7 +3,7 @@ require_relative 'forecast_auto_review_test'
 class ForecastTest
   def test_missing_provider_metadata_cannot_approve
     assert_equal 'forecast_ai_invalid', assert_raises(R::Error) {
-      R::ForecastAutoReview.capture_completion { |_capture| {decision:'approve',reason:'Allowed'}.to_json }
+      R::ForecastAutoReview.capture_completion { |_capture| approval_payload('Allowed').to_json }
     }.code
   end
 
@@ -19,7 +19,7 @@ class ForecastTest
     SiteSetting.rsc_forecast_auto_review_enabled = true
     SiteSetting.rsc_notifications_enabled = true
     result = captured_completion({'choices'=>[{'finish_reason'=>'content_filter','message'=>{'content'=>'partial'}}]},
-      text: {decision:'approve',reason:'Allowed'}.to_json)
+      text: approval_payload('Allowed').to_json)
     catalog_provider do
       request_catalog; request_catalog(@bob)
       before = Notification.count
@@ -53,7 +53,7 @@ class ForecastTest
     ['抱歉，我无法回答这个问题。', "Sorry, I cannot assist with that request."].each do |text|
       auto_model(text) { assert_equal 'reject',R::ForecastAutoReview.classify(attrs)['decision'] }
     end
-    normal = {decision:'approve',reason:'本问题不属于“抱歉，我无法回答”的情况。'}.to_json
+    normal = approval_payload('本问题不属于“抱歉，我无法回答”的情况。').to_json
     auto_model(normal) { assert_equal 'approve',R::ForecastAutoReview.classify(attrs)['decision'] }
   end
 
