@@ -146,15 +146,21 @@ class ForecastTest
   end
 
   def test_approved_market_remains_polled_outside_featured
+    scheduled = []
+    original = Jobs.method(:enqueue_in)
+    Jobs.define_singleton_method(:enqueue_in) { |delay, job, **args| scheduled << [delay, job, args] }
     catalog_provider do
       request_catalog
       review_catalog
       market=R::ForecastMarket.find_by!(external_id:'901')
       market.update!(synced_at:1.day.ago)
-      Discourse.redis.setex('rsc:forecast:discovered',600,'1')
       R::ForecastSettlement.tick
+      assert scheduled.any? { |_delay, job, args| job == :discourse_rsc_forecast_refresh && args[:market_id] == market.id }
+      R::ForecastSettlement.refresh_market(market.id)
       assert market.reload.synced_at > 1.minute.ago
     end
+  ensure
+    Jobs.define_singleton_method(:enqueue_in, original)
   end
 
   def test_request_api_permissions_and_preview

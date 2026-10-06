@@ -62,6 +62,7 @@ after_initialize do
     app/services/discourse_rsc/catalog
     app/services/discourse_rsc/provider_http
     app/services/discourse_rsc/forecast_translation
+    app/services/discourse_rsc/forecast_catalog_translation
     app/services/discourse_rsc/forecast_catalog
     app/services/discourse_rsc/forecast_listing
     app/services/discourse_rsc/forecast_auto_review

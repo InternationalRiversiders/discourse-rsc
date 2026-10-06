@@ -5,7 +5,7 @@ en:
     rsc_sports_team_name_overrides: "Manual JSON team dictionary, overriding built-in and AI names, e.g. {\"Arsenal\":\"阿森纳\",\"soccer|Paris FC\":\"巴黎FC\"}. Case-insensitive keys; sport|name scopes a sport. Invalid JSON is ignored; removing an entry restores automatic names."
     rsc_forecast_auto_review_enabled: "AI review of prediction listing requests: reject China-related politics; other questions still require valid rules and order books. Reuses the translation model; content filtering or explicit refusal rejects, while technical failures or uncertainty remain for manual review."
     rsc_forecast_auto_review_daily_limit: "Maximum new AI listing-review decisions per UTC day; cached verdict checks do not count."
-    rsc_forecast_translation_daily_limit: "Maximum prediction-market translation requests per UTC day; cache hits do not count."
+    rsc_forecast_translation_daily_limit: "Maximum translation requests per UTC day: up to 12 catalog labels or one set of rules per call. Failures count and back off for 6 hours; cache hits do not count."
     rsc_forecast_translation_model_id: "Discourse AI model ID for Chinese prediction-market translations; 0 disables. Public text only, cached in the background."
     rsc_forecast_enabled: "Enable independent prediction markets: popular Polymarket questions, RSC share trading and final-result settlement"
     rsc_daily_reward_delay_hours: Hours after the UTC+8 business day ends before daily rewards become payable (legacy default 02:00).

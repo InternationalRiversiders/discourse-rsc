@@ -66,6 +66,7 @@ en:
         category_world: "World"
         category_other: "Other"
         categories: "Market categories"
+        labels_translated_hint: "Titles and options translated · Original rules are shown and govern settlement"
         translated_hint: "Automatic translation · Original rules govern settlement"
         show_chinese: "Show Chinese"
         show_original: "Show original"

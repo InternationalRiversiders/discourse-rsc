@@ -115,12 +115,13 @@ module DiscourseRsc
     def market_view(m, detail: false)
       localized = ForecastTranslation.presentation(m)
       view = { id: m.id, question: localized[:question], event_title: localized[:event_title], outcomes: localized[:outcomes], prices: m.prices,
-        translated: localized[:translated], original_question: m.question,
+        translated: localized[:translated], rules_translated: localized[:rules_translated], original_question: m.question,
         volume: m.volume.to_s('F'), liquidity: m.liquidity.to_s('F'), ends_at: m.ends_at, state: m.state,
         synced_at: m.synced_at, confirmed_at: m.confirmed_at, settled_at: m.settled_at,
         payouts: ForecastSettlement.payouts(m.resolution), resolution_status: m.resolution['status'],
         url: "https://polymarket.com/market/#{m.slug}" }
       if detail
+        ForecastTranslation.enqueue(m) unless localized[:rules_translated]
         view[:rules] = localized[:rules]
         view[:original_rules] = m.rules
         view[:original_outcomes] = m.outcomes

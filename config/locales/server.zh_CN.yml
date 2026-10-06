@@ -5,7 +5,7 @@ zh_CN:
     rsc_sports_team_name_overrides: "人工队名词库（JSON 对象），优先于内置和 AI 译名。例如 {\"Arsenal\":\"阿森纳\",\"soccer|Paris FC\":\"巴黎FC\"}；键不区分大小写，可用 sport|原名区分运动。无效 JSON 不生效，删除条目后恢复自动词库。"
     rsc_forecast_auto_review_enabled: "AI 自动审核预测市场加入申请：涉及中国政治的不通过，其余通过后仍核验规则和盘口。复用预测市场翻译模型；内容过滤或拒答不通过，技术故障或不确定保留人工审核。"
     rsc_forecast_auto_review_daily_limit: "AI 自动审核每日最多新判断次数（UTC 日），重复核验缓存结果不计数。"
-    rsc_forecast_translation_daily_limit: "预测市场自动翻译每日最多请求次数（UTC 日）；命中缓存不计数。"
+    rsc_forecast_translation_daily_limit: "事件预测自动翻译每日最多请求次数（UTC 日，标题每批最多 12 条，规则每次 1 条）；失败也计数并等待 6 小时重试，命中缓存不计数。"
     rsc_forecast_translation_model_id: "预测市场中文翻译使用的 Discourse AI 模型 ID；0 关闭。仅翻译公开题目，后台缓存。"
     rsc_forecast_enabled: "启用独立预测市场：同步 Polymarket 热门问题，以 RSC 买卖份额并按最终结果结算"
     rsc_campaign_enabled: 2026 世界杯活动：赛果齐全后自动补发未完成的返利和徽章

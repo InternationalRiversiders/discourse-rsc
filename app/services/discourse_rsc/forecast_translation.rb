@@ -4,6 +4,7 @@ module DiscourseRsc
   module ForecastTranslation
     STORE = "rsc_forecast_zh"
     VERSION = 2
+    PREVIEW_QUEUE = "rsc:forecast:translation-previews"
     def self.signature(market, version: VERSION)
       source = [version, market.terms_digest, market.event_title]
       source << SiteSetting.rsc_forecast_translation_model_id if version >= 2
@@ -11,8 +12,10 @@ module DiscourseRsc
     end
 
     def self.cached(market, fresh: false)
-      data = Rails.cache.fetch("rsc:forecast:zh:#{market.id}:#{signature(market)}", expires_in: 10.minutes) do
-        PluginStore.get(STORE, market.id.to_s) || {}
+      data = Rails.cache.fetch("rsc:forecast:zh:external:#{market.external_id}:#{signature(market)}", expires_in: 10.minutes) do
+        external = PluginStore.get(STORE, "external:#{market.external_id}")
+        legacy = PluginStore.get(STORE, market.id.to_s) if market.persisted?
+        [external, legacy].compact.find { |row| row['signature'] == signature(market) } || legacy || external || {}
       end
       return data if data['signature'] == signature(market)
       # Keep a still-valid earlier Chinese version visible while upgrading the wording.
@@ -21,11 +24,12 @@ module DiscourseRsc
 
     def self.presentation(market)
       translated = cached(market)
-      { question: translated&.fetch('question') || market.question,
-        event_title: translated&.fetch('event_title') || market.event_title,
-        outcomes: translated&.fetch('outcomes') || market.outcomes,
+      labels = translated || ForecastCatalogTranslation.cached(market)
+      { question: labels&.fetch('question') || market.question,
+        event_title: labels&.fetch('event_title') || market.event_title,
+        outcomes: labels&.fetch('outcomes') || market.outcomes,
         rules: translated&.fetch('rules') || market.rules,
-        translated: translated.present? }
+        translated: labels.present?, rules_translated: translated.present? }
     end
 
     def self.translation_source(market)
@@ -91,45 +95,84 @@ module DiscourseRsc
       return false if %w[question event_title].any? { |key| data[key].include?('入侵') } &&
         market.question.match?(/\binvade\b/i) && translation_source(market)['question'] != market.question
       # Do not label an old translation as current if a refresh changed its source.
-      return false unless signature(market.reload) == expected
+      return false unless signature(market.persisted? ? market.reload : market) == expected
       data = data.slice('question', 'event_title', 'rules', 'outcomes').merge('signature' => expected)
-      PluginStore.set(STORE, market.id.to_s, data)
-      Rails.cache.write("rsc:forecast:zh:#{market.id}:#{expected}", data, expires_in: 10.minutes)
+      PluginStore.set(STORE, "external:#{market.external_id}", data)
+      PluginStore.set(STORE, market.id.to_s, data) if market.persisted?
+      Rails.cache.write("rsc:forecast:zh:external:#{market.external_id}:#{expected}", data, expires_in: 10.minutes)
       true
     rescue JSON::ParserError
       false
     end
 
+    def self.enabled?
+      SiteSetting.rsc_enabled && SiteSetting.rsc_forecast_enabled && SiteSetting.rsc_forecast_translation_model_id.positive? &&
+        defined?(DiscourseAi::Completions::Prompt) && defined?(LlmModel) && SiteSetting.discourse_ai_enabled
+    end
+
+    # Atomic shared allowance for full rules and catalog batches, including failed attempts.
+    def self.reserve_budget
+      key = "rsc:forecast:translation-budget:#{Time.now.utc.strftime('%Y%m%d')}"
+      Discourse.redis.eval(<<~LUA, keys: [Discourse.redis.namespace_key(key)], argv: [SiteSetting.rsc_forecast_translation_daily_limit, 2.days.to_i]).to_i == 1
+        local count = tonumber(redis.call('GET', KEYS[1]) or '0')
+        if count >= tonumber(ARGV[1]) then return 0 end
+        redis.call('INCR', KEYS[1])
+        redis.call('EXPIRE', KEYS[1], ARGV[2])
+        return 1
+      LUA
+    end
+
+    def self.retry_key(market)
+      "rsc:forecast:translate-retry:#{market.external_id}:#{signature(market)}"
+    end
+
+    def self.enqueue(market)
+      return false unless enabled? && !cached(market, fresh: true) && market.rules.length <= 12_000
+      return false if Discourse.redis.exists?(retry_key(market))
+      # Bounded FIFO queue; repeated reads do not move a request to the back.
+      Discourse.redis.zadd(PREVIEW_QUEUE, Time.now.to_f, market.external_id, nx: true)
+      Discourse.redis.zremrangebyrank(PREVIEW_QUEUE, 256, -1)
+      Discourse.redis.expire(PREVIEW_QUEUE, 1.day.to_i)
+      true
+    end
+
+    def self.translate_attempt(market)
+      return if cached(market, fresh: true) || Discourse.redis.exists?(retry_key(market))
+      return unless reserve_budget
+      Discourse.redis.setex(retry_key(market), 6.hours.to_i, '1')
+      unless translate(market)
+        Rails.logger.warn("RSC forecast translation market=#{market.external_id}: invalid or oversized response")
+      end
+    rescue StandardError => error
+      Rails.logger.warn("RSC forecast translation market=#{market.external_id}: #{error.class.name}")
+    end
+
     def self.tick
-      return unless SiteSetting.rsc_enabled && SiteSetting.rsc_forecast_enabled && SiteSetting.rsc_forecast_translation_model_id.positive?
-      return unless defined?(DiscourseAi::Completions::Prompt) && defined?(LlmModel) && SiteSetting.discourse_ai_enabled
+      return unless enabled?
       DistributedMutex.synchronize('rsc-forecast-translate', validity: 600) do
-        attempts = 0
         deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 60
+        # Give the full browse catalog capacity on every pass, even with a rules backlog.
+        ForecastCatalogTranslation.tick
+        preview_ids = Discourse.redis.zrange(PREVIEW_QUEUE, 0, 1)
+        preview_ids.each do |external_id|
+          break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+          break if Discourse.redis.get("rsc:forecast:translation-budget:#{Time.now.utc.strftime('%Y%m%d')}").to_i >= SiteSetting.rsc_forecast_translation_daily_limit
+          begin
+            market = ForecastMarket.find_by(external_id: external_id)
+            market ||= ForecastMarket.new(ForecastProvider.parse(ForecastCatalog.preview(external_id)))
+            translate_attempt(market)
+          rescue StandardError => error
+            Rails.logger.warn("RSC forecast preview translation: #{error.class.name}")
+          ensure
+            Discourse.redis.zrem(PREVIEW_QUEUE, external_id)
+          end
+        end
         ids = ForecastPosition.where(state: 'open').where('shares_units > 0').select(:market_id)
         markets = ForecastMarket.where('featured = TRUE OR id IN (?) OR id IN (?)', ids, ForecastRequest.approved_markets).order(volume: :desc).to_a
-        # Correct sensitive wording and fill missing titles before other refreshes.
-        markets.sort_by! { |m| m.question.match?(/invad|invasion/i) ? -1 : (cached(m) ? 1 : 0) }
-        markets.each do |market|
+        markets.reject! { |market| cached(market, fresh: true) || Discourse.redis.exists?(retry_key(market)) }
+        markets.first(2).each do |market|
           break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
-          next if cached(market, fresh: true)
-          key = "rsc:forecast:translate-retry:#{market.id}:#{signature(market)}"
-          next if Discourse.redis.exists?(key)
-          budget_key = "rsc:forecast:translation-budget:#{Time.now.utc.strftime('%Y%m%d')}"
-          break if Discourse.redis.get(budget_key).to_i >= SiteSetting.rsc_forecast_translation_daily_limit
-          Discourse.redis.incr(budget_key)
-          Discourse.redis.expire(budget_key, 2.days.to_i)
-          Discourse.redis.setex(key, 10.minutes.to_i, '1')
-          begin
-            unless translate(market)
-              Rails.logger.warn("RSC forecast translation market=#{market.id}: invalid or oversized response")
-            end
-          rescue StandardError => error
-            # Provider messages may contain credentials or source text: log class only.
-            Rails.logger.warn("RSC forecast translation market=#{market.id}: #{error.class.name}")
-          end
-          attempts += 1
-          break if attempts >= 4
+          translate_attempt(market)
         end
       end
     end

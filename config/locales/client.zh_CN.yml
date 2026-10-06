@@ -66,6 +66,7 @@ zh_CN:
         category_world: "国际动态"
         category_other: "其他"
         categories: "题目分类"
+        labels_translated_hint: "标题与选项已翻译 · 规则暂显示原文，结算以原文为准"
         translated_hint: "自动翻译 · 结算以原文规则为准"
         show_chinese: "查看中文"
         show_original: "查看原文"

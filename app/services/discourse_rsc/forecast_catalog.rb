@@ -71,19 +71,24 @@ module DiscourseRsc
         entries = reference(query).filter_map { |row| entry(row) }
         query = ''
       end
-      # Existing listed titles supply cached Chinese search terms without translating the entire catalog.
+      # One bulk cache read also covers unlisted markets; no synchronous AI calls.
+      dictionary = PluginStore.get_all(ForecastCatalogTranslation::STORE, entries.map { |row| row['external_id'] })
       listed = ForecastMarket.where(external_id: entries.map { |row| row['external_id'] }).index_by(&:external_id)
       requests = ForecastRequest.where(user_id: actor.id, external_id: entries.map { |row| row['external_id'] }).index_by(&:external_id)
       entries = entries.map do |row|
         market = listed[row['external_id']]
-        translated = market && ForecastTranslation.presentation(market)
-        row.merge('question' => translated ? translated[:question] : row['question'], 'original_question' => row['question'],
-          'outcomes' => translated ? translated[:outcomes] : row['outcomes'], 'market_id' => market&.id,
+        translated = ForecastCatalogTranslation.cached(row, dictionary: dictionary)
+        if market && ForecastCatalogTranslation.source(market) == ForecastCatalogTranslation.source(row)
+          translated = ForecastTranslation.cached(market) || translated
+        end
+        row.merge('question' => translated ? translated['question'] : row['question'], 'original_question' => row['question'],
+          'event_title' => translated ? translated['event_title'] : row['event_title'], 'original_event_title' => row['event_title'],
+          'outcomes' => translated ? translated['outcomes'] : row['outcomes'], 'market_id' => market&.id,
           'request_status' => requests[row['external_id']]&.status)
       end
       counts = entries.group_by { |row| row['category'] }.transform_values(&:size)
       entries.select! { |row| row['category'] == category } unless category == 'all'
-      entries.select! { |row| [row['question'],row['original_question'],row['event_title']].join(' ').downcase.include?(query.downcase) } if query.present?
+      entries.select! { |row| [row['question'],row['original_question'],row['event_title'],row['original_event_title']].join(' ').downcase.include?(query.downcase) } if query.present?
       entries.sort_by! { |row| order == 'newest' ? row['created_at'] : row['volume'].to_f }
       entries.reverse!
       grouped = event_id.to_s.empty?

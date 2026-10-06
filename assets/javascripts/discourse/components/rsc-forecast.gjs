@@ -254,7 +254,7 @@ export default class RscForecast extends Component {
   async reload() {
     const [data, detail] = await Promise.all([
       ajax("/rsc/forecast/state.json"),
-      this.detail && !this.detail.preview ? ajax(`/rsc/forecast/markets/${this.detail.id}.json`) : Promise.resolve(this.detail),
+      this.detail ? ajax(this.detail.preview ? `/rsc/forecast/catalog/${encodeURIComponent(this.detail.external_id)}.json` : `/rsc/forecast/markets/${this.detail.id}.json`) : Promise.resolve(this.detail),
     ]);
     if (!this.isDestroying) { this.data = data; this.detail = detail; }
   }
@@ -358,7 +358,7 @@ export default class RscForecast extends Component {
         <div class="forecast-detail">
           <div class="forecast-main">
             <h1>{{this.detailQuestion}}</h1>
-            {{#if this.detail.translated}}<div class="forecast-translation"><small>{{ft "translated_hint"}}</small><button class="btn btn-flat" type="button" {{on "click" this.toggleOriginal}}>{{#if this.showOriginal}}{{ft "show_chinese"}}{{else}}{{ft "show_original"}}{{/if}}</button></div>{{/if}}
+            {{#if this.detail.translated}}<div class="forecast-translation"><small>{{#if this.detail.rules_translated}}{{ft "translated_hint"}}{{else}}{{ft "labels_translated_hint"}}{{/if}}</small><button class="btn btn-flat" type="button" {{on "click" this.toggleOriginal}}>{{#if this.showOriginal}}{{ft "show_chinese"}}{{else}}{{ft "show_original"}}{{/if}}</button></div>{{/if}}
             <div class="forecast-meta"><span>{{status this.detail.state}}</span><span>{{ft "ends"}} {{when this.detail.ends_at}}</span><span>{{ft "volume"}} ${{pretty this.detail.volume 0}}</span><span>{{ft "updated"}} {{when this.detail.synced_at}}</span></div>
             {{#if this.result}}<p class="forecast-notice">{{ft "resolved_payout"}} {{this.result}}</p>{{/if}}
             {{#unless this.detail.preview}}<div class="forecast-chart">

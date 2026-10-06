@@ -57,6 +57,9 @@ module DiscourseRsc
             market.update!(state: 'review', synced_at: Time.current) unless market.settled_at
             return market
           end
+          # Detail refreshes may omit event metadata. Keep the known title rather
+          # than replacing it with the question and invalidating translation caches.
+          attrs.delete(:event_title) if raw.dig('events', 0, 'title').blank?
           attrs.except!(:state) if market.state == 'review' || market.settled_at
           attrs[:featured] = featured unless featured.nil?
           market.update!(attrs)
