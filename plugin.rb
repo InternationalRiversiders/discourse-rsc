@@ -100,6 +100,8 @@ after_initialize do
     app/jobs/scheduled/discourse_rsc_sync_data
     app/jobs/scheduled/discourse_rsc_forecast_translate
     app/jobs/scheduled/discourse_rsc_forecast_auto_review
+    app/jobs/regular/discourse_rsc_forecast_refresh
+    app/jobs/scheduled/discourse_rsc_forecast_discover
     app/jobs/scheduled/discourse_rsc_forecast_tick
     app/jobs/scheduled/discourse_rsc_business_tick
     app/jobs/scheduled/discourse_rsc_trading_tick

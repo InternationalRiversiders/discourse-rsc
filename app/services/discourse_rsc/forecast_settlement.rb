@@ -91,34 +91,40 @@ module DiscourseRsc
       end
     end
 
+    def self.enabled?
+      SiteSetting.rsc_enabled && SiteSetting.rsc_forecast_enabled && SiteSetting.rsc_native_trial_enabled && !Safety.read_only?
+    end
+
+    # Once a day, enqueue EVERY watched market, not just the first 12.
+    # Spread requests out so a large daily batch does not burst the provider.
     def self.tick
-      return unless SiteSetting.rsc_enabled && SiteSetting.rsc_forecast_enabled && SiteSetting.rsc_native_trial_enabled && !Safety.read_only?
-      # Across both A/B workers, only one poller owns the cycle.
-      DistributedMutex.synchronize('rsc-forecast-sync', validity: 180) do
-        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 60
-        unless Discourse.redis.exists?('rsc:forecast:discovered')
-          begin
-            ForecastProvider.discover
-            Discourse.redis.setex('rsc:forecast:discovered', 600, '1')
-          rescue Error => error
-            Rails.logger.warn("RSC forecast discovery: #{error.code}")
-          end
-        end
-        # Holdings stay in the settlement watch list after falling out of popular.
+      return unless enabled?
+      DistributedMutex.synchronize('rsc-forecast-daily', validity: 180) do
         ids = ForecastPosition.where(state: 'open').where('shares_units > 0').select(:market_id)
         scope = ForecastMarket.where(settled_at: nil).where('featured = TRUE OR id IN (?) OR id IN (?)', ids, ForecastRequest.approved_markets)
-        scope.order(Arel.sql("CASE WHEN id IN (#{ids.to_sql}) THEN 0 ELSE 1 END, synced_at ASC NULLS FIRST")).limit(12).each do |market|
-          break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
-          begin
-            ForecastProvider.refresh(market)
-            row = ForecastProvider.resolution(market)
-            observe(market, row) if row
-            settle(market.reload)
-          rescue Error => error
-            Rails.logger.warn("RSC forecast market=#{market.id}: #{error.code}")
-          end
+        market_ids = scope.order(Arel.sql("CASE WHEN id IN (#{ids.to_sql}) THEN 0 ELSE 1 END, synced_at ASC NULLS FIRST")).pluck(:id)
+        market_ids.each_with_index do |id, index|
+          Jobs.enqueue_in(index * 5.seconds, :discourse_rsc_forecast_refresh, market_id: id)
         end
         ForecastQuote.where('expires_at < ?', 1.day.ago).delete_all
+        market_ids.size
+      end
+    end
+
+    def self.refresh_market(id, confirm: false)
+      return unless enabled?
+      DistributedMutex.synchronize("rsc-forecast-market:#{id}", validity: 60) do
+        market = ForecastMarket.find_by(id: id)
+        return unless market && !market.settled_at
+        ForecastProvider.refresh(market)
+        row = ForecastProvider.resolution(market)
+        observe(market, row) if row
+        settle(market.reload)
+        # A final result first seen today gets one follow-up in this same batch,
+        # rather than making winners wait another full day for confirmation.
+        if !confirm && !market.settled_at && market.state == 'awaiting' && market.resolution_seen_at && payouts(market.resolution)
+          Jobs.enqueue_in(125.seconds, :discourse_rsc_forecast_refresh, market_id: id, confirm: true)
+        end
       end
     end
   end

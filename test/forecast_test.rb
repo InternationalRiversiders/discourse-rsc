@@ -229,10 +229,10 @@ class ForecastTest < Minitest::Test
     @raw['closed']=true
     @resolution=final
     Discourse.redis.setex('rsc:forecast:discovered',600,'1')
-    provider { R::ForecastSettlement.tick }
+    provider { R::ForecastSettlement.refresh_market(@market.id) }
     assert_equal 'awaiting',@market.reload.state
     @market.update!(resolution_seen_at:3.minutes.ago)
-    provider { R::ForecastSettlement.tick }
+    provider { R::ForecastSettlement.refresh_market(@market.id) }
     assert_equal 'resolved',@market.reload.state
     assert @market.settled_at
     assert_equal '110',R::Account.wallet(@alice.id).balance
@@ -314,15 +314,15 @@ class ForecastTest < Minitest::Test
     @raw['closed']=true
     @resolution=uma
     Discourse.redis.setex('rsc:forecast:discovered',600,'1')
-    provider { R::ForecastSettlement.tick }
+    provider { R::ForecastSettlement.refresh_market(@market.id) }
     assert_equal 'awaiting',@market.reload.state
     assert_equal '90',R::Account.wallet(@alice.id).balance
     @market.update!(resolution_seen_at:3.minutes.ago)
-    provider { R::ForecastSettlement.tick }
+    provider { R::ForecastSettlement.refresh_market(@market.id) }
     assert_equal 'settled',R::ForecastPosition.first.state
     assert_equal '110',R::Account.wallet(@alice.id).balance
     assert_equal 1,R::ForecastTrade.where(side:'settlement').count
-    provider { R::ForecastSettlement.tick }
+    provider { R::ForecastSettlement.refresh_market(@market.id) }
     assert_equal 1,R::ForecastTrade.where(side:'settlement').count
     assert_equal 0,R::Account.sum(:balance_units)
     assert_equal 0,R::Account.where(kind:'escrow').sum(:balance_units)
@@ -374,6 +374,45 @@ class ForecastTest < Minitest::Test
     assert_equal 1,R::ForecastSettlement.settle(@market)
     assert_equal '110',R::Account.wallet(@alice.id).balance
     assert_equal 0,R::Account.sum(:balance_units)
+  end
+
+  def test_daily_batch_includes_all_markets_and_nonpopular_holdings
+    execute(quote)
+    @market.update!(featured:false)
+    14.times do |i|
+      R::ForecastProvider.ingest(@raw.merge('id'=>(200+i).to_s,'conditionId'=>'0x'+(200+i).to_s(16).rjust(64,'0')))
+    end
+    calls=[]
+    original=Jobs.method(:enqueue_in)
+    Jobs.define_singleton_method(:enqueue_in){|delay,job,args|calls << [delay,job,args]}
+    assert_equal 15,R::ForecastSettlement.tick
+    assert_equal @market.id,calls.first[2][:market_id]
+    assert_equal 15,calls.map{|c|c[2][:market_id]}.uniq.size
+    assert_equal (0...15).map{|i|i*5},calls.map(&:first)
+    SiteSetting.rsc_read_only=true
+    R::ForecastSettlement.tick
+    assert_equal 15,calls.size
+  ensure
+    Jobs.define_singleton_method(:enqueue_in,original) if original
+  end
+
+  def test_daily_final_result_gets_one_followup_not_another_days_delay
+    execute(quote)
+    @raw['closed']=true; @resolution=uma
+    calls=[]
+    original=Jobs.method(:enqueue_in)
+    Jobs.define_singleton_method(:enqueue_in){|delay,job,args|calls << [delay,job,args]}
+    provider { R::ForecastSettlement.refresh_market(@market.id) }
+    assert_equal [[125,:discourse_rsc_forecast_refresh,{market_id:@market.id,confirm:true}]],calls
+    @market.update!(resolution_seen_at:3.minutes.ago)
+    provider { R::ForecastSettlement.refresh_market(@market.id,confirm:true) }
+    assert_equal 1,calls.size
+    assert_equal '110',R::Account.wallet(@alice.id).balance
+    assert_equal 'settled',R::ForecastPosition.first.state
+    provider { R::ForecastSettlement.refresh_market(@market.id,confirm:true) }
+    assert_equal 1,R::ForecastTrade.where(side:'settlement').count
+  ensure
+    Jobs.define_singleton_method(:enqueue_in,original) if original
   end
 
 end
