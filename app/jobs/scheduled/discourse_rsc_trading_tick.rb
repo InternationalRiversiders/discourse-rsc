@@ -8,7 +8,8 @@ module Jobs
       DiscourseRsc::CryptoStream.ensure_running
       DistributedMutex.synchronize('rsc-trading-tick', validity: 90) do
         ids = DiscourseRsc::Position.distinct.pluck(:instrument_id) |
-          DiscourseRsc::Order.where(status: 'pending').distinct.pluck(:instrument_id)
+          DiscourseRsc::Order.where(status: 'pending').distinct.pluck(:instrument_id) |
+          DiscourseRsc::Dividend.where(status: 'approved').where('effective_at <= ?', Time.current).distinct.pluck(:instrument_id)
         # Check available prices before external I/O. Only exposed instruments
         # require risk/order work; an idle catalog does not delay this task.
         ids.each { |id| process(id) }
@@ -20,6 +21,7 @@ module Jobs
     def process(id)
       DiscourseRsc::Exchange.process(id)
     rescue StandardError => error
+      return if error.is_a?(DiscourseRsc::Error) && error.code == "dividend_pending"
       DiscourseRsc::Audit.create!(action: 'trading_tick_failed', details: {instrument_id: id, error: error.class.name}, created_at: Time.current)
       Rails.logger.warn("RSC trading tick failed: #{error.class}")
     end

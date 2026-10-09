@@ -25,6 +25,7 @@ module DiscourseRsc
         end
         Risk.daily!(actor.id, instrument, side: side)
         price = price!(instrument, trading: true)
+        Dividends.apply_due!(instrument)
         raise Error.new("invalid_quantity") unless units >= instrument.minimum_units && (units % instrument.step_units.to_i).zero?
         raise Error.new("order_pending", status: 409) if Order.exists?(user_id: actor.id, instrument_id: instrument.id, status: "pending")
         raise Error.new("too_many_orders") if Order.where(user_id: actor.id, status: "pending").count >= 10
@@ -50,7 +51,7 @@ module DiscourseRsc
           gross = units * price / U
           TradingRules.opening!(instrument, gross)
           if tp || sl
-            projected = Position.new(side: side, average_units: ((position&.quantity_units.to_i || 0) * (position&.average_units.to_i || 0) + units * price) / ((position&.quantity_units.to_i || 0) + units), quantity_units: (position&.quantity_units.to_i || 0) + units, margin_units: (position&.margin_units.to_i || 0) + ceil_div(gross, leverage), leverage: leverage)
+            projected = Position.new(side: side, average_units: ((position&.quantity_units.to_i || 0) * (position&.average_units.to_i || 0) + units * price) / ((position&.quantity_units.to_i || 0) + units), quantity_units: (position&.quantity_units.to_i || 0) + units, margin_units: (position&.margin_units.to_i || 0) + ceil_div(gross, leverage), dividend_units: position&.dividend_units.to_i || 0, leverage: leverage)
             TradingRules.protection!(projected, instrument, price, tp, sl)
           end
           # Reserve at the upper edge of the 5% execution band, including fees.
@@ -106,6 +107,8 @@ module DiscourseRsc
         Risk.lock(actor.id)
         raise Error.new("wallet_frozen", status: 403) unless Account.wallet(actor.id).status == "active"
         price = price!(instrument)
+        Dividends.apply_due!(instrument)
+        position.reload
         TradingRules.protection!(position, instrument, price, tp, sl)
         position.update!(take_profit_units: tp, stop_loss_units: sl)
         { position_id: position.id }
@@ -123,6 +126,9 @@ module DiscourseRsc
         rescue Error
           next
         end
+        # Never swallow a dividend failure after partially modifying positions.
+        # Let the enclosing transaction roll back the entire corporate action.
+        Dividends.apply_due!(instrument)
         Position.where(instrument_id: instrument.id).order(:id).each do |position|
           Risk.lock(position.user_id)
           next unless Account.wallet(position.user_id).status == "active"
@@ -210,7 +216,7 @@ module DiscourseRsc
 
     def self.pnl(position, price, quantity = position.quantity_units.to_i)
       value = quantity * (price - position.average_units.to_i) / U
-      position.side == "long" ? value : -value
+      (position.side == "long" ? value : -value) + Dividends.portion(position, quantity)
     end
 
     def self.ceil_div(value, divisor)
@@ -232,7 +238,7 @@ module DiscourseRsc
       tp = order.details["take_profit"] && Amount.parse(order.details["take_profit"])
       sl = order.details["stop_loss"] && Amount.parse(order.details["stop_loss"])
       if tp || sl
-        projected = Position.new(side: order.side, quantity_units: (position&.quantity_units.to_i || 0) + quantity, average_units: ((position&.quantity_units.to_i || 0) * (position&.average_units.to_i || 0) + quantity * price) / ((position&.quantity_units.to_i || 0) + quantity), margin_units: (position&.margin_units.to_i || 0) + margin, leverage: order.leverage)
+        projected = Position.new(side: order.side, quantity_units: (position&.quantity_units.to_i || 0) + quantity, average_units: ((position&.quantity_units.to_i || 0) * (position&.average_units.to_i || 0) + quantity * price) / ((position&.quantity_units.to_i || 0) + quantity), margin_units: (position&.margin_units.to_i || 0) + margin, dividend_units: position&.dividend_units.to_i || 0, leverage: order.leverage)
         TradingRules.protection!(projected, instrument, price, tp, sl)
       end
       position ||= Position.create!(user_id: order.user_id, instrument_id: instrument.id, side: order.side, leverage: order.leverage)
@@ -252,17 +258,18 @@ module DiscourseRsc
       price = execution_price(instrument, position.side == "long" ? "short" : "long", price)
       quantity = order.quantity_units.to_i
       margin = position.margin_units.to_i * quantity / position.quantity_units.to_i
+      dividend = Dividends.portion(position, quantity)
       profit = pnl(position, price, quantity)
       fee = quantity * price / U * instrument.fee_bps / 10_000
       payout = [margin + profit - fee, 0].max
       Commands.move(user_id: order.user_id, action: "stock_close", request_id: "order-close-#{order.id}", settlement: true,
                     postings: { Account.internal("position:#{position.id}").id => -margin, Account.wallet(order.user_id).id => payout,
                                 Account.internal("system:exchange", kind: "system").id => margin - payout },
-                    metadata: { order_id: order.id, reason: kind, price: Amount.format(price), pnl: Amount.format(profit), fee: Amount.format(fee) },
+                    metadata: { order_id: order.id, reason: kind, price: Amount.format(price), pnl: Amount.format(profit), dividend: Amount.format(dividend), fee: Amount.format(fee) },
                     event: Commands.event(order.user_id, kind, { "amount" => Amount.format(payout), "symbol" => instrument.symbol, "instrument_id" => instrument.id, "order_id" => order.id }))
       remaining = position.quantity_units.to_i - quantity
-      remaining.zero? ? position.destroy! : position.update!(quantity_units: remaining, margin_units: position.margin_units.to_i - margin)
-      order.update!(status: "filled", details: order.details.merge("price" => Amount.format(price), "payout" => Amount.format(payout), "pnl" => Amount.format(profit), "fee" => Amount.format(fee), "margin" => Amount.format(margin), "reason" => kind, "gross" => Amount.format(quantity * price / U)))
+      remaining.zero? ? position.destroy! : position.update!(quantity_units: remaining, margin_units: position.margin_units.to_i - margin, dividend_units: position.dividend_units.to_i - dividend)
+      order.update!(status: "filled", details: order.details.merge("price" => Amount.format(price), "payout" => Amount.format(payout), "pnl" => Amount.format(profit), "dividend" => Amount.format(dividend), "fee" => Amount.format(fee), "margin" => Amount.format(margin), "reason" => kind, "gross" => Amount.format(quantity * price / U)))
     end
 
     def self.execution_price(instrument, side, price)

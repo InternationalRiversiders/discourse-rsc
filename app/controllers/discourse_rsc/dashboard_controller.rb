@@ -49,6 +49,7 @@ module DiscourseRsc
         instruments: instruments, market_page: listing, positions: positions,
         portfolio: { notional: Amount.format(positions.sum { |p| Amount.parse(p[:quantity]) * Amount.parse(p[:average]) / Amount::UNIT }),
           reserved: Amount.format(reserved), margin: Amount.format(margin), pnl: pnl && Amount.format(pnl), equity: pnl && Amount.format(margin + pnl) },
+        dividends: market ? Dividends.history(current_user.id) : [],
         orders: orders.map { |item| Views.order(item) },
         matches: sports ? Views.matches(current_user.id, focus: params[:match_id].present? ? positive_id(:match_id) : nil) : [],
         predictions: predictions.map { |item| Views.prediction(item, names: team_names) },

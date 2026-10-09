@@ -20,6 +20,10 @@ module DiscourseRsc
           { user_id: user.id, before: before, status: status }
         when "reset_assets"
           user = User.find(Integer(input.fetch("user_id")))
+          exposed_ids = Position.where(user_id: user.id).select(:instrument_id)
+          if Dividend.where(instrument_id: exposed_ids, status: "approved").where("effective_at <= ?", Time.current).exists?
+            raise Error.new("dividend_pending")
+          end
           target = Amount.parse(input.fetch("amount"))
           mode = input.fetch("reset_mode", "cash")
           raise Error.new("invalid_admin_input") unless %w[cash total_equity].include?(mode)

@@ -24,7 +24,7 @@ module DiscourseRsc
       # Match the legacy integer rounding: round each notional before subtracting.
       cost = position.quantity_units.to_i * position.average_units.to_i / Amount::UNIT
       value = position.quantity_units.to_i * price / Amount::UNIT
-      pnl = position.side == "short" ? cost - value : value - cost
+      pnl = (position.side == "short" ? cost - value : value - cost) + position.dividend_units.to_i
       { pnl: [pnl, -position.margin_units.to_i].max, basis: mark[:basis], at: mark[:at], price: Amount.format(price) }
     end
   end

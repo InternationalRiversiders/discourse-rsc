@@ -44,7 +44,9 @@ module DiscourseRsc
 
     def self.break_even(position, fee_bps)
       average = position.average_units.to_i
-      position.side == "short" ? average * (10_000 - fee_bps) / (10_000 + fee_bps) : (average * (10_000 + fee_bps) + 9_999 - fee_bps) / (10_000 - fee_bps)
+      adjustment = position.dividend_units.to_i * U / position.quantity_units.to_i
+      value = position.side == "short" ? (average * (10_000 - fee_bps) + adjustment * 10_000) / (10_000 + fee_bps) : (average * (10_000 + fee_bps) - adjustment * 10_000 + 9_999 - fee_bps) / (10_000 - fee_bps)
+      [value, 0].max
     end
 
     def self.protection!(position, instrument, current_price, take_profit, stop_loss)

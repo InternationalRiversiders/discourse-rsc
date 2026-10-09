@@ -32,6 +32,8 @@ after_initialize do
     app/models/discourse_rsc/command
     app/models/discourse_rsc/instrument
     app/models/discourse_rsc/position
+    app/models/discourse_rsc/dividend
+    app/models/discourse_rsc/dividend_entry
     app/models/discourse_rsc/order
     app/models/discourse_rsc/forecast_request
     app/models/discourse_rsc/forecast_market
@@ -59,6 +61,7 @@ after_initialize do
     app/services/discourse_rsc/market_sessions
     app/services/discourse_rsc/trading_rules
     app/services/discourse_rsc/exchange
+    app/services/discourse_rsc/dividends
     app/services/discourse_rsc/catalog
     app/services/discourse_rsc/provider_http
     app/services/discourse_rsc/forecast_translation
@@ -93,6 +96,7 @@ after_initialize do
     app/controllers/discourse_rsc/wallet_controller
     app/controllers/discourse_rsc/forecast_controller
     app/controllers/discourse_rsc/dashboard_controller
+    app/controllers/discourse_rsc/dividends_controller
     app/controllers/discourse_rsc/features_controller
     app/controllers/discourse_rsc/public_packets_controller
     app/jobs/regular/discourse_rsc_notify

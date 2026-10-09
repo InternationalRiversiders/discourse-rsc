@@ -1,5 +1,6 @@
 zh_CN:
   site_settings:
+    rsc_dividends_enabled: "允许管理员登记并确认美元美股现金分红（试运行）；分红计入仓位权益，平仓结算。关闭只禁止新增/批准，已批准计划仍会执行。"
     rsc_sports_team_translation_enabled: "后台自动翻译陌生赛事队名，复用预测市场翻译模型和 Key。每分钟最多一批 16 个名字；结果保存在论坛数据库并缓存，页面不等待 AI。关闭后仍使用已有译名。"
     rsc_sports_team_translation_daily_limit: "队名翻译每日最多批次（UTC 日，每批最多 16 个）；失败也计数并等待 6 小时重试，命中词库不计数。"
     rsc_sports_team_name_overrides: "人工队名词库（JSON 对象），优先于内置和 AI 译名。例如 {\"Arsenal\":\"阿森纳\",\"soccer|Paris FC\":\"巴黎FC\"}；键不区分大小写，可用 sport|原名区分运动。无效 JSON 不生效，删除条目后恢复自动词库。"
@@ -79,6 +80,14 @@ zh_CN:
       stock_refunded: 委托结束，退回 %{amount} RSC
       red_packet_claimed_by: 领取了你的红包 %{amount} RSC
     errors:
+      dividends_disabled: "现金分红试运行尚未开启。"
+      invalid_dividend: "请核对除息日、每股金额和 HTTPS 公告链接。"
+      dividend_too_late: "只能登记或调整尚未到除息时间的普通工作日分红，不支持历史补发。"
+      dividend_ineligible: "试运行仅支持美元计价的普通美股和派息基金，不支持杠杆或反向产品。"
+      dividend_locked: "此计划已执行或已更新，请刷新后核对。"
+      dividend_pending: "正在等待除息后的有效报价，分红处理完成后可继续交易。"
+      dividend_adjustment: "因除息调整，此待成交委托已撤销，预占资金已释放。"
+      dividend_inconsistent: "分红持仓快照需要管理员核对，该品种暂缓处理。"
       forecast_ai_unconfigured: "请先为预测市场配置可用的 Discourse AI 翻译模型。"
       forecast_ai_invalid: "AI 审核未返回有效结果，申请仍待审核。"
       forecast_ai_stale: "自动审核已关闭，或申请及规则已变化，请重新核对。"

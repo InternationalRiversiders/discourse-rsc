@@ -1,4 +1,6 @@
 plugins:
+  rsc_dividends_enabled:
+    default: false
   rsc_sports_team_translation_enabled:
     default: false
   rsc_sports_team_translation_daily_limit:

@@ -1,5 +1,6 @@
 en:
   site_settings:
+    rsc_dividends_enabled: "Allow administrators to schedule verified USD US-equity cash dividends. Accruals settle on close. Disabling blocks new approvals, not existing obligations."
     rsc_sports_team_translation_enabled: "Translate unknown sports team names in the background using the existing forecast AI model/key. Up to 16 names per minute; persisted in the forum database and cached. Page reads never wait for AI. Disabling retains existing translations."
     rsc_sports_team_translation_daily_limit: "Maximum daily batches (UTC; 16 names each). Failed attempts count and back off for 6 hours. Dictionary hits do not count."
     rsc_sports_team_name_overrides: "Manual JSON team dictionary, overriding built-in and AI names, e.g. {\"Arsenal\":\"阿森纳\",\"soccer|Paris FC\":\"巴黎FC\"}. Case-insensitive keys; sport|name scopes a sport. Invalid JSON is ignored; removing an entry restores automatic names."
@@ -79,6 +80,14 @@ en:
       stock_refunded: 'Order reservation refunded: %{amount} RSC'
       red_packet_claimed_by: claimed %{amount} RSC from your packet
     errors:
+      dividends_disabled: "Cash dividend scheduling is disabled."
+      invalid_dividend: "Check the ex-date, per-share amount and HTTPS source URL."
+      dividend_too_late: "Schedule ordinary future business-day dividends only; no historical backfill."
+      dividend_ineligible: "Only ordinary USD US stocks and funds are supported in this pilot."
+      dividend_locked: "This schedule has changed or executed. Refresh and review it."
+      dividend_pending: "Waiting for a valid post-ex-dividend quote before trading resumes."
+      dividend_adjustment: "Order canceled for a dividend adjustment; reserved funds released."
+      dividend_inconsistent: "Dividend holdings need administrator review."
       forecast_ai_unconfigured: "Configure an available Discourse AI translation model for prediction markets first."
       forecast_ai_invalid: "AI review did not return a valid result. The request remains pending."
       forecast_ai_stale: "Automatic review was disabled or the request or rules changed. Review again."

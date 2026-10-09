@@ -39,7 +39,9 @@ module DiscourseRsc
       positions = Position.where(user_id: user_id).includes(:instrument).to_a
       pending = Order.where(user_id: user_id, status: "pending").where.not(side: "close").includes(:instrument).to_a
       equity = Account.wallet_snapshot(user_id).balance_units.to_i + pending.sum { |o| o.reserved_units.to_i }
+      pending_dividends = Dividend.where(status: "approved").where("effective_at <= ?", Time.current).pluck(:instrument_id)
       positions.each do |position|
+        next if pending_dividends.include?(position.instrument_id)
         begin
           equity += [position.margin_units.to_i + Exchange.pnl(position, Exchange.price!(position.instrument)), 0].max
         rescue Error
@@ -106,7 +108,8 @@ module DiscourseRsc
 
     def self.liquidation(position)
       distance = position.margin_units.to_i * 3 * Amount::UNIT / (4 * position.quantity_units.to_i)
-      value = position.side == "long" ? position.average_units.to_i - distance : position.average_units.to_i + distance
+      adjustment = position.dividend_units.to_i * Amount::UNIT / position.quantity_units.to_i
+      value = position.side == "long" ? position.average_units.to_i - distance - adjustment : position.average_units.to_i + distance + adjustment
       Amount.format([value, 0].max)
     end
   end

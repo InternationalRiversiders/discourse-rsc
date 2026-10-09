@@ -1,3 +1,4 @@
+import RscDividendsAdmin from "./rsc-dividends-admin";
 import RscNavigation from "./rsc-navigation";
 import ForumUser from "./rsc-user";
 import Component from "@glimmer/component";
@@ -229,6 +230,7 @@ export default class extends Component {
           class="alert alert-success"
           role="status"
         >{{this.notice}}</div>{{/if}}
+      <RscDividendsAdmin />
       <div class="rsc-market-summary"><div>{{uiText "circulating"}}<strong
           >{{formatAmount this.data.stats.circulating}} RSC</strong></div><div>{{uiText
             "escrow"

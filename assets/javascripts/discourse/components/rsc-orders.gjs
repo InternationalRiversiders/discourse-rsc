@@ -29,6 +29,7 @@ export default class RscOrders extends Component {
               <details><summary>详情</summary><div class="rsc-order-details">
                 {{#if order.details.reason}}{{#unless (eq order.details.reason "legacy_import")}}<p>{{uiText order.details.reason}}</p>{{/unless}}{{/if}}
                 {{#if order.details.gross}}<p>名义金额 {{formatAmount order.details.gross}} RSC</p>{{/if}}
+                {{#if order.details.dividend}}{{#unless (eq order.details.dividend "0")}}<p>盈亏包含分红调整 {{signedAmount order.details.dividend}} RSC</p>{{/unless}}{{/if}}
                 {{#if order.details.payout}}<p>返还 {{formatAmount order.details.payout}} RSC</p>{{/if}}
                 {{#if order.details.error}}<p role="status">{{order.error_message}}</p>{{/if}}
                 {{#if (eq order.status "pending")}}<p>预占 {{formatAmount order.reserved}} RSC</p><p>最早处理 {{when order.execute_at}}</p><p>{{#if order.cancel_at}}可撤单时间 {{when order.cancel_at}}{{else}}撤单截止 {{when order.cancel_until}}{{/if}}</p><p>到期 {{when order.expires_at}}</p>{{/if}}

@@ -2131,3 +2131,14 @@
     .rsc-trader-columns .rsc-market-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 }
+
+.rsc-app .rsc-dividends-admin {
+  summary { font-weight: 600; cursor: pointer; }
+  p { line-height: 1.65; }
+  .rsc-dividend-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; align-items: end; }
+  .rsc-dividend-form label { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+  .rsc-dividend-form input { width: 100%; min-width: 0; box-sizing: border-box; margin: 0; }
+  .rsc-dividend-form__reason { grid-column: 1 / -1; }
+  td small { display: block; max-width: 28rem; overflow-wrap: anywhere; }
+  @media (max-width: 600px) { .rsc-dividend-form { grid-template-columns: minmax(0, 1fr); } }
+}

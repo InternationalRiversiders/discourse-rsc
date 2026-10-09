@@ -61,6 +61,7 @@ module DiscourseRsc
     end
 
     def self.rows(instruments, execution: true)
+      upcoming = Dividend.includes(:instrument).where(instrument_id: instruments.map(&:id), status: "approved").order(:effective_at).group_by(&:instrument_id)
       schedules = MarketSessions.hours
       counts = Order.group(:instrument_id).count
       last = Order.group(:instrument_id).maximum(:created_at)
@@ -77,7 +78,7 @@ module DiscourseRsc
           minimum_notional: TradingRules.stock?(item) ? "1" : nil,
           execution_prices: execution ? execution_prices(item) : nil,
           popularity: counts.fetch(item.id, 0), last_order_at: last[item.id], catalog_rank: metadata["catalog_rank"]&.to_i, catalog_id: metadata["id"]&.to_i || item.id,
-          fee_bps: item.fee_bps, close_only: TradingRules.close_only?(item), execution_mode: item.category == "crypto" ? "crypto_confirmation" : (TradingRules.delayed?(item) ? "delayed_confirmation" : "immediate"), history: item.history.last(16), minimum: Amount.format(item.minimum_units), step: Amount.format(item.step_units) }
+          dividend: upcoming[item.id]&.first && Dividends.view(upcoming[item.id].first), fee_bps: item.fee_bps, close_only: TradingRules.close_only?(item), execution_mode: item.category == "crypto" ? "crypto_confirmation" : (TradingRules.delayed?(item) ? "delayed_confirmation" : "immediate"), history: item.history.last(16), minimum: Amount.format(item.minimum_units), step: Amount.format(item.step_units) }
       end.sort_by do |row|
         [-row[:popularity], -(row[:last_order_at]&.to_f || 0), row[:quote]["price"].nil? ? 1 : 0, row[:catalog_rank] || 2147483647, row[:catalog_id]]
       end
