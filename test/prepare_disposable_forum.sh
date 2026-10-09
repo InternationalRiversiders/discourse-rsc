@@ -48,4 +48,4 @@ bundle exec rails runner /rsc/test/forecast_combined_translation_test.rb
 
 bundle exec rails runner /rsc/test/trading_ux_test.rb -n "/test_ux/"
 
-bundle exec rails runner /rsc/test/dividends_test.rb -n "/test_dividend_/"
+bundle exec rails runner /rsc/test/dividend_calendar_test.rb -n "/test_(dividend|calendar)_/"

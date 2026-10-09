@@ -4,7 +4,7 @@ require "uri"
 require "time"
 module DiscourseRsc
   module ProviderHttp
-    HOSTS = %w[query1.finance.yahoo.com api.exchange.coinbase.com api.twelvedata.com site.api.espn.com api.kraken.com www.okx.com gamma-api.polymarket.com clob.polymarket.com data-api.polymarket.com].freeze
+    HOSTS = %w[query1.finance.yahoo.com api.exchange.coinbase.com api.twelvedata.com site.api.espn.com api.kraken.com www.okx.com gamma-api.polymarket.com clob.polymarket.com data-api.polymarket.com api.nasdaq.com].freeze
     # Redis is shared by web processes and Sidekiq, including both A/B containers.
     # Reserve a bounded queue slot using Redis's clock, never a process-local clock.
     RESERVE = <<~LUA
@@ -70,10 +70,12 @@ module DiscourseRsc
     def self.get(host, path, query = {})
       raise Error.new("provider_unavailable", status: 503) unless HOSTS.include?(host)
       pace!(host)
-      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 12
+      # The low-frequency dividend calendar runs only in background jobs.
+      calendar = host == 'api.nasdaq.com'
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + (calendar ? 30 : 12)
       uri = URI::HTTPS.build(host: host, path: path, query: URI.encode_www_form(query))
       body = +""
-      Net::HTTP.start(host, 443, use_ssl: true, open_timeout: 4, read_timeout: 8, write_timeout: 4) do |http|
+      Net::HTTP.start(host, 443, use_ssl: true, open_timeout: 4, read_timeout: calendar ? 20 : 8, write_timeout: 4) do |http|
         request = Net::HTTP::Get.new(uri.request_uri, { "User-Agent" => "Discourse-RSC/0.2", "Accept" => "application/json", "Connection" => "close" })
         http.request(request) do |response|
           code = response.code.to_i

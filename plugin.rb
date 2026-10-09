@@ -62,6 +62,7 @@ after_initialize do
     app/services/discourse_rsc/trading_rules
     app/services/discourse_rsc/exchange
     app/services/discourse_rsc/dividends
+    app/services/discourse_rsc/dividend_calendar
     app/services/discourse_rsc/catalog
     app/services/discourse_rsc/provider_http
     app/services/discourse_rsc/forecast_translation
@@ -101,6 +102,8 @@ after_initialize do
     app/controllers/discourse_rsc/public_packets_controller
     app/jobs/regular/discourse_rsc_notify
     app/jobs/regular/discourse_rsc_provider_poll
+    app/jobs/regular/discourse_rsc_dividend_calendar
+    app/jobs/scheduled/discourse_rsc_sync_dividends
     app/jobs/regular/discourse_rsc_manual_sync
     app/jobs/scheduled/discourse_rsc_sync_data
     app/jobs/scheduled/discourse_rsc_forecast_translate

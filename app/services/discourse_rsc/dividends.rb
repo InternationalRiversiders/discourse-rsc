@@ -37,7 +37,8 @@ module DiscourseRsc
         item = Dividend.find_or_initialize_by(instrument_id: instrument.id, ex_date: day)
         raise Error.new('dividend_locked') if item.persisted? && !%w[draft canceled].include?(item.status)
         item.assign_attributes(effective_at: effective, per_share_units: units, source_url: source_url,
-          reason: reason.strip, created_by_id: actor.id, reviewed_by_id: nil, status: 'draft')
+          reason: reason.strip, created_by_id: actor.id, reviewed_by_id: nil, status: 'draft',
+          source: 'manual', source_checked_at: nil, source_issue: nil)
         item.save!
         Audit.create!(actor_user_id: actor.id, action: 'dividend_draft', details: {dividend_id: item.id}, created_at: Time.current)
         view(item)
@@ -71,6 +72,7 @@ module DiscourseRsc
     def self.apply_due!(instrument)
       due(instrument).lock.each do |item|
         raise Error.new('dividend_ineligible') unless eligible?(instrument)
+        raise Error.new('dividend_pending', status: 409) unless DividendCalendar.confirmed?(item)
         source = Time.iso8601(instrument.quote.fetch('source_time'))
         raise Error.new('dividend_pending', status: 409) if source < item.effective_at
         Order.where(instrument_id: instrument.id, status: 'pending').order(:id).each do |order|
@@ -107,7 +109,8 @@ module DiscourseRsc
       {id: item.id, instrument_id: item.instrument_id, symbol: item.instrument.symbol, ex_date: item.ex_date,
         effective_at: item.effective_at, amount: Amount.format(item.per_share_units), currency: item.currency,
         status: item.status, source_url: item.source_url, reason: item.reason, version: item.lock_version,
-        applied_at: item.applied_at}
+        applied_at: item.applied_at, source: item.source, source_checked_at: item.source_checked_at,
+        source_issue: item.source_issue}
     end
 
     def self.history(user_id)
