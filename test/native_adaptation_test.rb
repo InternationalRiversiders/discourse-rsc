@@ -60,6 +60,7 @@ class NativeAdaptationTest < NativeBusinessTest
 
   def test_stock_minimum_close_only_and_daily_turnover_limits
     fund;stock=instrument;stock.update!(minimum_units:R::Amount.parse("0.001"),step_units:R::Amount.parse("0.001"))
+    assert_nil R::MarketListing.rows([stock]).first[:minimum_notional]
     assert_equal "filled", order(stock,quantity:"0.001").status
     stock.update!(name:"Example 3x leveraged ETF",asset_type:"etf")
     assert_code("market_opening_disabled") { order(stock) }

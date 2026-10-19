@@ -57,8 +57,8 @@ export function notionalForQuantity(instrument, quantity) {
   return price && units !== null ? decimal(price * units / U) : null;
 }
 
-// Stock-like products require at least 1 RSC notional; FX uses the same useful
-// initial size instead of defaulting to a near-zero 0.01 currency-unit order.
+// Stock-like products and FX start around 1 RSC for a useful initial size.
+// This is only a draft suggestion; smaller orders can satisfy the quantity step.
 export function openingQuantity(instrument) {
   const price = atomic(instrument?.quote?.price), step = atomic(instrument?.step);
   const minimum = atomic(instrument?.minimum);
