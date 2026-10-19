@@ -62,6 +62,49 @@ class ForecastTest
     assert_equal 'forecast_liquidity', assert_raises(R::Error) { R::ForecastExchange.fill({ 'asks' => [] }, 'buy', R::Amount.parse('1')) }.code
   end
 
+  def test_buy_and_sell_beyond_former_amount_and_share_caps
+    R::Wallet.issue(actor: @admin, recipient: @alice, amount: '1000', reason: 'isolated uncapped trade test', request_id: SecureRandom.uuid)
+    @asks = [{ 'price' => '0.005', 'size' => '1000000' }]
+    @bids = [{ 'price' => '0.004', 'size' => '1000000' }]
+    purchase = quote('buy', '600')
+    assert_equal '120000', purchase[:shares]
+    execute(purchase)
+    assert_equal '500', R::Account.wallet(@alice.id).balance
+    assert_equal R::Amount.parse('120000'), R::ForecastPosition.first.shares_units
+    sale = quote('sell', '120000')
+    assert_equal '480', sale[:cash]
+    execute(sale)
+    assert_equal 0, R::ForecastPosition.first.shares_units
+    assert_equal '980', R::Account.wallet(@alice.id).balance
+    assert_equal 0, R::Entry.sum(:units)
+    assert_equal 0, R::Account.where(kind: 'escrow').sum(:balance_units)
+  end
+
+  def test_small_buy_budgets_are_allowed_and_invalid_amounts_rejected
+    %w[0.1 0.000001].each do |amount|
+      q = quote('buy', amount)
+      assert_equal amount, q[:cash]
+      execute(q)
+    end
+    %w[0 -1 0.0000001 NaN].each do |amount|
+      assert_equal 'invalid_amount', assert_raises(R::Error) { quote('buy', amount) }.code
+    end
+    assert_equal 2, R::ForecastTrade.count
+    assert_equal 0, R::Entry.sum(:units)
+  end
+
+  def test_uncapped_order_still_requires_balance_depth_and_owned_shares
+    @asks = [{ 'price' => '0.5', 'size' => '1000000' }]
+    @bids = [{ 'price' => '0.4', 'size' => '1000000' }]
+    assert_equal 'insufficient_balance', assert_raises(R::Error) { quote('buy', '501') }.code
+    assert_equal 'forecast_shares', assert_raises(R::Error) { quote('sell', '3000') }.code
+    @asks = [{ 'price' => '0.5', 'size' => '1' }]
+    assert_equal 'forecast_liquidity', assert_raises(R::Error) { quote('buy', '2') }.code
+    assert_equal '100', R::Account.wallet(@alice.id).balance
+    assert_equal 0, R::ForecastQuote.count
+    assert_equal 0, R::ForecastTrade.count
+  end
+
   def forecast_book_fixture(age: 0, asset: '123', timestamp: nil)
     { 'market' => @market.condition_id, 'asset_id' => asset,
       'timestamp' => timestamp || ((Time.current.to_f - age) * 1000).to_i.to_s,

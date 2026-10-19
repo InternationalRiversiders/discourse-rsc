@@ -3,9 +3,6 @@ module DiscourseRsc
   module ForecastExchange
     UNIT = Amount::UNIT
     LOT = UNIT / 1_000_000
-    MAX_ORDER = 500 * UNIT
-    MAX_USER_SHARES = 2_000 * UNIT
-    MAX_MARKET_SHARES = 20_000 * UNIT
 
     def self.enabled!
       raise Error.new('forecast_disabled', status: 404) unless SiteSetting.rsc_forecast_enabled && SiteSetting.rsc_native_trial_enabled
@@ -49,7 +46,6 @@ module DiscourseRsc
       Safety.ensure_writable!
       raise Error.new('invalid_amount') unless %w[buy sell].include?(side) && [0, 1].include?(outcome)
       units = Amount.positive(amount, decimals: 6)
-      raise Error.new('forecast_limit', status: 409) if (side == 'buy' && (units < UNIT || units > MAX_ORDER)) || (side == 'sell' && units > MAX_USER_SHARES)
       market = ForecastMarket.find(market_id)
       ForecastProvider.refresh(market)
       open!(market)
@@ -102,9 +98,6 @@ module DiscourseRsc
         bank = Account.internal('system:forecast', kind: 'system')
         pnl = 0
         if quote.side == 'buy'
-          user_shares = ForecastPosition.where(market_id: market.id, user_id: actor.id, state: 'open').sum(:shares_units).to_i
-          all_shares = ForecastPosition.where(market_id: market.id, state: 'open').sum(:shares_units).to_i
-          raise Error.new('forecast_limit', status: 409) if user_shares + shares > MAX_USER_SHARES || all_shares + shares > MAX_MARKET_SHARES
           postings = { wallet.id => -cash, escrow.id => cash }
           position.update!(shares_units: position.shares_units.to_i + shares, cost_units: position.cost_units.to_i + cash, state: 'open')
         else

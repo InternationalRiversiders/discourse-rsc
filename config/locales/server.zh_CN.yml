@@ -92,7 +92,6 @@ zh_CN:
       forecast_unavailable: "暂时无法取得可靠的市场数据，请稍后再试。"
       forecast_stale: "上游盘口尚未更新，自动刷新后仍未取得有效报价。本次未成交，请稍后重新获取报价。"
       forecast_closed: "该问题已停止交易或正在等待结果确认。"
-      forecast_limit: "超过交易限额：每次买入 1–500 RSC，每人每题最多 2,000 份；市场总份额上限 20,000。"
       forecast_shares: "可卖出的份额不足。"
       forecast_liquidity: "有效盘口不足以完成这笔交易，请减小数量或稍后再试。"
       forecast_quote_expired: "确认报价已过期或已使用，请重新获取。"

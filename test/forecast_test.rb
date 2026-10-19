@@ -212,9 +212,7 @@ class ForecastTest < Minitest::Test
     assert_equal 'awaiting',@market.reload.state
     assert_nil @market.confirmed_at
   end
-  def test_limits_stale_quotes_and_disabled_feature
-    assert_equal 'forecast_limit',assert_raises(R::Error) { quote('buy','501') }.code
-    assert_equal 'forecast_limit',assert_raises(R::Error) { quote('buy','0.1') }.code
+  def test_holdings_stale_quotes_and_disabled_feature
     assert_equal 'forecast_shares',assert_raises(R::Error) { quote('sell','1') }.code
     q=quote
     @market.update!(synced_at:2.minutes.ago)

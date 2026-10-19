@@ -5,7 +5,6 @@ const knownCodes = new Set([
   "forecast_quote_expired",
   "forecast_closed",
   "forecast_unavailable",
-  "forecast_limit",
   "forecast_shares",
   "forecast_disabled",
   "forecast_not_eligible",

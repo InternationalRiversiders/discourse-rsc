@@ -92,7 +92,6 @@ en:
       forecast_unavailable: "Reliable market data is temporarily unavailable."
       forecast_stale: "The upstream order book is still stale after an automatic refresh. No trade was placed. Please request a quote later."
       forecast_closed: "This market is closed or awaiting resolution."
-      forecast_limit: "Limit exceeded: buys 1–500 RSC, 2,000 shares per member per market, 20,000 per market."
       forecast_shares: "Insufficient shares to sell."
       forecast_liquidity: "Insufficient order book depth. Reduce the amount or try later."
       forecast_quote_expired: "This quote has expired or was used. Request a new quote."
