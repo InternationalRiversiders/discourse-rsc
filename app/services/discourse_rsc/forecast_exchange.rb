@@ -28,7 +28,7 @@ module DiscourseRsc
       levels.select! { |price, size| price > 0 && price < UNIT && size > 0 }
       levels.sort_by!(&:first)
       if side == 'buy' && levels.first && !levels.first[0].between?(UNIT / 50, UNIT * 98 / 100)
-        raise Error.new('forecast_liquidity', status: 409)
+        raise Error.new('forecast_probability_range', status: 409)
       end
       levels.reverse! if side == 'sell'
       left = amount; shares = 0; cash = 0

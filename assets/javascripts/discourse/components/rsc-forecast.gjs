@@ -5,7 +5,7 @@ import { on } from "@ember/modifier";
 import { action } from "@ember/object";
 import { LinkTo } from "@ember/routing";
 import { ajax } from "discourse/lib/ajax";
-import { extractError } from "discourse/lib/ajax-error";
+import { forecastErrorKey } from "../lib/rsc-forecast-error";
 import { eq, gt } from "discourse/truth-helpers";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import { i18n } from "discourse-i18n";
@@ -146,7 +146,7 @@ export default class RscForecast extends Component {
     try {
       const data = await ajax("/rsc/forecast/catalog.json", { data: {q: this.catalogQuery, category: this.catalogCategory, order: this.catalogOrder, event_id: this.catalogEvent, page} });
       if (!this.isDestroying && version === this.catalogVersion) { this.catalog = data; }
-    } catch (error) { if (!this.isDestroying && version === this.catalogVersion) { this.error = extractError(error); } }
+    } catch (error) { if (!this.isDestroying && version === this.catalogVersion) { this.error = ft(forecastErrorKey(error)); } }
     finally { if (!this.isDestroying && version === this.catalogVersion) { this.catalogLoading = false; } }
   }
 
@@ -172,7 +172,7 @@ export default class RscForecast extends Component {
     try {
       const detail = await ajax(`/rsc/forecast/catalog/${encodeURIComponent(externalId)}.json`);
       if (!this.isDestroying) { this.detail = detail; this.section = "popular"; this.requestReason = ""; this.showOriginal = false; this.clearQuote(); }
-    } catch (error) { if (!this.isDestroying) { this.error = extractError(error); } }
+    } catch (error) { if (!this.isDestroying) { this.error = ft(forecastErrorKey(error)); } }
     finally { if (!this.isDestroying) { this.busy = false; } }
   }
   @action
@@ -184,7 +184,7 @@ export default class RscForecast extends Component {
     try {
       const result = await ajax("/rsc/forecast/requests.json", {type: "POST", data: {external_id: this.detail.external_id, reason: this.requestReason, request_id: crypto.randomUUID()}});
       if (!this.isDestroying) { this.detail = {...this.detail, request_status: result.status, market_id: result.market_id}; this.notice = ft("request_sent"); }
-    } catch (error) { if (!this.isDestroying) { this.error = extractError(error); } }
+    } catch (error) { if (!this.isDestroying) { this.error = ft(forecastErrorKey(error)); } }
     finally { if (!this.isDestroying) { this.busy = false; } }
   }
   async loadRequests() {
@@ -192,7 +192,7 @@ export default class RscForecast extends Component {
     try {
       const data = await ajax("/rsc/forecast/requests.json", {data: {admin: this.section === "review"}});
       if (!this.isDestroying) { this.requestData = data; }
-    } catch (error) { if (!this.isDestroying) { this.error = extractError(error); } }
+    } catch (error) { if (!this.isDestroying) { this.error = ft(forecastErrorKey(error)); } }
     finally { if (!this.isDestroying) { this.busy = false; } }
   }
   @action
@@ -205,7 +205,7 @@ export default class RscForecast extends Component {
       const result = await ajax("/rsc/forecast/auto-review-settings.json", {type: "POST", data: {enabled}});
       if (!this.isDestroying) { this.requestData = {...this.requestData, ...result}; }
     } catch (error) {
-      if (!this.isDestroying) { event.target.checked = !!this.requestData.auto_review_enabled; this.error = extractError(error); }
+      if (!this.isDestroying) { event.target.checked = !!this.requestData.auto_review_enabled; this.error = ft(forecastErrorKey(error)); }
     } finally { if (!this.isDestroying) { this.busy = false; } }
   }
   @action
@@ -215,7 +215,7 @@ export default class RscForecast extends Component {
     try {
       await ajax("/rsc/forecast/requests/review.json", {type: "POST", data: {external_id: id, decision, reason: this.reviewReasons[id] || "", request_id: crypto.randomUUID()}});
       if (!this.isDestroying) { await this.loadRequests(); await this.reload(); this.notice = ft("review_saved"); }
-    } catch (error) { if (!this.isDestroying) { this.error = extractError(error); } }
+    } catch (error) { if (!this.isDestroying) { this.error = ft(forecastErrorKey(error)); } }
     finally { if (!this.isDestroying) { this.busy = false; } }
   }
 
@@ -245,7 +245,7 @@ export default class RscForecast extends Component {
       const data = await ajax(`/rsc/forecast/markets/${this.detail.id}/history.json`, { data: { outcome: this.outcome, interval: this.interval } });
       if (!this.isDestroying && version === this.historyVersion) { this.history = data.points; }
     } catch (error) {
-      if (!this.isDestroying && version === this.historyVersion) { this.chartError = extractError(error); }
+      if (!this.isDestroying && version === this.historyVersion) { this.chartError = ft(forecastErrorKey(error)); }
     } finally {
       if (!this.isDestroying && version === this.historyVersion) { this.chartLoading = false; }
     }
@@ -264,7 +264,7 @@ export default class RscForecast extends Component {
     if (this.busy) { return; }
     this.busy = true; this.error = "";
     try { await this.reload(); if (this.section === "browse") { await this.loadCatalog(this.catalog.page); } }
-    catch (error) { if (!this.isDestroying) { this.error = extractError(error); } }
+    catch (error) { if (!this.isDestroying) { this.error = ft(forecastErrorKey(error)); } }
     finally { if (!this.isDestroying) { this.busy = false; } }
   }
 
@@ -279,7 +279,7 @@ export default class RscForecast extends Component {
       this.quote = quote; this.requestId = `forecast-${quote.token}`;
       const tick = () => { this.seconds = Math.max(0, Math.floor((new Date(quote.expires_at).getTime() - Date.now()) / 1000)); if (!this.seconds) { clearInterval(this.timer); } };
       tick(); this.timer = setInterval(tick, 1000);
-    } catch (error) { if (!this.isDestroying) { this.error = extractError(error); } }
+    } catch (error) { if (!this.isDestroying) { this.error = ft(forecastErrorKey(error)); } }
     finally { if (!this.isDestroying) { this.busy = false; } }
   }
 
@@ -292,7 +292,7 @@ export default class RscForecast extends Component {
       if (this.isDestroying) { return; }
       this.clearQuote(); this.notice = ft("success");
       await this.reload();
-    } catch (error) { if (!this.isDestroying) { this.error = extractError(error); } }
+    } catch (error) { if (!this.isDestroying) { this.error = ft(forecastErrorKey(error)); } }
     finally { if (!this.isDestroying) { this.busy = false; } }
   }
 

@@ -108,11 +108,19 @@ module DiscourseRsc
 
     def self.book(market, outcome)
       token = market.token_ids.fetch(outcome)
-      book = get(CLOB, '/book', token_id: token)
-      raise Error.new('forecast_unavailable', status: 503) unless book.is_a?(Hash) && book['asset_id'] == token && book['market'] == market.condition_id
-      timestamp = decimal(book['timestamp']) / 1000
-      raise Error.new('forecast_stale', status: 409) unless (Time.current.to_f - timestamp).between?(-10, 30)
-      book
+      # Only retry a stale read, never a trade. The shared provider limiter still
+      # applies, and a second stale response must not become a tradable quote.
+      2.times do |attempt|
+        book = get(CLOB, '/book', token_id: token)
+        raise Error.new('forecast_unavailable', status: 503) unless book.is_a?(Hash) && book['asset_id'] == token && book['market'] == market.condition_id
+        timestamp = decimal(book['timestamp']) / 1000
+        age = Time.current.to_f - timestamp
+        return book if age.between?(-10, 30)
+        next if attempt.zero? && age > 30
+        raise Error.new('forecast_stale', status: 409)
+      end
+    rescue ArgumentError, TypeError
+      raise Error.new('forecast_unavailable', status: 503)
     end
 
     def self.history(market, outcome, interval)
