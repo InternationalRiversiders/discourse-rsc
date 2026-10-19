@@ -6,7 +6,9 @@ class ForecastTest
     %w[0.005 0.995].each do |price|
       @asks = [{ 'price' => price, 'size' => '1000000' }]
       %w[1 10 351].each do |amount|
-        assert_equal 'forecast_probability_range', assert_raises(R::Error) { quote('buy', amount) }.code
+        error = assert_raises(R::Error) { quote('buy', amount) }
+        assert_equal 'forecast_probability_range', error.code
+        assert_equal 422, error.status
       end
     end
     assert_equal '100', R::Account.wallet(@alice.id).balance
