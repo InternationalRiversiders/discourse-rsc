@@ -95,7 +95,6 @@ en:
       forecast_limit: "Limit exceeded: buys 1–500 RSC, 2,000 shares per member per market, 20,000 per market."
       forecast_shares: "Insufficient shares to sell."
       forecast_liquidity: "Insufficient order book depth. Reduce the amount or try later."
-      forecast_probability_range: "The buy price is outside the allowed 2%–98% range. Reducing the amount will not remove this restriction. Existing shares can still be sold against a valid order book."
       forecast_quote_expired: "This quote has expired or was used. Request a new quote."
       reset_below_retained: "The target is below retained position equity and pending prediction stakes."
       instrument_inactive: "This instrument is inactive. Review and enable it in instrument management first."

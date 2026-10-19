@@ -27,16 +27,9 @@ module DiscourseRsc
       end
       levels.select! { |price, size| price > 0 && price < UNIT && size > 0 }
       levels.sort_by!(&:first)
-      if side == 'buy' && levels.first && !levels.first[0].between?(UNIT / 50, UNIT * 98 / 100)
-        # A definite quote rejection, also understood by older App clients that
-        # do not yet recognize this more specific error code.
-        raise Error.new('forecast_probability_range', status: 422)
-      end
       levels.reverse! if side == 'sell'
       left = amount; shares = 0; cash = 0
       levels.each do |price, size|
-        # Ignore negligible tails. Buying outside these bounds remains unavailable.
-        next if side == 'buy' && !price.between?(UNIT / 50, UNIT * 98 / 100)
         quantity = side == 'buy' ? [size, left * UNIT / price / LOT * LOT].min : [size, left].min
         next unless quantity.positive?
         value = side == 'buy' ? (quantity * price + UNIT - 1) / UNIT : quantity * price / UNIT

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../assets/javascripts/discourse/lib/rsc-forecast-error.js", import.meta.url), "utf8");
 const { forecastErrorKey } = await import(`data:text/javascript,${encodeURIComponent(source)}`);
-for (const code of ["forecast_probability_range", "forecast_stale", "forecast_liquidity", "forecast_quote_expired"]) {
+for (const code of ["forecast_stale", "forecast_liquidity", "forecast_quote_expired"]) {
   const response = { responseJSON: { error_code: code, errors: ["English server error"] }, status: 409 };
   assert.equal(forecastErrorKey(response), `error_${code}`);
   assert.equal(forecastErrorKey({ jqXHR: response }), `error_${code}`);

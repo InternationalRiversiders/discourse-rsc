@@ -2,18 +2,48 @@
 require_relative 'forecast_test'
 
 class ForecastTest
-  def test_forecast_error_extreme_buy_price_is_not_a_depth_error
+  def test_extreme_buy_prices_quote_execute_and_replay
     %w[0.005 0.995].each do |price|
       @asks = [{ 'price' => price, 'size' => '1000000' }]
+      q = quote('buy', '1')
+      assert_operator R::Amount.parse(q[:shares]), :>, 0
+      assert_operator R::Amount.parse(q[:cash]), :<=, R::Amount.parse('1')
+      request_id = SecureRandom.uuid
+      result = execute(q, request_id)
+      assert result['trade_id']
+      assert execute(q, request_id)['replayed']
+    end
+    assert_equal 2, R::ForecastTrade.count
+    assert_equal 0, R::Entry.sum(:units)
+  end
+
+  def test_extreme_buy_prices_fill_large_budgets_and_mixed_levels
+    %w[0.005 0.995].each do |price|
+      book = { 'asks' => [{ 'price' => price, 'size' => '1000000' }] }
       %w[1 10 351].each do |amount|
-        error = assert_raises(R::Error) { quote('buy', amount) }
-        assert_equal 'forecast_probability_range', error.code
-        assert_equal 422, error.status
+        budget = R::Amount.parse(amount)
+        shares, cash = R::ForecastExchange.fill(book, 'buy', budget)
+        assert_operator shares, :>, 0
+        assert_operator cash, :<=, budget
+        assert_operator budget - cash, :<, R::ForecastExchange::LOT
       end
     end
-    assert_equal '100', R::Account.wallet(@alice.id).balance
-    assert_equal 0, R::ForecastQuote.count
-    assert_equal 0, R::ForecastTrade.count
+    book = { 'asks' => [{ 'price' => '0.995', 'size' => '100' }, { 'price' => '0.005', 'size' => '100' }] }
+    shares, cash = R::ForecastExchange.fill(book, 'buy', R::Amount.parse('10'))
+    assert_equal R::Amount.parse('109.547738'), shares
+    assert_operator cash, :<=, R::Amount.parse('10')
+    assert_operator R::Amount.parse('10') - cash, :<, R::ForecastExchange::LOT
+  end
+
+  def test_invalid_endpoint_prices_and_insufficient_depth_still_reject
+    %w[0 1].each do |price|
+      book = { 'asks' => [{ 'price' => price, 'size' => '1000000' }] }
+      error = assert_raises(R::Error) { R::ForecastExchange.fill(book, 'buy', R::Amount.parse('1')) }
+      assert_equal 'forecast_liquidity', error.code
+    end
+    book = { 'asks' => [{ 'price' => '0.995', 'size' => '1' }] }
+    error = assert_raises(R::Error) { R::ForecastExchange.fill(book, 'buy', R::Amount.parse('10')) }
+    assert_equal 'forecast_liquidity', error.code
   end
 
   def test_forecast_error_boundary_prices_and_extreme_sell_remain_allowed

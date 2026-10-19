@@ -18,7 +18,6 @@ en:
         stock_refunded: 'Order reservation refunded: %{amount} RSC'
         red_packet_claimed_by: claimed %{amount} RSC from your packet
       forecast_ui:
-        error_forecast_probability_range: "The buy price is outside the allowed 2%–98% range. Reducing the amount will not remove this restriction. Existing shares can still be sold against a valid order book."
         error_forecast_liquidity: "Insufficient order book depth. Reduce the amount or try later."
         error_forecast_stale: "The upstream order book is still stale after an automatic refresh. No trade was placed. Please request a quote later."
         error_forecast_quote_expired: "This quote has expired or was used. Request a new quote."
@@ -146,7 +145,7 @@ en:
         receive: "Receive"
         if_wins: "Payout if this outcome wins"
         confirm: "Confirm trade"
-        trade_hint: "RSC only. Buy 1–500 RSC per order, up to 2,000 shares per member per market. No trading fee. Probabilities are indicative; quotes follow available book depth. A winning share normally pays 1 RSC. Buy prices must be within 2%–98%; existing shares can still be sold against a valid order book."
+        trade_hint: "RSC only. Buy 1–500 RSC per order, up to 2,000 shares per member per market. No trading fee. Probabilities are indicative; quotes follow available book depth. A winning share normally pays 1 RSC."
         empty: "No matching popular markets yet."
         source_hint: "Popular questions are selected by upstream 24h volume. Prices come from Polymarket; RSC trades take place in this forum."
         success: "Trade completed. Balance and positions updated."
