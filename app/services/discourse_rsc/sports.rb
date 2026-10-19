@@ -28,16 +28,16 @@ module DiscourseRsc
         prediction = Prediction.lock.find_by(user_id: actor.id, sport_match_id: match.id)
         if prediction_id
           raise Error.new("prediction_not_found", status: 404) unless prediction&.id == prediction_id
-          raise Error.new("prediction_settled", status: 409) unless prediction.status == "pending"
-        elsif prediction
+          raise Error.new("prediction_settled", status: 409) unless %w[pending withdrawn].include?(prediction.status)
+        elsif prediction && prediction.status != "withdrawn"
           raise Error.new("prediction_exists", status: 409)
         end
         wallet = Account.wallet(actor.id)
         raise Error.new("wallet_frozen", status: 403) unless wallet.status == "active"
-        old_stake = prediction&.stake_units.to_i
+        old_stake = prediction&.status == "pending" ? prediction.stake_units.to_i : 0
         if prediction
-          revisions = prediction.revisions + [{ pick: prediction.pick, stake: Amount.format(old_stake), odds: prediction.odds, at: Time.current.iso8601 }]
-          prediction.update!(pick: pick, stake_units: units, odds: odds, revisions: revisions)
+          revisions = prediction.revisions + [{ pick: prediction.pick, stake: Amount.format(prediction.stake_units), odds: prediction.odds, status: prediction.status, at: Time.current.iso8601 }]
+          prediction.update!(pick: pick, stake_units: units, odds: odds, revisions: revisions, status: "pending", payout_units: 0, settled_at: nil)
         else
           prediction = Prediction.create!(user_id: actor.id, sport_match_id: match.id, pick: pick, stake_units: units, odds: odds)
         end
@@ -51,6 +51,26 @@ module DiscourseRsc
                         metadata: { prediction_id: prediction.id, match_id: match.id, pick: pick, odds: odds })
         end
         { prediction_id: prediction.id, stake: Amount.format(units), potential_payout: Amount.format(units * Amount.parse(odds) / Amount::UNIT) }
+      end
+    end
+
+    def self.cancel(actor:, prediction_id:, request_id:)
+      Access.ensure_member!(actor)
+      Commands.run(user_id: actor.id, action: "prediction_cancel", request_id: request_id, input: [prediction_id]) do
+        candidate = Prediction.find_by!(id: prediction_id, user_id: actor.id)
+        match = SportMatch.lock.find(candidate.sport_match_id)
+        prediction = Prediction.lock.find(candidate.id)
+        raise Error.new("match_locked", status: 409) unless match.status == "scheduled" && match.starts_at > Time.current
+        raise Error.new("prediction_settled", status: 409) unless prediction.status == "pending"
+        stake = prediction.stake_units.to_i
+        escrow = Account.internal("prediction:#{prediction.id}")
+        wallet = Account.wallet(actor.id)
+        Commands.move(user_id: actor.id, action: "prediction_refund", request_id: request_id,
+          postings: { escrow.id => -stake, wallet.id => stake }, settlement: true,
+          metadata: { prediction_id: prediction.id, match_id: match.id, reason: "withdrawn" })
+        prediction.update!(status: "withdrawn", payout_units: stake, settled_at: Time.current,
+          revisions: prediction.revisions + [{ action: "withdrawn", stake: Amount.format(stake), at: Time.current.iso8601 }])
+        { prediction_id: prediction.id, refunded: Amount.format(stake), status: "withdrawn" }
       end
     end
 

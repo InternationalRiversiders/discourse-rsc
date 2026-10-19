@@ -100,7 +100,7 @@ module DiscourseRsc
           match = SportMatch.lock.find(Integer(input.fetch("id")))
           result = input.fetch("result")
           raise Error.new("invalid_pick") unless %w[home away draw canceled].include?(result) && (result != "draw" || match.allow_draw)
-          raise Error.new("prediction_settled", status: 409) if match.predictions.where.not(status: "pending").exists?
+          raise Error.new("prediction_settled", status: 409) if match.predictions.where.not(status: %w[pending withdrawn]).exists?
           match.update!(status: result == "canceled" ? "canceled" : "finished", result: result == "canceled" ? nil : result, confirmed_at: Time.current, provider_data: match.provider_data.merge("manual_result" => true))
           { match_id: match.id }
         else

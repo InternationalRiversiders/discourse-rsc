@@ -60,7 +60,7 @@ class NativeAdaptationTest < NativeBusinessTest
 
   def test_stock_minimum_close_only_and_daily_turnover_limits
     fund;stock=instrument;stock.update!(minimum_units:R::Amount.parse("0.001"),step_units:R::Amount.parse("0.001"))
-    assert_code("order_notional_below_min") { order(stock,quantity:"0.001") }
+    assert_equal "filled", order(stock,quantity:"0.001").status
     stock.update!(name:"Example 3x leveraged ETF",asset_type:"etf")
     assert_code("market_opening_disabled") { order(stock) }
     stock.update!(name:"Example ordinary shares",asset_type:"stock")
@@ -79,7 +79,7 @@ class NativeAdaptationTest < NativeBusinessTest
   def test_packet_exemption_covers_amount_caps_only_while_effective
     fund(@alice,"10000")
     exemption=R::Exemption.create!(user_id:@alice.id,starts_at:1.day.from_now,expires_at:2.days.from_now,actor_user_id:@admin.id,reason:"Test scheduled exemption")
-    assert_code("packet_limit") { R::RedPackets.create(actor:@alice,mode:"fixed",count:4,amount:"100",request_id:SecureRandom.uuid) }
+    assert_code("daily_amount_limit") { R::RedPackets.create(actor:@alice,mode:"fixed",count:4,amount:"100",request_id:SecureRandom.uuid) }
     exemption.update!(starts_at:1.day.ago)
     created=R::RedPackets.create(actor:@alice,mode:"fixed",count:4,amount:"100",request_id:SecureRandom.uuid)
     assert_equal "400",created["total"]

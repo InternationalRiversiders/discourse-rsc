@@ -18,6 +18,14 @@ en:
         stock_refunded: 'Order reservation refunded: %{amount} RSC'
         red_packet_claimed_by: claimed %{amount} RSC from your packet
       forecast_ui:
+        error_forecast_request_recent: "This request was recently reviewed. Wait at least one hour before reapplying."
+        error_forecast_request_limit: "You may have at most 20 pending requests."
+        error_forecast_request_missing: "No pending requests remain. Refresh and try again."
+        error_forecast_request_changed: "The rules changed after submission. Reject the old request and request a new review."
+        error_forecast_ai_invalid: "AI review did not return a valid result. The request remains pending."
+        error_forecast_ai_stale: "Automatic review was disabled or the request or rules changed. Review again."
+        page: "Page"
+        records: "records"
         error_forecast_liquidity: "Insufficient order book depth. Reduce the amount or try later."
         error_forecast_stale: "The upstream order book is still stale after an automatic refresh. No trade was placed. Please request a quote later."
         error_forecast_quote_expired: "This quote has expired or was used. Request a new quote."
@@ -72,7 +80,7 @@ en:
         back_browse: "Back to list"
         apply: "Request listing"
         apply_hint: "RSC trading opens after the request is approved and its rules and order books are verified."
-        request_reason: "Why recommend this question?"
+        request_reason: "Recommendation reason (optional)"
         request_sent: "Request submitted. Track it in My requests."
         review_reason: "Review note (required to reject)"
         approve: "Approve"
@@ -239,6 +247,7 @@ en:
         positions: My positions
         margin: Margin
         pnl: Unrealized P&L
+        cancel_and_close: "Cancel opening order and close position"
         close_position: Close position
         take_profit: Take profit
         stop_loss: Stop loss
@@ -305,6 +314,9 @@ en:
         red_packet_claim: Packet claimed
         red_packet_refund: Packet refund
         daily_reward: Daily reward
+        withdrawn: "Withdrawn and refunded"
+        cancel_prediction: "Withdraw prediction and refund stake"
+        prediction_refund: "Prediction withdrawal refund"
         prediction_stake: Prediction stake
         prediction_settlement: Prediction settlement
         stock_reserve: Order reservation

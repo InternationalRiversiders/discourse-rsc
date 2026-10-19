@@ -5,7 +5,7 @@ module DiscourseRsc
   class Exchange
     U = Amount::UNIT
 
-    def self.submit(actor:, instrument_id:, side:, quantity:, leverage:, request_id:, high_risk: false, take_profit: nil, stop_loss: nil)
+    def self.submit(actor:, instrument_id:, side:, quantity:, leverage:, request_id:, high_risk: false, take_profit: nil, stop_loss: nil, cancel_pending: false)
       Access.ensure_member!(actor)
       raise Error.new("invalid_order") unless %w[long short close].include?(side) && leverage.is_a?(Integer) && leverage.between?(1, 100)
       units = Amount.positive(quantity)
@@ -15,8 +15,9 @@ module DiscourseRsc
       unless Command.exists?(key: "stock_submit:#{actor.id}:#{request_id}")
         MarketData.refresh_if_needed(instrument_id, purpose: :trade)
       end
-      Commands.run(user_id: actor.id, action: "stock_submit", request_id: request_id,
-                   input: [instrument_id, side, units.to_s, leverage, high_risk, tp&.to_s, sl&.to_s]) do
+      input = [instrument_id, side, units.to_s, leverage, high_risk, tp&.to_s, sl&.to_s]
+      input << { cancel_pending: true } if cancel_pending
+      Commands.run(user_id: actor.id, action: "stock_submit", request_id: request_id, input: input) do
         Commands.lock("rsc-exchange")
         instrument = Instrument.lock.find(instrument_id)
         Risk.lock(actor.id)
@@ -26,14 +27,17 @@ module DiscourseRsc
         Risk.daily!(actor.id, instrument, side: side)
         price = price!(instrument, trading: true)
         raise Error.new("invalid_quantity") unless units >= instrument.minimum_units && (units % instrument.step_units.to_i).zero?
-        raise Error.new("order_pending", status: 409) if Order.exists?(user_id: actor.id, instrument_id: instrument.id, status: "pending")
-        raise Error.new("too_many_orders") if Order.where(user_id: actor.id, status: "pending").count >= 10
+        pending = Order.where(user_id: actor.id, instrument_id: instrument.id, status: "pending").order(:id).lock.to_a
+        replacing = side == "close" && cancel_pending && pending.all? { |order| order.side != "close" }
+        raise Error.new("order_pending", status: 409) if pending.any? && !replacing
+        raise Error.new("too_many_orders") if side != "close" && Order.where(user_id: actor.id, status: "pending").where.not(side: "close").count >= 10
         position = Position.find_by(user_id: actor.id, instrument_id: instrument.id)
         if side == "close"
           raise Error.new("position_unavailable") unless position && position.quantity_units >= units
           hold_until = Risk.hold_until(position)
           raise Error.new("position_locked", status: 409) if hold_until && hold_until > Time.current
           leverage = position.leverage
+          pending.each { |order| refund_locked(order, "canceled") } if replacing
         elsif position && (position.side != side || position.leverage != leverage)
           raise Error.new("position_conflict", status: 409)
         end

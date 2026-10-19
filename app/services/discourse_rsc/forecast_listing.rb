@@ -10,7 +10,8 @@ module DiscourseRsc
       Access.ensure_member!(actor)
       Safety.ensure_writable!
       external_id = ForecastCatalog.id(external_id)
-      raise Error.new('reason_required') unless reason.is_a?(String) && reason.strip.length.between?(1, 500)
+      reason = "" if reason.nil?
+      raise Error.new('reason_required') unless reason.is_a?(String) && reason.strip.length <= 500
       previous = replay(actor:actor,action:'forecast_request',request_id:request_id,input:[external_id,reason.strip])
       return previous if previous
       raw = ForecastCatalog.raw(external_id)
@@ -21,8 +22,8 @@ module DiscourseRsc
         Commands.lock("forecast-requests-user:#{actor.id}")
         row = ForecastRequest.find_or_initialize_by(user_id: actor.id, external_id: external_id)
         next({status:row.status,id:row.id}) if row.persisted? && row.status=='pending'
-        raise Error.new('forecast_request_recent') if row.persisted? && row.updated_at > 1.day.ago
-        raise Error.new('forecast_request_limit') if ForecastRequest.where(user_id:actor.id,status:'pending').count >= 5
+        raise Error.new('forecast_request_recent') if row.persisted? && row.updated_at > 1.hour.ago
+        raise Error.new('forecast_request_limit') if ForecastRequest.where(user_id:actor.id,status:'pending').count >= 20
         row.assign_attributes(question:raw['question'],terms_digest:ForecastProvider.parse(raw)[:terms_digest],reason:reason.strip,status:'pending',review_reason:'',reviewer_id:nil)
         row.save!
         {id:row.id,status:row.status}
@@ -39,7 +40,8 @@ module DiscourseRsc
       previous = replay(actor:actor,action:'forecast_request_review',request_id:request_id,input:[external_id,decision,reason])
       return previous if previous
       raise Error.new('forecast_request_missing') unless ForecastRequest.exists?(external_id:external_id,status:'pending')
-      # Check live contract and both order books before taking the transaction lock.
+      # Check the live contract and resolution before taking the transaction lock.
+      # Liquidity is checked when quoting a trade, not when approving content.
       raw = ForecastCatalog.raw(external_id) if decision=='approved'
       raw = ForecastAutoReview.source(external_id) if automation && decision=='rejected'
       attrs = ForecastProvider.parse(raw) if raw
@@ -47,13 +49,11 @@ module DiscourseRsc
         if ForecastRequest.where(external_id:external_id,status:'pending').where.not(terms_digest:attrs[:terms_digest]).exists?
           raise Error.new('forecast_request_changed')
         end
-        raise Error.new('forecast_not_eligible') unless attrs[:ends_at] > 1.hour.from_now
         candidate = ForecastMarket.new(attrs)
         row = ForecastProvider.resolution(candidate)
         if row && (row['extended_review']==true || !%w[posed unresolved open].include?(row['status']))
           raise Error.new('forecast_closed')
         end
-        2.times { |outcome| ForecastExchange.fill(ForecastProvider.book(candidate,outcome),'buy',ForecastExchange::UNIT) }
       end
       Commands.run(user_id:actor.id,action:'forecast_request_review',request_id:request_id,input:[external_id,decision,reason]) do
         Commands.lock("forecast-listing:#{external_id}")

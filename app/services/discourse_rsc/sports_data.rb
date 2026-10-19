@@ -134,7 +134,7 @@ module DiscourseRsc
         match = SportMatch.lock.find_or_initialize_by(external_id: external)
         return if match.provider_data["manual_result"]
         changed = match.status != state || match.result != result
-        if match.persisted? && changed && match.predictions.where.not(status: "pending").exists?
+        if match.persisted? && changed && match.predictions.where.not(status: %w[pending withdrawn]).exists?
           unless match.provider_data["correction"] == { "status" => state, "result" => result }
             Audit.create!(action: "sports_result_correction", details: { match_id: match.id, old: match.result, proposed: result, status: state }, created_at: Time.current)
           end

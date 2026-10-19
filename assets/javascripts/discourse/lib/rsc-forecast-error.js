@@ -1,5 +1,11 @@
 // Translate structured codes using the browser locale, not the server's locale.
 const knownCodes = new Set([
+  "forecast_request_recent",
+  "forecast_request_limit",
+  "forecast_request_missing",
+  "forecast_request_changed",
+  "forecast_ai_invalid",
+  "forecast_ai_stale",
   "forecast_liquidity",
   "forecast_stale",
   "forecast_quote_expired",

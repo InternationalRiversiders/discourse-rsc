@@ -208,7 +208,7 @@ module DiscourseRsc
         manual = attempts >= 3 || %w[forecast_request_changed forecast_ai_stale forecast_request_missing forecast_closed forecast_not_eligible forecast_liquidity].include?(code)
         record(request, data.merge('status' => manual ? 'manual' : 'retry', 'error' => code,
           'retry_at' => 10.minutes.from_now.to_i,
-          'reason' => manual ? '未能自动完成审核，请管理员核对规则和盘口。' : '自动审核暂未完成，将稍后重试；管理员也可直接处理。'))
+          'reason' => manual ? '未能自动完成审核，请管理员核对规则与结果状态。' : '自动审核暂未完成，将稍后重试；管理员也可直接处理。'))
         Rails.logger.warn("RSC forecast auto review request=#{request.id}: #{code}")
       end
     end

@@ -5,7 +5,7 @@ class ForecastTest
     @raw.merge('id'=>'901','conditionId'=>'0x'+'9'*64,'slug'=>'catalog-demo','question'=>'Will the new space mission launch?',
       'events'=>[{'id'=>'event-901','title'=>'Space mission'}],'liquidity'=>'900','volume24hr'=>'15','createdAt'=>Time.current.iso8601)
   end
-  def catalog_provider(raw=catalog_raw, empty_book:false)
+  def catalog_provider(raw=catalog_raw, empty_book:false, resolution_error:nil)
     original=R::ForecastProvider.method(:get)
     R::ForecastProvider.define_singleton_method(:get) do |host,path,query={}|
       case host
@@ -18,6 +18,7 @@ class ForecastTest
           raw
         end
       when R::ForecastProvider::DATA
+        raise resolution_error if resolution_error
         {'data'=>[]}
       when R::ForecastProvider::CLOB
         {'market'=>raw['conditionId'],'asset_id'=>query[:token_id],'timestamp'=>(Time.current.to_f*1000).to_i.to_s,
@@ -185,17 +186,17 @@ class ForecastTest
       key&.destroy!
     end
   end
-  def test_listing_requires_live_depth_on_both_sides
+  def test_listing_does_not_require_immediately_tradeable_books
     catalog_provider { request_catalog }
     catalog_provider(catalog_raw,empty_book:true) do
-      assert_equal 'forecast_liquidity',assert_raises(R::Error){review_catalog}.code
-      assert_nil R::ForecastMarket.find_by(external_id:'901')
-      assert_equal 'pending',R::ForecastRequest.first.status
+      review_catalog
+      assert R::ForecastMarket.find_by(external_id:'901')
+      assert_equal 'approved',R::ForecastRequest.first.status
     end
   end
 
   def test_pending_request_cap_and_notification_deduplication_under_concurrency
-    5.times { |i| R::ForecastRequest.create!(external_id:(950+i).to_s,user_id:@alice.id,question:'Test',terms_digest:'test') }
+    20.times { |i| R::ForecastRequest.create!(external_id:(950+i).to_s,user_id:@alice.id,question:'Test',terms_digest:'test') }
     catalog_provider do
       assert_equal 'forecast_request_limit',assert_raises(R::Error){request_catalog}.code
       R::ForecastRequest.delete_all

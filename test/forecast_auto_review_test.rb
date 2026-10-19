@@ -143,14 +143,13 @@ class ForecastTest
     end
   end
 
-  def test_auto_approval_still_requires_live_depth
+  def test_auto_approval_does_not_depend_on_current_book_depth
     SiteSetting.rsc_forecast_auto_review_enabled = true
     catalog_provider { request_catalog }
     catalog_provider(catalog_raw,empty_book:true) do
       auto_model { R::ForecastAutoReview.tick }
-      assert_equal 'pending', R::ForecastRequest.first.status
-      assert_equal 'manual', R::ForecastAutoReview.receipt(R::ForecastRequest.first)['status']
-      assert_nil R::ForecastMarket.find_by(external_id:'901')
+      assert_equal 'approved', R::ForecastRequest.first.status
+      assert R::ForecastMarket.find_by(external_id:'901')
     end
   end
 

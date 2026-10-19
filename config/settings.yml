@@ -37,11 +37,11 @@ plugins:
     type: group_list
     default: ""
   rsc_daily_outgoing_count:
-    default: 20
-    min: 1
+    default: 0
+    min: 0
     max: 10000
   rsc_daily_outgoing_amount:
-    default: "300"
+    default: "0"
   rsc_notifications_enabled:
     default: true
   rsc_native_trial_enabled:

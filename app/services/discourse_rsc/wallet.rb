@@ -49,21 +49,23 @@ module DiscourseRsc
 
     def self.enforce_daily_limit!(actor, units)
       return if limit_exempt?(actor)
+      count_limit = SiteSetting.rsc_daily_outgoing_count
+      maximum = Amount.parse(SiteSetting.rsc_daily_outgoing_amount)
+      return if count_limit.zero? && maximum.zero?
       now = Time.current.utc
       start = Time.utc(*(now + 8.hours).to_date.to_s.split("-").map(&:to_i)) - 8.hours
       journals = Journal.where(actor_user_id: actor.id, operation: %w[transfer post_tip red_packet_open])
                         .where(created_at: start...(start + 1.day))
       legacy = LegacyRecord.where(source_table: "ledger_entries").where("data ->> 'discourse_user_id' = ? AND data ->> 'direction' = 'debit'", actor.id.to_s)
         .where("data ->> 'type' IN ('transfer', 'post_tip', 'red_packet_fund')").pluck(:data).select { |row| (start...(start + 1.day)).cover?(Time.iso8601(row.fetch("created_at"))) }
-      if journals.count + legacy.size >= SiteSetting.rsc_daily_outgoing_count
+      if count_limit.positive? && journals.count + legacy.size >= count_limit
         raise Error.new("daily_count_limit", status: 429)
       end
       # The caller holds the sender account lock, so concurrent requests cannot
       # both pass a limit check against the same pre-transfer state.
       spent = Entry.joins(:journal).where(journal_id: journals.select(:id)).where("units < 0").sum(:units).abs.to_i
       spent += legacy.sum { |row| Amount.parse(row.fetch("amount_rsc")) }
-      maximum = Amount.positive(SiteSetting.rsc_daily_outgoing_amount)
-      raise Error.new("daily_amount_limit", status: 429) if spent + units > maximum
+      raise Error.new("daily_amount_limit", status: 429) if maximum.positive? && spent + units > maximum
     end
   end
 end

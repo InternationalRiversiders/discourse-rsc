@@ -41,6 +41,8 @@ export default class RscForecast extends Component {
   @tracked requestReason = "";
   @tracked previewReturnSection = "browse";
   @tracked reviewReasons = {};
+  @tracked portfolioLoading = false;
+  portfolioVersion = 0;
   @tracked catalogLoading = false;
   catalogVersion = 0;
   @tracked outcome = 0;
@@ -75,6 +77,7 @@ export default class RscForecast extends Component {
     super.willDestroy(...arguments);
     this.historyVersion++;
     this.catalogVersion++;
+    this.portfolioVersion++;
     clearInterval(this.timer);
   }
 
@@ -98,8 +101,35 @@ export default class RscForecast extends Component {
   get previousDisabled() { return this.catalogLoading || this.catalog.page <= 1; }
   get nextDisabled() { return this.catalogLoading || this.catalog.page >= this.catalog.pages; }
   get reviewDisabled() { return this.busy || this.data.read_only; }
-  get requestDisabled() { return this.busy || this.data.read_only || this.detail?.request_status === "pending" || !this.requestReason.trim(); }
+  get requestDisabled() { return this.busy || this.data.read_only || this.detail?.request_status === "pending"; }
   get pendingRequests() { return (this.requestData.pending || []).map((r) => ({...r, reviewReason: this.reviewReasons[r.external_id] || ""})); }
+
+  get holdingsPage() { return this.data.holdings_pagination || {page: 1, pages: 1, total: this.data.holdings.length}; }
+  get tradesPage() { return this.data.trades_pagination || {page: 1, pages: 1, total: this.data.trades.length}; }
+
+  @action
+  pagePortfolio(kind, delta) {
+    return this.loadPortfolio(kind, (kind === "holdings" ? this.holdingsPage : this.tradesPage).page + delta);
+  }
+  @action
+  jumpPortfolio(kind, event) { return this.loadPortfolio(kind, Number(event.target.value)); }
+
+  async loadPortfolio(kind, page) {
+    if (this.portfolioLoading) { return; }
+    const version = ++this.portfolioVersion;
+    this.portfolioLoading = true; this.error = "";
+    try {
+      const result = await ajax("/rsc/forecast/portfolio.json", {data: {kind, page}});
+      if (!this.isDestroying && version === this.portfolioVersion) {
+        const {items, ...pagination} = result;
+        this.data = {...this.data, [kind]: items, [`${kind}_pagination`]: pagination};
+      }
+    } catch (error) {
+      if (!this.isDestroying && version === this.portfolioVersion) { this.error = ft(forecastErrorKey(error)); }
+    } finally {
+      if (!this.isDestroying && version === this.portfolioVersion) { this.portfolioLoading = false; }
+    }
+  }
 
   get choices() { return this.detail ? options(this.detail) : []; }
   get selectedLabel() { return this.detail ? outcomeLabel(this.detail.outcomes[this.outcome]) : ""; }
@@ -107,7 +137,7 @@ export default class RscForecast extends Component {
   get tradeDisabled() { return this.busy || this.data.read_only || this.detail?.state !== "open" || new Date(this.detail?.ends_at) <= new Date(); }
   get confirmationDisabled() { return this.tradeDisabled || this.seconds <= 0; }
   get currentHolding() {
-    return this.data.holdings.find((p) => p.market_id === this.detail?.id && p.outcome === this.outcome && p.state === "open");
+    return (this.detail?.holdings || this.data.holdings).find((p) => p.market_id === this.detail?.id && p.outcome === this.outcome && p.state === "open");
   }
 
   get points() {
@@ -348,11 +378,12 @@ export default class RscForecast extends Component {
             <div class="forecast-position-data"><strong>{{outcomeLabel position.label}}</strong><span>{{ft "shares"}} {{pretty position.shares 6}}</span><span>{{ft "cost"}} {{pretty position.cost}} RSC</span><span class={{tone position.realized}}>{{ft "realized"}} {{signed position.realized}} RSC</span></div>
           </article>
         {{else}}<p class="forecast-hint">{{ft "no_holdings"}}</p>{{/each}}
+        <div class="forecast-pagination"><button class="btn" type="button" disabled={{if this.portfolioLoading true (eq this.holdingsPage.page 1)}} {{on "click" (fn this.pagePortfolio "holdings" -1)}}>{{ft "previous"}}</button><label>{{ft "page"}} <input class="forecast-page-input" aria-label={{ft "page"}} type="number" min="1" max={{this.holdingsPage.pages}} value={{this.holdingsPage.page}} disabled={{this.portfolioLoading}} {{on "change" (fn this.jumpPortfolio "holdings")}} /> / {{this.holdingsPage.pages}}</label><span>{{this.holdingsPage.total}} {{ft "records"}}</span><button class="btn" type="button" disabled={{if this.portfolioLoading true (eq this.holdingsPage.page this.holdingsPage.pages)}} {{on "click" (fn this.pagePortfolio "holdings" 1)}}>{{ft "next"}}</button></div>
       {{else if (eq this.section "history")}}
         <div class="forecast-table-wrap"><table class="forecast-table"><thead><tr><th>{{ft "question"}}</th><th>{{ft "side"}}</th><th>{{ft "shares"}}</th><th>RSC</th><th>{{ft "realized"}}</th><th>{{ft "time"}}</th></tr></thead><tbody>
           {{#each this.data.trades as |trade|}}<tr><td><LinkTo @query={{hash section=null market_id=trade.market_id outcome=trade.outcome_index}} @route="rsc.forecast" {{on "click" (fn this.setSection "popular")}}>{{trade.question}}</LinkTo><br /><small>{{outcomeLabel trade.outcome}}</small></td><td>{{ft trade.side}}</td><td>{{pretty trade.shares 6}}</td><td>{{pretty trade.cash}}</td><td class={{tone trade.pnl}}>{{#if (eq trade.side "buy")}}—{{else}}{{signed trade.pnl}}{{/if}}</td><td>{{when trade.at}}</td></tr>
           {{else}}<tr><td colspan="6">{{ft "no_trades"}}</td></tr>{{/each}}
-        </tbody></table></div><p class="forecast-hint">{{ft "recent_trades"}}</p>
+        </tbody></table></div><div class="forecast-pagination"><button class="btn" type="button" disabled={{if this.portfolioLoading true (eq this.tradesPage.page 1)}} {{on "click" (fn this.pagePortfolio "trades" -1)}}>{{ft "previous"}}</button><label>{{ft "page"}} <input class="forecast-page-input" aria-label={{ft "page"}} type="number" min="1" max={{this.tradesPage.pages}} value={{this.tradesPage.page}} disabled={{this.portfolioLoading}} {{on "change" (fn this.jumpPortfolio "trades")}} /> / {{this.tradesPage.pages}}</label><span>{{this.tradesPage.total}} {{ft "records"}}</span><button class="btn" type="button" disabled={{if this.portfolioLoading true (eq this.tradesPage.page this.tradesPage.pages)}} {{on "click" (fn this.pagePortfolio "trades" 1)}}>{{ft "next"}}</button></div>
       {{else if this.detail}}
         <div class="forecast-detail-top">{{#if this.detail.preview}}<button class="btn btn-flat" type="button" {{on "click" this.closePreview}}>{{dIcon "arrow-left"}} {{ft "back_browse"}}</button>{{else}}<LinkTo @query={{hash section=null market_id=null}} @route="rsc.forecast">{{dIcon "arrow-left"}} {{ft "back"}}</LinkTo>{{/if}}<a href={{this.detail.url}} rel="noopener noreferrer" target="_blank">Polymarket ↗</a></div>
         <div class="forecast-detail">

@@ -451,6 +451,7 @@ export default class RscDashboard extends Component {
       instrument_id: position.instrument_id,
       side: "close",
       quantity: position.closeQuantity || position.quantity,
+      cancel_pending: !!position.pending_open,
       leverage: String(position.leverage),
     });
   }
@@ -472,6 +473,9 @@ export default class RscDashboard extends Component {
       pick: match.draftPick,
       stake: match.draftStake,
     });
+  }
+  @action cancelPrediction(match) {
+    return this.send(`predictions/${match.prediction.id}/cancel`, {});
   }
   @action async createPacket(event) {
     event.preventDefault();
@@ -668,7 +672,7 @@ export default class RscDashboard extends Component {
                     >{{uiText
                         position.valuation_basis
                       }}</small>{{/unless}}{{#if (eq position.risk "high")}}<span class="negative">风险较高</span>{{else if (eq position.risk "liquidation")}}<span class="negative">已达强平线</span>{{/if}}</div>
-                <dl class="rsc-position-metrics"><div><dt>数量</dt><dd>{{formatQuantity position.quantity}}</dd></div><div><dt>均价</dt><dd>{{formatPrice position.average}}</dd></div><div><dt>保证金</dt><dd>{{formatAmount position.margin}}</dd></div><div><dt>浮动盈亏</dt><dd class={{tone position.pnl}}>{{signedAmount position.pnl}}</dd></div></dl>{{#if position.remaining}}<p>距离可手动平仓约 {{position.remaining}} 秒（{{when position.hold_until}}）</p>{{/if}}</div><details class="rsc-position-details"><summary>管理持仓 · 平仓 / 止盈止损</summary><dl class="rsc-position-metrics"><div><dt>强平价</dt><dd>{{formatPrice position.liquidation}}</dd></div><div><dt>单仓权益</dt><dd>{{formatAmount position.equity}}</dd></div><div><dt>保本价</dt><dd>{{formatPrice position.break_even}}</dd></div><div><dt>维持保证金</dt><dd>{{formatAmount position.maintenance}}</dd></div></dl><p class="rsc-muted">风险状态：{{#if (eq position.risk "normal")}}正常{{else if (eq position.risk "high")}}较高{{else if position.risk}}已达强平线{{else}}报价不足{{/if}} · 金额单位 RSC</p><form class="rsc-partial-close" {{on "submit" (fn this.close position)}}><label>平仓数量<input required inputmode="decimal" value={{position.closeQuantity}} {{on "input" (fn this.closeQuantity position.id)}} /></label><button class="btn" type="submit" disabled={{position.closeDisabled}}>{{uiText "close_position"}}</button></form><form
+                <dl class="rsc-position-metrics"><div><dt>数量</dt><dd>{{formatQuantity position.quantity}}</dd></div><div><dt>均价</dt><dd>{{formatPrice position.average}}</dd></div><div><dt>保证金</dt><dd>{{formatAmount position.margin}}</dd></div><div><dt>浮动盈亏</dt><dd class={{tone position.pnl}}>{{signedAmount position.pnl}}</dd></div></dl>{{#if position.remaining}}<p>距离可手动平仓约 {{position.remaining}} 秒（{{when position.hold_until}}）</p>{{/if}}</div><details class="rsc-position-details"><summary>管理持仓 · 平仓 / 止盈止损</summary><dl class="rsc-position-metrics"><div><dt>强平价</dt><dd>{{formatPrice position.liquidation}}</dd></div><div><dt>单仓权益</dt><dd>{{formatAmount position.equity}}</dd></div><div><dt>保本价</dt><dd>{{formatPrice position.break_even}}</dd></div><div><dt>维持保证金</dt><dd>{{formatAmount position.maintenance}}</dd></div></dl><p class="rsc-muted">风险状态：{{#if (eq position.risk "normal")}}正常{{else if (eq position.risk "high")}}较高{{else if position.risk}}已达强平线{{else}}报价不足{{/if}} · 金额单位 RSC</p><form class="rsc-partial-close" {{on "submit" (fn this.close position)}}><label>平仓数量<input required inputmode="decimal" value={{position.closeQuantity}} {{on "input" (fn this.closeQuantity position.id)}} /></label><button class="btn" type="submit" disabled={{position.closeDisabled}}>{{#if position.pending_open}}{{uiText "cancel_and_close"}}{{else}}{{uiText "close_position"}}{{/if}}</button></form><form
                 class="rsc-protection"
                 {{on "submit" (fn this.protect position)}}
               ><label>{{uiText "take_profit"}}<input
@@ -817,7 +821,7 @@ export default class RscDashboard extends Component {
                   type="submit"
                   disabled={{if this.busy true match.locked}}
                 >{{#if match.locked}}{{uiText "locked"}}{{else if
-                    match.prediction
+                    (eq match.prediction.status "pending")
                   }}{{uiText "update_prediction"}}{{else}}{{uiText
                       "predict"
                     }}{{/if}}</button><p class="rsc-muted">预计返还 {{formatAmount match.potentialPayout}} RSC（含本金）</p></form>{{#if match.prediction}}<p
@@ -831,7 +835,7 @@ export default class RscDashboard extends Component {
                   ·
                   {{uiText
                     match.prediction.status
-                  }} · 预计返还 {{formatAmount match.prediction.potential_payout}} RSC · 实际返还 {{formatAmount match.prediction.payout}} RSC</p>{{/if}}</article>{{else}}<p class="rsc-empty">{{uiText
+                  }} · 预计返还 {{formatAmount match.prediction.potential_payout}} RSC · 实际返还 {{formatAmount match.prediction.payout}} RSC</p>{{#if match.prediction.can_cancel}}<button type="button" class="btn btn-flat" disabled={{this.busy}} {{on "click" (fn this.cancelPrediction match)}}>{{uiText "cancel_prediction"}}</button>{{/if}}{{/if}}</article>{{else}}<p class="rsc-empty">{{uiText
                 "no_matches"
               }}</p>{{/each}}</div>
         <section class="rsc-card"><h2>{{uiText "predictions"}}</h2><div

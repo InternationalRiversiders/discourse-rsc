@@ -121,3 +121,6 @@
   .forecast-pagination { display: flex; align-items: center; justify-content: center; gap: 14px; margin-block: 20px; }
   .forecast-order textarea { box-sizing: border-box; width: 100%; min-height: 100px; }
 }
+
+.rsc-forecast .forecast-page-input { width: 4.5em; margin: 0; }
+.rsc-forecast .forecast-pagination label { display: flex; align-items: center; gap: 0.35em; margin: 0; }

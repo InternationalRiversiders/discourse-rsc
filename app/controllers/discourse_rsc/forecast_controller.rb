@@ -10,16 +10,20 @@ module DiscourseRsc
     def state
       wallet = Account.wallet_snapshot(current_user.id)
       scope = ForecastMarket.where(featured: true).where.not(state: 'resolved').order(volume: :desc)
-      holdings = ForecastPosition.where(user_id: current_user.id).where('shares_units > 0').includes(:market).order(updated_at: :desc)
-      trades = ForecastTrade.where(user_id: current_user.id).includes(:market).order(id: :desc).limit(30)
+      holdings = portfolio_page('holdings')
+      trades = portfolio_page('trades')
       metadata = ForecastDiscovery.metadata
       markets = scope.reject { |m| ForecastDiscovery.excluded?(question: m.question, event_title: m.event_title, rules: m.rules) }
       markets.sort_by! { |m| metadata.dig(m.id.to_s, 'rank') || ForecastDiscovery::LIMIT + 1 }
       joined = ForecastMarket.where(id: ForecastRequest.approved_markets).where.not(state: 'resolved').order(id: :desc)
       render_json_dump(admin: Access.admin?(current_user), joined: joined.limit(200).reject { |m| ForecastDiscovery.excluded?(question: m.question, event_title: m.event_title, rules: m.rules) }.map { |m| market_view(m) }, markets: markets.first(ForecastDiscovery::LIMIT).map { |m| market_view(m).merge(category: metadata.dig(m.id.to_s, 'category') || 'other') }, balance: wallet.balance,
-        read_only: Safety.read_only?, holdings: holdings.limit(100).map { |p| position_view(p) },
-        trades: trades.map { |t| { id: t.id, market_id: t.market_id, question: ForecastTranslation.presentation(t.market)[:question], outcome: ForecastTranslation.presentation(t.market)[:outcomes][t.outcome],
-          side: t.side, outcome_index: t.outcome, shares: Amount.format(t.shares_units), cash: Amount.format(t.cash_units), pnl: Amount.format(t.pnl_units), at: t.created_at } })
+        read_only: Safety.read_only?, holdings: holdings[:items], trades: trades[:items],
+        holdings_pagination: holdings.except(:items), trades_pagination: trades.except(:items))
+    end
+
+    def portfolio
+      RateLimiter.new(current_user, 'rsc-forecast-portfolio', 30, 1.minute).performed!
+      render_json_dump(portfolio_page(params[:kind], page: params[:page]))
     end
 
     def catalog
@@ -53,7 +57,7 @@ module DiscourseRsc
     end
 
     def request_listing
-      RateLimiter.new(current_user, 'rsc-forecast-request', 5, 1.hour).performed!
+      RateLimiter.new(current_user, 'rsc-forecast-request', 20, 1.hour).performed!
       render_json_dump(ForecastListing.submit(actor: current_user, external_id: params.require(:external_id), reason: params[:reason], request_id: params.require(:request_id)))
     end
 
@@ -96,6 +100,27 @@ module DiscourseRsc
     end
 
     private
+    def portfolio_page(kind, page: 1)
+      raise Error.new('invalid_section') unless %w[holdings trades].include?(kind)
+      scope = if kind == 'holdings'
+        ForecastPosition.where(user_id: current_user.id).where('shares_units > 0').includes(:market).order(updated_at: :desc, id: :desc)
+      else
+        ForecastTrade.where(user_id: current_user.id).includes(:market).order(id: :desc)
+      end
+      per_page = kind == 'holdings' ? 100 : 30
+      total = scope.count
+      pages = [(total.to_f / per_page).ceil, 1].max
+      page = [[page.to_i, 1].max, pages].min
+      items = scope.offset((page - 1) * per_page).limit(per_page).map { |row| kind == 'holdings' ? position_view(row) : trade_view(row) }
+      { items: items, page: page, pages: pages, total: total, per_page: per_page }
+    end
+
+    def trade_view(t)
+      localized = ForecastTranslation.presentation(t.market)
+      { id: t.id, market_id: t.market_id, question: localized[:question], outcome: localized[:outcomes][t.outcome],
+        side: t.side, outcome_index: t.outcome, shares: Amount.format(t.shares_units), cash: Amount.format(t.cash_units), pnl: Amount.format(t.pnl_units), at: t.created_at }
+    end
+
     def request_view(row)
       market = ForecastMarket.find_by(id: row.market_id) if row.market_id
       question = market && market.question == row.question ? ForecastTranslation.presentation(market)[:question] : row.question
@@ -123,6 +148,7 @@ module DiscourseRsc
         payouts: ForecastSettlement.payouts(m.resolution), resolution_status: m.resolution['status'],
         url: "https://polymarket.com/market/#{m.slug}" }
       if detail
+        view[:holdings] = m.id ? ForecastPosition.where(user_id: current_user.id, market_id: m.id).where('shares_units > 0').includes(:market).map { |position| position_view(position) } : []
         ForecastTranslation.enqueue(m) unless localized[:rules_translated]
         view[:rules] = localized[:rules]
         view[:original_rules] = m.rules

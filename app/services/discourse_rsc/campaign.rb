@@ -23,7 +23,7 @@ module DiscourseRsc
         [match.id, result]
       end
       ready = matches.size == 32 && matches.all? { |match| match.status == "finished" && results[match.id].present? }
-      predictions = Prediction.where(sport_match_id: matches.map(&:id)).to_a
+      predictions = Prediction.where(sport_match_id: matches.map(&:id)).where.not(status: "withdrawn").to_a
       ready &&= predictions.all? { |p| p.status == (p.pick == results.fetch(p.sport_match_id) ? "won" : "lost") }
       old = LegacyRecord.where(source_table: "world_cup_campaign_rewards").pluck(:data)
         .select { |row| row["campaign_key"] == KEY }.index_by { |row| row["discourse_user_id"].to_i }

@@ -18,6 +18,8 @@ module DiscourseRsc
       wallet_page = full || section == 'wallet'
       wallet = Account.wallet_snapshot(current_user.id)
       positions = market ? Position.where(user_id: current_user.id).includes(:instrument).order(:id).map { |p| Views.position(p) } : []
+      pending_open_ids = market ? Order.where(user_id: current_user.id, status: "pending").where.not(side: "close").distinct.pluck(:instrument_id) : []
+      positions.each { |position| position[:pending_open] = pending_open_ids.include?(position[:instrument_id]) }
       margin = positions.sum { |p| Amount.parse(p[:margin]) }
       profits = positions.map { |p| p[:pnl] && BigDecimal(p[:pnl]) }
       pnl = profits.none?(&:nil?) ? (profits.sum * Amount::UNIT).to_i : nil
@@ -60,7 +62,7 @@ module DiscourseRsc
     def order
       RateLimiter.new(current_user, "rsc-orders", 30, 1.minute).performed!
       result = Exchange.submit(actor: current_user, instrument_id: positive_id(:instrument_id), side: params.require(:side),
-                               quantity: params.require(:quantity), leverage: positive_id(:leverage), request_id: params.require(:request_id), high_risk: params[:high_risk].to_s == "true", take_profit: params[:take_profit], stop_loss: params[:stop_loss])
+                               quantity: params.require(:quantity), leverage: positive_id(:leverage), request_id: params.require(:request_id), high_risk: params[:high_risk].to_s == "true", take_profit: params[:take_profit], stop_loss: params[:stop_loss], cancel_pending: params[:cancel_pending].to_s == "true")
       render_json_dump(result)
     rescue Error => error
       # Legacy exchange_order_rejections recorded failed attempts separately from
@@ -88,6 +90,10 @@ module DiscourseRsc
       render_json_dump(Sports.predict(actor: current_user, match_id: positive_id(:match_id), pick: params.require(:pick),
                                       stake: params.require(:stake), request_id: params.require(:request_id),
                                       prediction_id: params[:prediction_id].present? ? positive_id(:prediction_id) : nil))
+    end
+
+    def cancel_prediction
+      render_json_dump(Sports.cancel(actor: current_user, prediction_id: positive_id(:id), request_id: params.require(:request_id)))
     end
 
     def create_packet

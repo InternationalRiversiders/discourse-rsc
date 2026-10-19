@@ -10,10 +10,7 @@ module DiscourseRsc
       total = Amount.positive(amount, decimals: 2) * (mode == "fixed" ? count : 1)
       min = mode == "fixed" ? total / count : Amount.positive(minimum, decimals: 2)
       max = mode == "fixed" ? min : Amount.positive(maximum || amount, decimals: 2)
-      raise Error.new("invalid_packet") unless min <= max && total >= min * count && total <= max * count && total <= Amount.parse("1000000")
-      unless Wallet.limit_exempt?(actor)
-        raise Error.new("packet_limit") if total > Amount.parse("300") || max > Amount.parse("100")
-      end
+      raise Error.new("invalid_packet") unless min <= max && total >= min * count && total <= max * count
       Commands.run(user_id: actor.id, action: "packet_create", request_id: request_id,
                    input: [mode, count, total.to_s, min.to_s, max.to_s, days, message]) do
         remaining = total / CENT

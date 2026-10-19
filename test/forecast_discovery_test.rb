@@ -46,12 +46,13 @@ class ForecastTest
 
   def test_discovery_keeps_quality_and_contract_filters
     bads=[{'liquidity'=>'4999'},{'volume24hr'=>'999'},{'negRiskOther'=>true},{'closed'=>true},
-      {'outcomePrices'=>'["0.999","0.001"]'},{'endDate'=>30.minutes.from_now.iso8601},
+      {'endDate'=>1.minute.ago.iso8601},
       {'question'=>'Will China invade Taiwan?'}]
     bads.each do |change|
       assert_empty R::ForecastDiscovery.candidates([@raw.merge(change)],'culture')
     end
     assert_equal 1,R::ForecastDiscovery.candidates([@raw],'culture').size
+    assert_equal 1,R::ForecastDiscovery.candidates([@raw.merge('outcomePrices'=>'["0.999","0.001"]', 'endDate'=>2.minutes.from_now.iso8601)],'culture').size
   end
 
   def test_failed_discovery_does_not_replace_existing_recommendations

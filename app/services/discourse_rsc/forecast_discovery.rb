@@ -45,10 +45,10 @@ module DiscourseRsc
     def self.candidates(rows, category)
       rows.filter_map do |raw|
         attrs = ForecastProvider.parse(raw)
-        next unless attrs && attrs[:state] == 'open' && attrs[:ends_at] > 1.hour.from_now
+        next unless attrs && attrs[:state] == 'open' && attrs[:ends_at] > Time.current
         next if raw['negRiskOther'] == true || excluded?(**attrs.slice(:question, :event_title, :rules))
         # Keep the existing liquidity floor; sparse categories may simply show fewer entries.
-        next unless attrs[:volume] >= 1000 && attrs[:liquidity] >= 5000 && attrs[:prices].all? { |p| ForecastProvider.decimal(p).between?(BigDecimal('0.02'), BigDecimal('0.98')) }
+        next unless attrs[:volume] >= 1000 && attrs[:liquidity] >= 5000
         next if category == 'sports' && attrs[:question].match?(/Counter.Strike|Dota 2|\bLoL:|Valorant|StarCraft|League of Legends/i)
         event = raw.dig('events', 0, 'id').presence || attrs[:event_title]
         family = 'musk-posts' if attrs[:question].match?(/Elon(?: Musk)?.*(?:tweets?|posts?)/i)

@@ -18,6 +18,14 @@ zh_CN:
         stock_refunded: 委托结束，退回 %{amount} RSC
         red_packet_claimed_by: 领取了你的红包 %{amount} RSC
       forecast_ui:
+        error_forecast_request_recent: "此申请最近已审核，请至少一小时后再提交。"
+        error_forecast_request_limit: "最多同时保留 20 个待审核申请。"
+        error_forecast_request_missing: "没有待审核申请，请刷新后重试。"
+        error_forecast_request_changed: "申请后题目规则已变化，请拒绝旧申请并重新核对申请。"
+        error_forecast_ai_invalid: "AI 审核未返回有效结果，申请仍待审核。"
+        error_forecast_ai_stale: "自动审核已关闭，或申请及规则已变化，请重新核对。"
+        page: "页码"
+        records: "条"
         error_forecast_liquidity: "有效盘口不足以完成这笔交易，请减小数量或稍后再试。"
         error_forecast_stale: "上游盘口尚未更新，自动刷新后仍未取得有效报价。本次未成交，请稍后重新获取报价。"
         error_forecast_quote_expired: "确认报价已过期或已使用，请重新获取。"
@@ -72,7 +80,7 @@ zh_CN:
         back_browse: "返回列表"
         apply: "申请加入"
         apply_hint: "申请审核通过并确认规则和盘口后开放 RSC 交易。"
-        request_reason: "推荐理由"
+        request_reason: "推荐理由（选填）"
         request_sent: "申请已提交，可在“我的申请”查看进度。"
         review_reason: "审核说明（拒绝时必填）"
         approve: "通过"
@@ -233,6 +241,7 @@ zh_CN:
         positions: 我的持仓
         margin: 保证金
         pnl: 浮动盈亏
+        cancel_and_close: "撤销加仓委托并平仓"
         close_position: 确认平仓
         take_profit: 止盈价
         stop_loss: 止损价
@@ -299,6 +308,9 @@ zh_CN:
         red_packet_claim: 领取红包
         red_packet_refund: 红包退款
         daily_reward: 每日奖励
+        withdrawn: "已撤销并退款"
+        cancel_prediction: "撤销预测并退回本金"
+        prediction_refund: "预测撤销退款"
         prediction_stake: 赛事预测
         prediction_settlement: 预测结算
         stock_reserve: 委托预留

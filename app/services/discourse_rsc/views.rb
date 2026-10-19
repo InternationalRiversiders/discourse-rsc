@@ -17,7 +17,7 @@ module DiscourseRsc
 
     def self.prediction(item, names: nil)
       names ||= SportsTeamTranslation.names
-      {id:item.id,match_id:item.sport_match_id,match_name:"#{SportsPresentation.team(item.sport_match.home, sport: item.sport_match.sport, names: names)} — #{SportsPresentation.team(item.sport_match.away, sport: item.sport_match.sport, names: names)}",pick:item.pick,stake:Amount.format(item.stake_units),odds:item.odds,status:item.status,payout:Amount.format(item.payout_units),potential_payout:Amount.format(item.stake_units.to_i*Amount.parse(item.odds)/Amount::UNIT),created_at:item.created_at,settled_at:item.settled_at}
+      {id:item.id,match_id:item.sport_match_id,match_name:"#{SportsPresentation.team(item.sport_match.home, sport: item.sport_match.sport, names: names)} — #{SportsPresentation.team(item.sport_match.away, sport: item.sport_match.sport, names: names)}",pick:item.pick,stake:Amount.format(item.stake_units),odds:item.odds,status:item.status,can_cancel:item.status=="pending" && item.sport_match.status=="scheduled" && item.sport_match.starts_at>Time.current,payout:Amount.format(item.payout_units),potential_payout:Amount.format(item.stake_units.to_i*Amount.parse(item.odds)/Amount::UNIT),created_at:item.created_at,settled_at:item.settled_at}
     end
 
     def self.matches(user_id, focus: nil)
@@ -27,7 +27,7 @@ module DiscourseRsc
       # Pending predictions remain accessible even beyond the first 200 fixtures.
       matches=(matches+SportMatch.where(id:own_pending).to_a+SportMatch.where(id:focus).to_a).uniq(&:id)
       own=Prediction.where(user_id:user_id,sport_match_id:matches.map(&:id)).includes(:sport_match).index_by(&:sport_match_id)
-      counts=Prediction.where(sport_match_id:matches.map(&:id)).group(:sport_match_id).count
+      counts=Prediction.where(sport_match_id:matches.map(&:id)).where.not(status:"withdrawn").group(:sport_match_id).count
       matches.map do |item|
         reason=if item.status!='scheduled' || item.starts_at<=Time.current; 'match_locked'
           elsif !item.odds_at || item.odds_at<SiteSetting.rsc_odds_max_age_hours.hours.ago || item.odds.empty?; 'odds_unavailable'; end

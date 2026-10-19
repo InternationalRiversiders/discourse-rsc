@@ -15,8 +15,8 @@ zh_CN:
     rsc_enabled: 启用原生 RSC 系统（迁移与验收完成后再开启）
     rsc_allowed_groups: 允许使用 RSC 的用户组
     rsc_admin_groups: 允许管理 RSC 的用户组；站点管理员自动拥有管理权限
-    rsc_daily_outgoing_count: 每天转账、打赏与发红包的合计次数上限（北京时间）
-    rsc_daily_outgoing_amount: 每天转账、打赏与发红包的合计 RSC 上限
+    rsc_daily_outgoing_count: 每天转账、打赏与发红包的合计次数上限（北京时间）；0 不限制
+    rsc_daily_outgoing_amount: 每天转账、打赏与发红包的合计 RSC 上限；0 不限制
     rsc_notifications_enabled: 投递 RSC 站内通知
     rsc_native_trial_enabled: 启用原生 RSC 业务（上线前须完成数据导入、对账与行情验收）
     rsc_odds_max_age_hours: 允许的赔率最大时效（小时）
@@ -84,8 +84,8 @@ zh_CN:
       forecast_ai_stale: "自动审核已关闭，或申请及规则已变化，请重新核对。"
       forecast_invalid_reference: "请输入有效的 Polymarket 市场 ID 或市场／事件链接。"
       forecast_not_eligible: "该题目目前不在本站开放范围内，或已停止接受交易。"
-      forecast_request_recent: "此申请最近已审核，请至少一天后再提交。"
-      forecast_request_limit: "最多同时保留 5 个待审核申请。"
+      forecast_request_recent: "此申请最近已审核，请至少一小时后再提交。"
+      forecast_request_limit: "最多同时保留 20 个待审核申请。"
       forecast_request_missing: "没有待审核申请，请刷新后重试。"
       forecast_request_changed: "申请后题目规则已变化，请拒绝旧申请并重新核对申请。"
       forecast_disabled: "预测市场暂未开放。"

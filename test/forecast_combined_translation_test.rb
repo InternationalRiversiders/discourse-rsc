@@ -38,10 +38,10 @@ class ForecastTest
   def test_manual_approval_reuses_translation_after_a_technical_listing_failure
     SiteSetting.rsc_forecast_auto_review_enabled = true
     catalog_provider { request_catalog }
-    catalog_provider(catalog_raw, empty_book:true) do
+    catalog_provider(catalog_raw, resolution_error: R::Error.new('forecast_unavailable')) do
       auto_model { R::ForecastAutoReview.tick }
       assert_equal 1, @ai_calls.size
-      assert_equal 'manual', R::ForecastAutoReview.receipt(R::ForecastRequest.first)['status']
+      assert_equal 'retry', R::ForecastAutoReview.receipt(R::ForecastRequest.first)['status']
     end
     catalog_provider { review_catalog }
     market = R::ForecastMarket.find_by!(external_id:'901')

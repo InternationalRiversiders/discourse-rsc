@@ -16,8 +16,8 @@ en:
     rsc_enabled: Enable native RSC after migration and acceptance testing
     rsc_allowed_groups: Groups permitted to use RSC
     rsc_admin_groups: Groups permitted to administer RSC; site admins are always administrators
-    rsc_daily_outgoing_count: Daily outgoing transfer, tip and red packet count (Asia/Shanghai)
-    rsc_daily_outgoing_amount: Daily outgoing RSC amount
+    rsc_daily_outgoing_count: Daily outgoing transfer, tip and red packet count (Asia/Shanghai) (0 disables this limit).
+    rsc_daily_outgoing_amount: Daily outgoing RSC amount (0 disables this limit).
     rsc_notifications_enabled: Deliver RSC in-site notifications
     rsc_native_trial_enabled: native trial enabled
     rsc_odds_max_age_hours: odds max age hours
@@ -84,8 +84,8 @@ en:
       forecast_ai_stale: "Automatic review was disabled or the request or rules changed. Review again."
       forecast_invalid_reference: "Enter a valid Polymarket market ID or market/event link."
       forecast_not_eligible: "This question is outside this site’s listing scope or is no longer trading."
-      forecast_request_recent: "This request was recently reviewed. Wait at least one day before reapplying."
-      forecast_request_limit: "You may have at most 5 pending requests."
+      forecast_request_recent: "This request was recently reviewed. Wait at least one hour before reapplying."
+      forecast_request_limit: "You may have at most 20 pending requests."
       forecast_request_missing: "No pending requests remain. Refresh and try again."
       forecast_request_changed: "The rules changed after submission. Reject the old request and request a new review."
       forecast_disabled: "Prediction markets are not enabled."

@@ -21,7 +21,6 @@ module DiscourseRsc
     def self.opening!(instrument, gross)
       raise Error.new("market_opening_disabled", status: 409) if close_only?(instrument)
       return unless stock?(instrument)
-      raise Error.new("order_notional_below_min", status: 409) if gross < U
       # Imported candles are already RSC-denominated. Provider charts retain
       # their currency and must be converted using the quote's trusted FX rate.
       cache = HistoryCache.where(instrument_id: instrument.id, range: %w[1mo 6mo]).order(updated_at: :desc).first
