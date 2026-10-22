@@ -2159,6 +2159,7 @@
     .rsc-fx-title h2 { font-size: 1rem; }
     .rsc-fx-actions { flex-direction: row; width: 100%; .btn { flex: 1; font-size: .85rem; } }
     .rsc-fx-content { padding: .85rem; }
+    .rsc-fx-settings form { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; label { display: block; width: 100%; } .btn { justify-self: start; } }
     .rsc-fx-ranks li { gap: .4rem; grid-template-columns: 1.5rem minmax(0, 1fr) minmax(4rem, auto) 2rem; font-size: .85rem; }
   }
 }

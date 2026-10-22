@@ -180,7 +180,7 @@ export default class extends Component {
       >{{#each this.categories as |category|}}<button
             type="button"
             class={{if (eq this.category category.id) "active" ""}}
-            aria-pressed={{eq this.category category.id}}
+            aria-pressed={{if (eq this.category category.id) "true" "false"}}
             {{on "click" (fn this.chooseCategory category.id)}}
           >{{category.name}}</button>{{/each}}</div>
       <div class="rsc-board-tools"><label class="rsc-search"><span
@@ -216,7 +216,7 @@ export default class extends Component {
           <div class="rsc-quote-item"><button
               type="button"
               class="rsc-quote-row {{if (eq @selectedId item.id) 'selected'}}"
-              aria-pressed={{eq @selectedId item.id}}
+              aria-pressed={{if (eq @selectedId item.id) "true" "false"}}
               aria-label={{item.symbol}}
               {{on "click" (fn @onSelect item.id)}}
             >

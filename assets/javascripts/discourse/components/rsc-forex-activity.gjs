@@ -68,7 +68,7 @@ export default class extends Component {
             <p>外汇最高 100× · 新活动仓位每边手续费 {{this.fee}}% · 自动授予徽章与称号</p>
             <small>{{#if @activity.ends_at}}预计截止 {{formatDateTime @activity.ends_at}}（按你的时区显示，可随播出安排调整）{{else}}{{@activity.end_label}}{{/if}}</small>
           </div>
-          <div class="rsc-fx-actions"><button class="btn btn-primary" type="button" {{on "click" @browse}}>外汇修行 {{dIcon "arrow-right"}}</button><button class="btn btn-flat" type="button" aria-expanded={{this.expanded}} aria-controls="rsc-fx-standings" {{on "click" this.toggle}}>活动榜与规则 {{dIcon "chevron-down"}}</button></div>
+          <div class="rsc-fx-actions"><button class="btn btn-primary" type="button" {{on "click" @browse}}>外汇修行 {{dIcon "arrow-right"}}</button><button class="btn btn-flat" type="button" aria-expanded={{if this.expanded "true" "false"}} aria-controls="rsc-fx-standings" {{on "click" this.toggle}}>活动榜与规则 {{dIcon "chevron-down"}}</button></div>
         </div>
         {{#if this.expanded}}<div id="rsc-fx-standings" class="rsc-fx-content">
           <div class="rsc-fx-board-heading"><h3>外汇修行榜 <small>净盈亏 / RSC</small></h3><button class="btn btn-small" type="button" disabled={{this.loading}} {{on "click" this.refreshBoard}}>{{dIcon "arrows-rotate"}} 刷新</button></div>
