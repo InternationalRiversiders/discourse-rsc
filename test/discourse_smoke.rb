@@ -18,6 +18,11 @@ class DiscourseSmokeTest < Minitest::Test
     ActiveRecord::Base.connection.execute("TRUNCATE discourse_rsc_events, discourse_rsc_entries, discourse_rsc_journals, discourse_rsc_accounts RESTART IDENTITY CASCADE")
     ActiveRecord::Base.connection.execute("TRUNCATE discourse_rsc_commands, discourse_rsc_instruments, discourse_rsc_positions, discourse_rsc_orders, discourse_rsc_sport_matches, discourse_rsc_predictions, discourse_rsc_packets, discourse_rsc_packet_claims RESTART IDENTITY CASCADE")
     ActiveRecord::Base.connection.execute("TRUNCATE discourse_rsc_searches, discourse_rsc_audits, discourse_rsc_market_requests, discourse_rsc_history_caches, discourse_rsc_exemptions, discourse_rsc_legacy_records RESTART IDENTITY CASCADE")
+    DiscourseRsc::ForexActivityEntry.delete_all
+    SiteSetting.rsc_forex_activity_enabled = false
+    SiteSetting.rsc_forex_activity_starts_at = ""
+    SiteSetting.rsc_forex_activity_ends_at = ""
+    SiteSetting.rsc_forex_activity_fee_bps = 1
     SiteSetting.rsc_market_data_enabled = false
     SiteSetting.rsc_sports_data_enabled = false
     SiteSetting.rsc_high_risk_enabled = false

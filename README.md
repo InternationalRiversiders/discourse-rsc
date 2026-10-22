@@ -6,6 +6,8 @@ RiversideCoin 的原生 Discourse 重构：Ruby/Rails 后端、论坛 PostgreSQL
 
 插件安装默认关闭、只读。现有论坛迁移需要停旧写入、校验导出、导入、对账后再启用；具体流程与兼容边界见上线记录。普通用户以论坛账户和用户组权限使用，无需旧 JWT 或原 Express/Next.js 服务。
 
+久留美外汇活动的规则、排期、原生 App 接口及发布步骤见 [活动说明](docs/fx-kurumi-activity.md)。
+
 ## 原生页面
 
 - `/rsc`：余额、转账、发红包、我的红包和资金流水。

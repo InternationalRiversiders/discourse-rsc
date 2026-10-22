@@ -1,5 +1,9 @@
 zh_CN:
   site_settings:
+    rsc_forex_activity_enabled: "启用久留美外汇活动"
+    rsc_forex_activity_starts_at: "活动开始时间（ISO 8601，含时区）"
+    rsc_forex_activity_ends_at: "活动结束时间（ISO 8601，含时区）；请在结束前调整"
+    rsc_forex_activity_fee_bps: "新活动仓位每边手续费（基点，1 为名义金额的 0.01%）"
     rsc_sports_team_translation_enabled: "后台自动翻译陌生赛事队名，复用预测市场翻译模型和 Key。每分钟最多一批 16 个名字；结果保存在论坛数据库并缓存，页面不等待 AI。关闭后仍使用已有译名。"
     rsc_sports_team_translation_daily_limit: "队名翻译每日最多批次（UTC 日，每批最多 16 个）；失败也计数并等待 6 小时重试，命中词库不计数。"
     rsc_sports_team_name_overrides: "人工队名词库（JSON 对象），优先于内置和 AI 译名。例如 {\"Arsenal\":\"阿森纳\",\"soccer|Paris FC\":\"巴黎FC\"}；键不区分大小写，可用 sport|原名区分运动。无效 JSON 不生效，删除条目后恢复自动词库。"
@@ -28,7 +32,7 @@ zh_CN:
     rsc_sports_data_enabled: 启用 ESPN 赛事与赔率同步
     rsc_twelve_data_api_key: Twelve Data 服务端 API 密钥
     rsc_sports_leagues: 同步的联赛，格式 sport:league
-    rsc_high_risk_enabled: 允许虚拟币高风险模式（最高 100 倍；仍需用户单独选择）
+    rsc_high_risk_enabled: 允许虚拟币高风险模式及活动期外汇最高 100 倍杠杆
     rsc_standard_position_limits_enabled: "对虚拟币和延迟行情的普通杠杆（1–10 倍）启用原有单仓比例与组合额度限制；默认关闭。余额、保证金和强平检查始终保留。"
     rsc_high_risk_margin_percent: "多个高杠杆（11–100 倍）品种共用的初始保证金额度，占账户权益的百分比。"
     rsc_high_risk_cooldown_seconds: "高杠杆平仓后再次开仓的冷却秒数，默认 0（关闭）。"
@@ -146,6 +150,7 @@ zh_CN:
       packet_claimed: 你已领取过此红包。
       packet_expired: 红包已过期。
       invalid_reward_date: 奖励日期必须早于今天。
+      forex_activity_ended: "外汇活动已结束或暂停，本笔活动开仓未成交；已有仓位仍可平仓。"
       high_risk_disabled: 高风险模式未启用，或尚未勾选高风险选项。
       high_risk_budget: 高杠杆剩余保证金额度不足，请减少数量或使用比例按钮重新填入。
       high_risk_position_limit: 一次只能在一个虚拟币标的上持有或挂出高风险仓位。

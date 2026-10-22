@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 module DiscourseRsc
   class DashboardController < WalletController
-    skip_before_action :ensure_rsc_member, only: [:index]
+    skip_before_action :ensure_rsc_member, only: [:index, :forex_activity_settings]
     before_action :ensure_native_trial, except: [:index]
 
     def index
@@ -27,20 +27,21 @@ module DiscourseRsc
       orders = market ? Order.where(user_id: current_user.id).includes(:instrument).order(id: :desc).limit(50).to_a : []
       focused = Order.where(user_id: current_user.id).includes(:instrument).find_by(id: positive_id(:order_id)) if market && params[:order_id].present?
       orders.unshift(focused) if focused && orders.none? { |o| o.id == focused.id }
-      listing = MarketListing.page(params) if section == 'market'
-      instruments = full ? MarketListing.rows(Instrument.where(active: true).order(:symbol).to_a) : []
+      listing = MarketListing.page(params.to_unsafe_h.symbolize_keys.merge(user_id: current_user.id)) if section == 'market'
+      instruments = full ? MarketListing.rows(Instrument.where(active: true).order(:symbol).to_a, user_id: current_user.id) : []
       if listing
         # Keep selected/held instruments available even outside the current results page.
         ids = positions.map { |p| p[:instrument_id] }
         ids << positive_id(:instrument_id) if params[:instrument_id].present?
         ids << focused.instrument_id if focused
-        selected = MarketListing.rows(Instrument.where(id: ids.uniq).to_a)
+        selected = MarketListing.rows(Instrument.where(id: ids.uniq).to_a, user_id: current_user.id)
         instruments = (selected + listing[:rows]).uniq { |row| row[:id] }
       end
       entries = wallet_page ? Entry.where(account_id: wallet.id).includes(:journal).order(id: :desc).limit(30) : []
       team_names = SportsTeamTranslation.names if sports
       predictions = sports ? Prediction.where(user_id: current_user.id).includes(:sport_match).order(id: :desc).limit(100) : []
       render_json_dump(
+        forex_activity: market ? ForexActivity.summary : nil,
         market_data_enabled: SiteSetting.rsc_market_data_enabled,
         high_risk: market ? Risk.high_risk_status(current_user.id) : { positions: [], pending: [] },
         read_only: Safety.read_only?, reward: wallet_page ? Rewards.today(current_user.id) : {},
@@ -57,6 +58,23 @@ module DiscourseRsc
         packets: wallet_page ? Packet.where(user_id: current_user.id).includes(:claims).order(id: :desc).limit(30).map { |item| packet_json(item) } : [],
         entries: entries.map { |item| { id: item.id, operation: item.journal.operation, amount: Amount.format(item.units), balance: Amount.format(item.balance_after_units), created_at: item.created_at } },
       )
+    end
+
+    def forex_activity
+      RateLimiter.new(current_user, 'rsc-forex-activity', 20, 1.minute).performed!
+      render_json_dump(ForexActivity.presentation(user_id: current_user.id, page: params[:page]))
+    end
+
+    def forex_activity_settings
+      raise Error.new('admin_required', status: 403) unless Access.admin?(current_user)
+      Safety.ensure_writable!
+      value = params[:ends_at].to_s
+      ending = ForexActivity.time(value)
+      raise Error.new('invalid_request') if value.present? && (!ending || ending <= 1.minute.from_now)
+      raise Error.new('forex_activity_ended') if ForexActivity.ends_at && Time.current >= ForexActivity.ends_at
+      SiteSetting.rsc_forex_activity_ends_at = ending ? ending.iso8601 : ''
+      Audit.create!(actor_user_id: current_user.id, action: 'forex_activity_schedule', details: { ends_at: ending }, created_at: Time.current)
+      render_json_dump(ForexActivity.summary)
     end
 
     def order

@@ -355,6 +355,7 @@ en:
         category_cn: China A-shares
         category_hk: Hong Kong
         category_crypto: Crypto
+        category_fx_activity: "Kurumi FX activity"
         category_forex: Forex
         category_index: Indices
         category_commodity: Commodities

@@ -5,6 +5,7 @@ module Jobs
     def execute(args)
       return if DiscourseRsc::Safety.read_only?
       return unless SiteSetting.rsc_enabled && SiteSetting.rsc_native_trial_enabled
+      safely("forex_activity") { DiscourseRsc::ForexActivity.tick }
       safely("packets") { DiscourseRsc::RedPackets.expire }
       DiscourseRsc::SportMatch.where(status: %w[finished canceled]).joins(:predictions).where(discourse_rsc_predictions: { status: "pending" }).distinct.pluck(:id).each do |id|
         safely("match:#{id}") { DiscourseRsc::Sports.settle(id) }

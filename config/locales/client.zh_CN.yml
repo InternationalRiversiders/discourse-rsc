@@ -349,6 +349,7 @@ zh_CN:
         category_cn: A 股
         category_hk: 港股
         category_crypto: 虚拟币
+        category_fx_activity: "久留美活动"
         category_forex: 外汇
         category_index: 指数
         category_commodity: 商品

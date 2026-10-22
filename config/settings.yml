@@ -1,4 +1,14 @@
 plugins:
+  rsc_forex_activity_enabled:
+    default: false
+  rsc_forex_activity_starts_at:
+    default: ""
+  rsc_forex_activity_ends_at:
+    default: ""
+  rsc_forex_activity_fee_bps:
+    default: 1
+    min: 0
+    max: 100
   rsc_sports_team_translation_enabled:
     default: false
   rsc_sports_team_translation_daily_limit:

@@ -319,6 +319,8 @@ module DiscourseRsc
       active_ids = Position.distinct.pluck(:instrument_id) | Order.where(status: "pending").distinct.pluck(:instrument_id)
       scope = Instrument.where(active: true, provider: %w[yahoo coinbase twelve_data kraken okx])
       schedules = MarketSessions.hours
+      activity_ids = ForexActivity.active? ? scope.where(symbol: ForexActivity::FEATURED, category: "forex").pluck(:id) : []
+      active_ids |= activity_ids
       priority = scope.where(id: active_ids).order(Arel.sql("synced_at ASC NULLS FIRST")).select { |item| refresh_due?(item, purpose: :background, schedules: schedules) }.first(SiteSetting.rsc_market_sync_batch)
       remaining = SiteSetting.rsc_market_sync_batch - priority.size
       # At most five unheld catalog symbols per minute; cold browsing remains

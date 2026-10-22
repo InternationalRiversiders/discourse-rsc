@@ -31,6 +31,7 @@ after_initialize do
     app/models/discourse_rsc/event
     app/models/discourse_rsc/command
     app/models/discourse_rsc/instrument
+    app/models/discourse_rsc/forex_activity_entry
     app/models/discourse_rsc/position
     app/models/discourse_rsc/order
     app/models/discourse_rsc/forecast_request
@@ -75,6 +76,7 @@ after_initialize do
     app/services/discourse_rsc/sports_team_translation
     app/services/discourse_rsc/sports_presentation
     app/services/discourse_rsc/sports_data
+    app/services/discourse_rsc/forex_activity
     app/services/discourse_rsc/risk
     app/services/discourse_rsc/valuation
     app/services/discourse_rsc/market_listing

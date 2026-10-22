@@ -34,7 +34,7 @@ export default class extends Component {
       );
       this.search = typeof saved.search === "string" ? saved.search : "";
       this.category =
-        ["all", "tradable"].includes(saved.category) ||
+        ["all", "tradable", "fx_activity"].includes(saved.category) ||
         this.args.instruments.some((item) => item.category === saved.category)
           ? saved.category
           : this.category;
@@ -68,6 +68,7 @@ export default class extends Component {
     return [
       "all",
       "tradable",
+      ...(this.args.activity?.visible ? ["fx_activity"] : []),
       ...new Set(this.args.pageData?.categories || this.args.instruments.map((item) => item.category)),
     ].map((id) => ({
       id,
@@ -84,7 +85,7 @@ export default class extends Component {
         (item) =>
           (this.category === "all" ||
             this.category === "tradable" ||
-            this.category === item.category) &&
+            this.category === item.category || (this.category === "fx_activity" && item.category === "forex")) &&
           `${item.symbol} ${item.display_symbol || ""} ${item.exchange || ""} ${item.currency || ""} ${item.name} ${item.category}`
             .toLocaleLowerCase()
             .includes(query)

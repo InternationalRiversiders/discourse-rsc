@@ -19,6 +19,7 @@ import RscTeam from "./rsc-team";
 import RscHistory from "./rsc-history";
 import RscDiscovery from "./rsc-discovery";
 import RscMarketList from "./rsc-market-list";
+import RscForexActivity from "./rsc-forex-activity";
 import {
   formatAmount,
   formatWallet,
@@ -90,6 +91,7 @@ export default class RscDashboard extends Component {
   @tracked sport = "all";
   @tracked matchFilter = "open";
   @tracked marketQuery = {};
+  @tracked marketFilterRevision = 0;
   stateGeneration = 0;
   timer;
   clockTimer;
@@ -139,7 +141,7 @@ export default class RscDashboard extends Component {
   get tradingDisabled() {
     return (
       this.data.read_only ||
-      this.busy || this.highRiskStatus.blocked || !!this.quantityError || !!this.budgetError || !!this.positionConflict ||
+      this.busy || Number(this.leverage) > this.maxLeverage || this.highRiskStatus.blocked || !!this.quantityError || !!this.budgetError || !!this.positionConflict ||
       !this.selectedMarket?.tradable ||
       this.data.wallet.status !== "active" ||
       (this.side !== "close" && this.selected?.close_only)
@@ -241,7 +243,7 @@ export default class RscDashboard extends Component {
     const seconds = status.cooldown_until ? Math.max(0, Math.ceil((Date.parse(status.cooldown_until) - this.quoteClock) / 1000)) : 0;
     const hold = samePosition?.hold_until ? Math.max(0, Math.ceil((Date.parse(samePosition.hold_until) - this.quoteClock) / 1000)) : 0;
     return { occupying, seconds, countdown: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`, hold,
-      blocked: Number(this.leverage) > 10 && (!samePosition && seconds > 0) };
+      blocked: this.selected?.category !== "forex" && Number(this.leverage) > 10 && (!samePosition && seconds > 0) };
   }
   get quoteStats() {
     const q = this.selected?.quote || {};
@@ -255,13 +257,16 @@ export default class RscDashboard extends Component {
   }
   @action closeQuantity(id, event) { this.closeQuantities = { ...this.closeQuantities, [id]: event.target.value }; }
   get maxLeverage() {
+    if (this.selected?.category === "forex") { return this.data.forex_activity?.active && this.data.high_risk_enabled ? 100 : 10; }
     return this.highRisk &&
       this.data.high_risk_enabled &&
       this.selected?.category === "crypto"
       ? 100
       : 10;
   }
+  get forexFee() { return Number(this.selected?.fee_bps || 0) / 100; }
   get executionHint() {
+    if (this.selected?.execution_mode === "forex_confirmation") { return "等待提交之后的新外汇报价确认，成交前可撤单；没有额外持仓锁定或开仓冷却。"; }
     if (this.selected?.execution_mode === "immediate") { return "按当前可用行情成交。"; }
     if (this.selected?.execution_mode !== "crypto_confirmation") { return "等待提交之后的新报价确认；提交后 10 秒内可撤单。普通仓位成交后没有额外持仓锁定。"; }
     const delay = this.siteSettings.rsc_crypto_confirmation_delay_seconds;
@@ -378,6 +383,13 @@ export default class RscDashboard extends Component {
     this.marketQuery = query;
     try { await this.loadState(false); } catch (error) { this.error = extractError(error); }
   }
+  @action async showForexActivity() {
+    this.marketDetailOpen = false; this.orderTicketOpen = false; this.selectedId = "";
+    await this.queryMarkets({ market_category: "fx_activity", market_search: "", market_sort: "popular", market_page: 1 });
+    if (this.isDestroying || this.isDestroyed) { return; }
+    this.marketFilterRevision++;
+    requestAnimationFrame(() => document.querySelector("#rsc-markets")?.scrollIntoView({ block: "start" }));
+  }
   async loadState(refreshQuote = true) {
     const generation = ++this.stateGeneration;
     if (refreshQuote && this.args.section === "market" && this.marketDetailOpen &&
@@ -440,7 +452,7 @@ export default class RscDashboard extends Component {
       side: this.side,
       quantity: this.quantity,
       leverage: this.leverage,
-      high_risk: this.highRisk,
+      high_risk: this.selected?.category === "forex" ? Number(this.leverage) > 10 : this.highRisk,
       take_profit: this.side === "close" ? "" : this.takeProfit,
       stop_loss: this.side === "close" ? "" : this.stopLoss,
     });
@@ -629,6 +641,7 @@ export default class RscDashboard extends Component {
         <RscPackets />
         <RscLedger @journalId={{this.args.model.focus.journal_id}} @revision={{this.ledgerRevision}} />
       {{else if (eq @section "market")}}
+        <RscForexActivity @activity={{this.data.forex_activity}} @admin={{this.data.admin}} @readOnly={{this.data.read_only}} @browse={{this.showForexActivity}} @refresh={{this.refresh}} />
         <div
           class="rsc-market-summary rsc-trading-summary"
           aria-label={{uiText "account_overview"}}
@@ -702,7 +715,8 @@ export default class RscDashboard extends Component {
                 >{{uiText "add_margin"}}</button></form></details></article>{{else}}<p
               class="rsc-muted"
             >{{uiText "no_positions"}}</p>{{/each}}</section>
-          <RscMarketList
+          {{#each (array this.marketFilterRevision) key="@identity" as |_revision|}}<RscMarketList
+            @activity={{this.data.forex_activity}}
             @instruments={{this.data.instruments}}
             @pageData={{this.data.market_page}}
             @onQuery={{this.queryMarkets}}
@@ -710,7 +724,7 @@ export default class RscDashboard extends Component {
             @selectedId={{this.selected.id}}
             @onSelect={{this.selectMarket}}
             @readOnly={{this.data.read_only}}
-          /></div>
+          />{{/each}}</div>
           {{#if this.marketDetailVisible}}
             <div class="rsc-market-layout"><section class="rsc-card rsc-chart">
                 <div class="rsc-detail-heading"><div><p
@@ -740,7 +754,7 @@ export default class RscDashboard extends Component {
               {{#if this.orderTicketOpen}}<section class="rsc-card rsc-order-ticket">
                 <div class="rsc-ticket-heading"><h2>{{uiText "order"}}</h2><span>{{this.selected.symbol}}</span><button class="btn btn-flat rsc-close-order" type="button" {{on "click" this.closeOrderTicket}}>收起下单</button></div>
                 <form {{on "submit" this.trade}}>
-                  <label>{{uiText "direction"}}<select {{on "change" (fn this.set "side")}}><option value="long" selected={{eq this.side "long"}}>{{uiText "long"}}</option><option value="short" selected={{eq this.side "short"}}>{{uiText "short"}}</option></select></label>
+                  <label>{{uiText "direction"}}<select {{on "change" (fn this.set "side")}}><option value="long" selected={{eq this.side "long"}}>{{#if (eq this.selected.category "forex")}}看涨{{this.selected.currency_name}}{{else}}{{uiText "long"}}{{/if}}</option><option value="short" selected={{eq this.side "short"}}>{{#if (eq this.selected.category "forex")}}看跌{{this.selected.currency_name}}{{else}}{{uiText "short"}}{{/if}}</option></select></label>
                   {{#if (eq this.selected.category "forex")}}<label>RSC 名义金额<input inputmode="decimal" value={{this.notional}} {{on "input" this.changeNotional}} /></label><p class="rsc-muted">按交易总额换算货币数量，按数量步进向下取整；保证金另按杠杆计算，以当前数量提交。</p>{{/if}}
                   <div class="rsc-fields rsc-ticket-inputs">
                     <div><label>{{uiText "quantity"}}<input required inputmode="decimal" value={{this.quantity}} {{on "input" this.changeQuantity}} /></label>
@@ -752,6 +766,7 @@ export default class RscDashboard extends Component {
                     <label class="rsc-checkbox"><input type="checkbox" checked={{this.highRisk}} {{on "change" this.toggleHighRisk}} />{{uiText "high_risk_mode"}}</label>
                     <div class="rsc-risk-status"><strong>高杠杆（11–100×）</strong>{{#if this.data.high_risk.budget}}<span>剩余保证金额度 {{formatAmount this.data.high_risk.budget.available_margin}} / {{formatAmount this.data.high_risk.budget.maximum_margin}} RSC</span>{{/if}}<span>{{#if this.highRiskStatus.occupying}}已持有：{{this.highRiskStatus.occupying}}{{else}}暂无高杠杆仓位{{/if}}</span>{{#if this.highRiskStatus.seconds}}<span>冷却倒计时 <b>{{this.highRiskStatus.countdown}}</b>（现有同标的高杠杆仓位可继续加仓）</span>{{else}}<span>当前无冷却</span>{{/if}}{{#if this.highRiskStatus.hold}}<span>当前仓位还需 {{this.highRiskStatus.hold}} 秒可手动平仓</span>{{/if}}</div>
                   {{/if}}{{/if}}
+                  {{#if (eq this.selected.category "forex")}}<div class="rsc-risk-status"><strong>{{this.selected.currency_name}}交易 · 每边手续费 {{this.forexFee}}%</strong><span>买入做多为看涨{{this.selected.currency_name}}兑美元，卖出做空为看跌。</span>{{#if this.data.forex_activity.active}}<span>活动期间最高 100×，外汇不设额外冷却或持仓等待。</span>{{else}}<span>当前最高 10×。已有高杠杆仓位可从“我的持仓”平仓、追加保证金或设置止盈止损。</span>{{/if}}{{#if this.data.high_risk.budget}}<span>高杠杆剩余初始保证金额度 {{formatAmount this.data.high_risk.budget.available_margin}} RSC，与虚拟币共用。</span>{{/if}}<span>仅使用 RSC 模拟交易。100× 下小幅汇率波动也可能触发强平。</span></div>{{/if}}
                   {{#if this.selected.close_only}}<p class="alert alert-info">此杠杆/反向产品目前仅可平仓。</p>{{/if}}
                   <div class="rsc-fields"><label>{{uiText "take_profit"}}<input inputmode="decimal" value={{this.takeProfit}} {{on "input" (fn this.set "takeProfit")}} /></label><label>{{uiText "stop_loss"}}<input inputmode="decimal" value={{this.stopLoss}} {{on "input" (fn this.set "stopLoss")}} /></label></div>
                   {{#if this.quantityError}}<p class="alert alert-error" role="alert">{{this.quantityError}}</p>{{/if}}

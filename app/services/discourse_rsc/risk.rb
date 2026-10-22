@@ -7,12 +7,13 @@ module DiscourseRsc
     end
 
     def self.check!(user_id, instrument, leverage, margin, excluding_order: nil)
-      return unless instrument.category == "crypto" || TradingRules.delayed?(instrument)
+      return unless instrument.category == "crypto" || TradingRules.delayed?(instrument) || (instrument.category == "forex" && leverage > 10)
       return if leverage <= 10 && !SiteSetting.rsc_standard_position_limits_enabled
       positions, pending, equity = portfolio(user_id, excluding_order: excluding_order)
       if leverage > 10
         raise Error.new("high_risk_disabled", status: 403) unless SiteSetting.rsc_high_risk_enabled
-        unless positions.any? { |p| p.instrument_id == instrument.id && p.leverage > 10 }
+        raise Error.new("forex_activity_ended", status: 409) if instrument.category == "forex" && !ForexActivity.active_for?(instrument)
+        unless instrument.category == "forex" || positions.any? { |p| p.instrument_id == instrument.id && p.leverage > 10 }
           raise Error.new("high_risk_cooldown", status: 429) if high_risk_cooldown_until(user_id)
         end
         budget = high_risk_budget(positions, pending, equity)
@@ -53,8 +54,8 @@ module DiscourseRsc
     end
 
     def self.high_risk_budget(positions, pending, equity)
-      high_positions = positions.select { |p| p.instrument.category == "crypto" && p.leverage > 10 }
-      high_orders = pending.select { |p| p.instrument.category == "crypto" && p.leverage > 10 }
+      high_positions = positions.select { |p| p.leverage > 10 }
+      high_orders = pending.select { |p| p.leverage > 10 }
       used = high_positions.sum { |p| TradingRules.initial_margin(p) } + high_orders.sum { |p| TradingRules.order_margin(p) }
       maximum = equity * SiteSetting.rsc_high_risk_margin_percent / 100
       { equity: equity, maximum_margin: maximum, used_margin: used, available_margin: [maximum - used, 0].max }
@@ -64,8 +65,8 @@ module DiscourseRsc
     def self.high_risk_cooldown_until(user_id)
       seconds = SiteSetting.rsc_high_risk_cooldown_seconds
       return if seconds.zero?
-      closed_at = Order.where(user_id: user_id, side: "close", status: "filled")
-        .where("leverage > 10 AND updated_at > ?", seconds.seconds.ago).maximum(:updated_at)
+      closed_at = Order.joins(:instrument).where(user_id: user_id, side: "close", status: "filled", discourse_rsc_instruments: { category: "crypto" })
+        .where("leverage > 10 AND discourse_rsc_orders.updated_at > ?", seconds.seconds.ago).maximum(:updated_at)
       closed_at && closed_at + seconds.seconds
     end
 
@@ -79,9 +80,9 @@ module DiscourseRsc
     end
 
     def self.high_risk_status(user_id)
-      positions = Position.where(user_id: user_id).where("leverage > 10").includes(:instrument).select { |p| p.instrument.category == "crypto" }
+      positions = Position.where(user_id: user_id).where("leverage > 10").includes(:instrument)
       pending = Order.where(user_id: user_id, status: "pending").where.not(side: "close")
-        .where("leverage > 10").includes(:instrument).select { |p| p.instrument.category == "crypto" }
+        .where("leverage > 10").includes(:instrument)
       budget = high_risk_budget(*portfolio(user_id)).transform_values { |value| Amount.format(value) }
       { budget: budget, margin_percent: SiteSetting.rsc_high_risk_margin_percent, cooldown_until: high_risk_cooldown_until(user_id),
         positions: positions.map { |p| { instrument_id: p.instrument_id, symbol: p.instrument.symbol, hold_until: hold_until(p) } },

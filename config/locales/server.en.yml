@@ -1,5 +1,9 @@
 en:
   site_settings:
+    rsc_forex_activity_enabled: "Enable the Kurumi forex activity"
+    rsc_forex_activity_starts_at: "Activity start (ISO 8601, including timezone)"
+    rsc_forex_activity_ends_at: "Activity end (ISO 8601, including timezone); set before finalization"
+    rsc_forex_activity_fee_bps: "Fee per side for new activity positions, in basis points"
     rsc_sports_team_translation_enabled: "Translate unknown sports team names in the background using the existing forecast AI model/key. Up to 16 names per minute; persisted in the forum database and cached. Page reads never wait for AI. Disabling retains existing translations."
     rsc_sports_team_translation_daily_limit: "Maximum daily batches (UTC; 16 names each). Failed attempts count and back off for 6 hours. Dictionary hits do not count."
     rsc_sports_team_name_overrides: "Manual JSON team dictionary, overriding built-in and AI names, e.g. {\"Arsenal\":\"阿森纳\",\"soccer|Paris FC\":\"巴黎FC\"}. Case-insensitive keys; sport|name scopes a sport. Invalid JSON is ignored; removing an entry restores automatic names."
@@ -28,7 +32,7 @@ en:
     rsc_sports_data_enabled: Enable ESPN fixtures and odds synchronization
     rsc_twelve_data_api_key: Server-side Twelve Data API key
     rsc_sports_leagues: Leagues to synchronize as sport:league
-    rsc_high_risk_enabled: Allow crypto high risk mode up to 100×, with user opt-in
+    rsc_high_risk_enabled: Allow crypto high risk mode and activity forex leverage up to 100×
     rsc_standard_position_limits_enabled: "Enable legacy position and portfolio percentage caps for 1–10× crypto/delayed-market orders. Balance, margin and liquidation checks always remain."
     rsc_high_risk_margin_percent: "Combined initial margin budget across all high-risk (11–100×) instruments, as a percent of equity."
     rsc_high_risk_cooldown_seconds: "Cooldown after a high-risk close, default 0 (disabled)."
@@ -147,6 +151,7 @@ en:
       packet_claimed: Packet claimed.
       packet_expired: Packet expired.
       invalid_reward_date: Invalid reward date.
+      forex_activity_ended: "The forex activity has ended or is paused. This activity order was not filled. Existing positions can still be closed."
       high_risk_disabled: High risk disabled.
       high_risk_budget: Insufficient high-risk margin budget. Reduce the quantity or use an allocation shortcut.
       high_risk_position_limit: High risk position limit.

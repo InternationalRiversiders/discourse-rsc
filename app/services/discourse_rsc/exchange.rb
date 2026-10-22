@@ -21,7 +21,7 @@ module DiscourseRsc
         Commands.lock("rsc-exchange")
         instrument = Instrument.lock.find(instrument_id)
         Risk.lock(actor.id)
-        if side != "close" && leverage > 10 && (instrument.category != "crypto" || !high_risk || !SiteSetting.rsc_high_risk_enabled)
+        if side != "close" && leverage > 10 && (!(instrument.category == "crypto" || ForexActivity.active_for?(instrument)) || !high_risk || !SiteSetting.rsc_high_risk_enabled)
           raise Error.new("high_risk_disabled", status: 403)
         end
         Risk.daily!(actor.id, instrument, side: side)
@@ -44,24 +44,27 @@ module DiscourseRsc
         wallet = Account.wallet(actor.id)
         raise Error.new("wallet_frozen", status: 403) unless wallet.status == "active"
         delay = instrument.quote.fetch("delay_seconds", 0).to_i
-        delayed = instrument.category == "crypto" || TradingRules.delayed?(instrument)
+        fx_confirmation = ForexActivity.confirmation?(instrument, leverage)
+        delayed = instrument.category == "crypto" || TradingRules.delayed?(instrument) || fx_confirmation
+        fee_bps = ForexActivity.fee_bps(instrument, position: position)
         wait = instrument.category == "crypto" ? (side == "close" ? 0 : SiteSetting.rsc_crypto_confirmation_delay_seconds) : [[delay - 30, 30].max, 1800].min
+        wait = 0 if fx_confirmation && !TradingRules.delayed?(instrument)
         order = Order.create!(user_id: actor.id, instrument_id: instrument.id, side: side, leverage: leverage,
                               status: delayed ? "pending" : "executing", quantity_units: units,
                               execute_at: Time.current + wait.seconds, expires_at: Time.current + (instrument.category == "crypto" ? 15 : 30).minutes,
-                              details: { "reference_price" => Amount.format(price), "delayed" => TradingRules.delayed?(instrument), "take_profit" => tp && Amount.format(tp), "stop_loss" => sl && Amount.format(sl) })
+                              details: { "reference_price" => Amount.format(price), "delayed" => TradingRules.delayed?(instrument), "take_profit" => tp && Amount.format(tp), "stop_loss" => sl && Amount.format(sl) }.merge(ForexActivity.order_details(instrument, position, side)).merge("fee_bps" => fee_bps, "fx_confirmation" => fx_confirmation))
         if side != "close"
           gross = units * price / U
           TradingRules.opening!(instrument, gross)
           if tp || sl
             projected = Position.new(side: side, average_units: ((position&.quantity_units.to_i || 0) * (position&.average_units.to_i || 0) + units * price) / ((position&.quantity_units.to_i || 0) + units), quantity_units: (position&.quantity_units.to_i || 0) + units, margin_units: (position&.margin_units.to_i || 0) + ceil_div(gross, leverage), leverage: leverage)
-            TradingRules.protection!(projected, instrument, price, tp, sl)
+            TradingRules.protection!(projected, instrument, price, tp, sl, fee_bps: fee_bps)
           end
           # Reserve at the upper edge of the 5% execution band, including fees.
-          reserve = ceil_div(gross * 105, 100 * leverage) + ceil_div(gross * 105 * instrument.fee_bps, 1_000_000)
+          reserve = ceil_div(gross * 105, 100 * leverage) + ceil_div(gross * 105 * fee_bps, 1_000_000)
           unless delayed
             immediate_gross = units * execution_price(instrument, side, price) / U
-            reserve = ceil_div(immediate_gross, leverage) + immediate_gross * instrument.fee_bps / 10_000
+            reserve = ceil_div(immediate_gross, leverage) + immediate_gross * fee_bps / 10_000
           end
           Risk.check!(actor.id, instrument, leverage, ceil_div(gross, leverage), excluding_order: order.id)
           Commands.move(user_id: actor.id, action: "stock_reserve", request_id: "order-reserve-#{order.id}",
@@ -84,7 +87,7 @@ module DiscourseRsc
         Risk.lock(actor.id)
         order = Order.lock.find(candidate.id)
         raise Error.new("order_not_pending", status: 409) unless order.status == "pending"
-        window_open = instrument.category == "crypto" || Time.current <= order.created_at + 10.seconds
+        window_open = instrument.category == "crypto" || order.details["fx_confirmation"] || Time.current <= order.created_at + 10.seconds
         unless window_open || order.expires_at <= Time.current || instrument.provider_error.present? || order.details["error"].present?
           raise Error.new("cancellation_locked", status: 409)
         end
@@ -110,7 +113,7 @@ module DiscourseRsc
         Risk.lock(actor.id)
         raise Error.new("wallet_frozen", status: 403) unless Account.wallet(actor.id).status == "active"
         price = price!(instrument)
-        TradingRules.protection!(position, instrument, price, tp, sl)
+        TradingRules.protection!(position, instrument, price, tp, sl, fee_bps: ForexActivity.fee_bps(instrument, position: position))
         position.update!(take_profit_units: tp, stop_loss_units: sl)
         { position_id: position.id }
       end
@@ -122,6 +125,15 @@ module DiscourseRsc
         Commands.lock("rsc-exchange")
         instrument = Instrument.lock.find(instrument_id)
         Order.where(instrument_id: instrument.id, status: "pending").where("expires_at <= ?", Time.current).order(:id).each { |order| refund_locked(order, "expired") }
+        # Activity expiry must release reservations even with a stale/closed feed,
+        # and must not wait for a delayed order's execution window.
+        if instrument.category == 'forex' && !ForexActivity.active?
+          Order.where(instrument_id: instrument.id, status: 'pending').where.not(side: 'close')
+            .where("details->>'forex_campaign' = ? OR leverage > 10", ForexActivity::KEY).order(:id).each do |order|
+              Risk.lock(order.user_id)
+              refund_locked(order, 'expired', 'forex_activity_ended')
+            end
+        end
         begin
           price = price!(instrument, trading: true)
         rescue Error
@@ -165,7 +177,7 @@ module DiscourseRsc
               Risk.check!(order.user_id, instrument, order.leverage, ceil_div(order.quantity_units.to_i * price / U, order.leverage), excluding_order: order.id)
               open_locked(instrument, order, position, price)
             rescue Error => error
-              raise unless %w[position_risk_limit portfolio_risk_limit high_risk_budget high_risk_cooldown high_risk_position_limit high_risk_disabled quote_stale quote_unavailable market_opening_disabled order_notional_below_min market_liquidity_limit invalid_protection take_profit_not_profitable stop_loss_beyond_liquidation].include?(error.code)
+              raise unless %w[position_risk_limit portfolio_risk_limit high_risk_budget high_risk_cooldown high_risk_position_limit high_risk_disabled forex_activity_ended quote_stale quote_unavailable market_opening_disabled order_notional_below_min market_liquidity_limit invalid_protection take_profit_not_profitable stop_loss_beyond_liquidation].include?(error.code)
               refund_locked(order, "rejected", error.code)
             end
           end
@@ -185,6 +197,7 @@ module DiscourseRsc
         raise Error.new("wallet_frozen", status: 403) unless Account.wallet(actor.id).status == "active"
         Commands.move(user_id: actor.id, action: "stock_margin", request_id: request_id,
                       postings: { Account.wallet(actor.id).id => -units, Account.internal("position:#{position.id}").id => units }, metadata: { position_id: position.id })
+        ForexActivity.prepare_close(position) if instrument.category == "forex"
         position.update!(margin_units: position.margin_units.to_i + units)
         { position_id: position.id, margin: Amount.format(position.margin_units) }
       end
@@ -226,7 +239,7 @@ module DiscourseRsc
       quantity = order.quantity_units.to_i
       gross = quantity * price / U
       margin = ceil_div(gross, order.leverage)
-      fee = gross * instrument.fee_bps / 10_000
+      fee = gross * order.details.fetch("fee_bps", instrument.fee_bps).to_i / 10_000
       Risk.check!(order.user_id, instrument, order.leverage, margin, excluding_order: order.id)
       reserve = order.reserved_units.to_i
       if margin + fee > reserve || (position && (position.side != order.side || position.leverage != order.leverage))
@@ -235,10 +248,13 @@ module DiscourseRsc
       end
       tp = order.details["take_profit"] && Amount.parse(order.details["take_profit"])
       sl = order.details["stop_loss"] && Amount.parse(order.details["stop_loss"])
+      fee_bps = order.details.fetch("fee_bps", instrument.fee_bps).to_i
       if tp || sl
         projected = Position.new(side: order.side, quantity_units: (position&.quantity_units.to_i || 0) + quantity, average_units: ((position&.quantity_units.to_i || 0) * (position&.average_units.to_i || 0) + quantity * price) / ((position&.quantity_units.to_i || 0) + quantity), margin_units: (position&.margin_units.to_i || 0) + margin, leverage: order.leverage)
-        TradingRules.protection!(projected, instrument, price, tp, sl)
+        TradingRules.protection!(projected, instrument, price, tp, sl, fee_bps: fee_bps)
       end
+      ForexActivity.prepare_close(position) if position && instrument.category == "forex"
+      fresh_position = position.nil?
       position ||= Position.create!(user_id: order.user_id, instrument_id: instrument.id, side: order.side, leverage: order.leverage)
       existing = position.quantity_units.to_i
       position.update!(quantity_units: existing + quantity, average_units: (existing * position.average_units.to_i + quantity * price) / (existing + quantity),
@@ -249,6 +265,7 @@ module DiscourseRsc
                                 Account.internal("system:exchange", kind: "system").id => fee, Account.wallet(order.user_id).id => reserve - margin - fee },
                     metadata: { order_id: order.id, price: Amount.format(price), fee: Amount.format(fee) },
                     event: Commands.event(order.user_id, "stock_filled", { "amount" => Amount.format(margin), "symbol" => instrument.symbol, "instrument_id" => instrument.id, "order_id" => order.id }))
+      ForexActivity.record_open(position, order, fee, fresh: fresh_position)
       order.update!(status: "filled", reserved_units: 0, details: order.details.merge("price" => Amount.format(price), "fee" => Amount.format(fee), "gross" => Amount.format(gross), "margin" => Amount.format(margin)))
     end
 
@@ -257,15 +274,18 @@ module DiscourseRsc
       quantity = order.quantity_units.to_i
       margin = position.margin_units.to_i * quantity / position.quantity_units.to_i
       profit = pnl(position, price, quantity)
-      fee = quantity * price / U * instrument.fee_bps / 10_000
+      fx_entry = ForexActivity.prepare_close(position) if instrument.category == "forex"
+      fee = quantity * price / U * (fx_entry&.fee_bps || instrument.fee_bps) / 10_000
       payout = [margin + profit - fee, 0].max
       Commands.move(user_id: order.user_id, action: "stock_close", request_id: "order-close-#{order.id}", settlement: true,
                     postings: { Account.internal("position:#{position.id}").id => -margin, Account.wallet(order.user_id).id => payout,
                                 Account.internal("system:exchange", kind: "system").id => margin - payout },
                     metadata: { order_id: order.id, reason: kind, price: Amount.format(price), pnl: Amount.format(profit), fee: Amount.format(fee) },
                     event: Commands.event(order.user_id, kind, { "amount" => Amount.format(payout), "symbol" => instrument.symbol, "instrument_id" => instrument.id, "order_id" => order.id }))
+      ForexActivity.record_close(fx_entry, position, quantity, payout - margin, kind) if fx_entry
       remaining = position.quantity_units.to_i - quantity
       remaining.zero? ? position.destroy! : position.update!(quantity_units: remaining, margin_units: position.margin_units.to_i - margin)
+      ForexActivity.mark(fx_entry, remaining.zero? ? nil : position) if fx_entry
       order.update!(status: "filled", details: order.details.merge("price" => Amount.format(price), "payout" => Amount.format(payout), "pnl" => Amount.format(profit), "fee" => Amount.format(fee), "margin" => Amount.format(margin), "reason" => kind, "gross" => Amount.format(quantity * price / U)))
     end
 

@@ -2131,3 +2131,34 @@
     .rsc-trader-columns .rsc-market-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 }
+
+// Keep the activity inside the RSC work area and native theme colors.
+.rsc-app .rsc-fx-activity {
+  margin-block: 0 1.1rem;
+  border: 1px solid var(--primary-low);
+  border-radius: 14px;
+  background: var(--secondary);
+  overflow: hidden;
+  .rsc-fx-banner { display: flex; align-items: center; gap: 1rem; padding: 1.1rem; background: linear-gradient(110deg, var(--tertiary-very-low), var(--secondary) 80%); }
+  .rsc-fx-emblem { display: grid; place-items: center; flex: 0 0 64px; height: 64px; border-radius: 15px; background: var(--tertiary-low); color: var(--tertiary); font-size: 1.5rem; font-weight: 800; line-height: 1.1; span { font-size: .8rem; font-weight: 600; } }
+  .rsc-fx-intro { flex: 1 1 auto; min-width: 0; p { margin: .35rem 0; font-size: .9rem; } small { color: var(--primary-medium); } }
+  .rsc-fx-title { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; h2 { margin: 0; font-size: 1.1rem; line-height: 1.5; } }
+  .rsc-fx-status { background: var(--tertiary-low); color: var(--tertiary); border-radius: 5px; padding: .15rem .4rem; font-size: .75rem; white-space: nowrap; }
+  .rsc-fx-actions { display: flex; flex-direction: column; flex-shrink: 0; gap: .25rem; .btn { white-space: nowrap; } }
+  .rsc-fx-content { padding: 1rem; border-top: 1px solid var(--primary-low); }
+  .rsc-fx-board-heading { display: flex; justify-content: space-between; align-items: center; gap: .6rem; h3 { margin: 0; font-size: 1rem; } small { font-weight: normal; color: var(--primary-medium); } }
+  .rsc-fx-mine { padding: .7rem; background: var(--primary-very-low); border-radius: 8px; }
+  .rsc-fx-ranks { list-style: none; padding: 0; margin: .7rem 0; li { display: grid; grid-template-columns: 2rem minmax(0, 1fr) minmax(5rem, auto) 3rem; align-items: center; gap: .7rem; padding: .7rem .3rem; border-bottom: 1px solid var(--primary-low); strong, small { text-align: right; } strong { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; } } .rsc-forum-user { min-width: 0; span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } } li.rsc-fx-empty { display: block; color: var(--primary-medium); } }
+  .rsc-fx-rank { font-weight: 700; color: var(--primary-medium); }
+  .rsc-fx-rules, .rsc-fx-settings { margin-top: .8rem; summary { cursor: pointer; } ul { padding-inline-start: 1.3rem; } li { margin-block: .5rem; line-height: 1.65; } }
+  .rsc-fx-settings form { display: flex; align-items: end; gap: .6rem; margin-top: .7rem; label { flex: 1; min-width: 0; } input { box-sizing: border-box; max-width: 100%; width: 100%; margin: .4rem 0 0; } }
+  @media (max-width: 650px) {
+    .rsc-fx-banner { flex-wrap: wrap; gap: .7rem; padding: .85rem; }
+    .rsc-fx-emblem { flex-basis: 48px; height: 54px; font-size: 1.2rem; }
+    .rsc-fx-intro { flex-basis: calc(100% - 65px); }
+    .rsc-fx-title h2 { font-size: 1rem; }
+    .rsc-fx-actions { flex-direction: row; width: 100%; .btn { flex: 1; font-size: .85rem; } }
+    .rsc-fx-content { padding: .85rem; }
+    .rsc-fx-ranks li { gap: .4rem; grid-template-columns: 1.5rem minmax(0, 1fr) minmax(4rem, auto) 2rem; font-size: .85rem; }
+  }
+}

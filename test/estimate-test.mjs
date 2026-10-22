@@ -5,7 +5,7 @@ assert.equal(atomic('0.000000000000000001'), 1n);
 assert.equal(atomic('1e5'), null);
 assert.equal(decimal(atomic('10000000000000000.000000000000000001')), '10000000000000000.000000000000000001');
 assert.equal(payout('0.01','1.85'),'0.0185');
-for (const execution_mode of ['immediate','crypto_confirmation','delayed_confirmation']) {
+for (const execution_mode of ['immediate','crypto_confirmation','delayed_confirmation','forex_confirmation']) {
   for (const step of ['1','0.1','0.000000000000000001']) {
     const item={quote:{price:'123.4567890123456789'},step,fee_bps:5,execution_mode};
     const result=estimate(item,'1',10,'100');
@@ -20,7 +20,7 @@ for (const execution_mode of ['immediate','crypto_confirmation','delayed_confirm
 assert.equal(estimate({quote:{price:'100'},step:'1'},'1',1,'0').maximum,'0');
 console.log('PASS exact decimal arithmetic, payout and affordable step boundaries for all execution modes');
 
-for (const execution_mode of ['immediate','crypto_confirmation','delayed_confirmation']) {
+for (const execution_mode of ['immediate','crypto_confirmation','delayed_confirmation','forex_confirmation']) {
   for (const step of ['1','0.01','0.000000000000000001']) {
     for (const quarters of [1,2,3,4]) {
       const item={quote:{price:'12.34567890123456789'},minimum:step,step,fee_bps:5,execution_mode};
@@ -85,3 +85,14 @@ for (const quarters of [1,2,3,4]) {
 }
 assert.equal(quantityForFraction({quote:{price:'100'},step:'0.01'},'100','1000',4,'long','0'),'0');
 console.log('PASS high-risk allocation respects combined margin budget and 5% execution headroom');
+
+// Activity FX uses the discounted fee and the shared high-risk margin budget.
+const activityFx={...fx, fee_bps:1, execution_mode:'forex_confirmation'};
+for (const quarter of [1,2,3,4]) {
+  const qty=quantityForFraction(activityFx,'100','1000',quarter,'long','25');
+  const result=estimate(activityFx,qty,'100','1000','long','25');
+  assert.ok(atomic(result.margin)*105n/100n<=atomic('25')*BigInt(quarter)/4n);
+  assert.ok(atomic(result.reserve)<=atomic('1000')*BigInt(quarter)/4n);
+  assert.equal(atomic(result.fee),atomic(result.gross)/10000n);
+}
+console.log('PASS activity forex fees, high leverage and allocation budget');
