@@ -268,4 +268,119 @@ class ForexActivityTest < NativeBusinessTest
     end
   end
 
+  def awarded_keys
+    R::ForexActivity::BADGES.keys.select do |key|
+      badge = Badge.find_by!(name: R::ForexActivity::BADGES[key].first)
+      UserBadge.exists?(user_id: @alice.id, badge_id: badge.id)
+    end
+  end
+
+  def test_profit_thresholds_use_realized_net_and_remember_reversed_profit
+    travel_to(Time.utc(2026,10,22,12)) do
+      fund(@alice, '10000'); activity; item=forex
+      submit(item, quantity:'1000', leverage:5); tick_quote(item)
+      tick_quote(item, '2.1'); R::ForexActivity.award
+      assert_equal [:debut], awarded_keys # floating profit is not an achievement
+      submit(item, side:'close', quantity:'1000'); tick_quote(item, '2.1')
+      # Lose more than the realized profit before the next badge job runs.
+      item.update!(quote:quote('1'))
+      submit(item, quantity:'6000', leverage:5); tick_quote(item)
+      tick_quote(item, '0.79')
+      assert entry.class.where(liquidated:true).exists?
+      assert_operator R::ForexActivity.entries.sum(:realized_units), :<, 0
+      wallet = R::Account.wallet(@alice.id).balance
+      2.times { R::ForexActivity.award }
+      assert_includes awarded_keys, :profit_100
+      assert_includes awarded_keys, :profit_1000
+      assert_includes awarded_keys, :liquidated
+      assert_includes awarded_keys, :loss_100
+      refute_includes awarded_keys, :loss_1000 # aggregate net, not sum of losing trades
+      assert_equal wallet, R::Account.wallet(@alice.id).balance
+      assert_equal awarded_keys.size, UserBadge.where(user_id:@alice.id, badge_id:Badge.where(name:R::ForexActivity::BADGES.values.map(&:first)).select(:id)).count
+    end
+  end
+
+  def test_loss_milestones_survive_recovery_and_ignore_after_deadline_profit
+    travel_to(Time.utc(2026,10,22,12)) do
+      fund(@alice, '10000'); activity; item=forex
+      submit(item, quantity:'6000', leverage:5); tick_quote(item); tick_quote(item,'0.79')
+      item.update!(quote:quote('1'))
+      submit(item, quantity:'2000', leverage:5); tick_quote(item)
+      tick_quote(item,'1.7')
+      closing=submit(item, side:'close', quantity:'2000'); tick_quote(item,'1.7')
+      assert_equal 'filled',closing.reload.status
+      R::ForexActivity.award
+      assert_includes awarded_keys, :loss_100
+      assert_includes awarded_keys, :loss_1000
+      assert_includes awarded_keys, :profit_100
+      refute_includes awarded_keys, :profit_1000
+      item.update!(quote:quote('1'))
+      submit(item, quantity:'2000', leverage:5); tick_quote(item)
+      SiteSetting.rsc_forex_activity_ends_at=1.second.from_now.iso8601
+      travel 2.seconds
+      tick_quote(item,'2')
+      closing=submit(item, side:'close', quantity:'2000'); tick_quote(item,'2')
+      assert_equal 'filled',closing.reload.status
+      R::ForexActivity.tick
+      refute_includes awarded_keys, :profit_1000
+      refute_includes awarded_keys, :survivor
+    end
+  end
+
+  def test_fee_boundary_old_positions_and_legacy_journals
+    travel_to(Time.utc(2026,10,22,12)) do
+      fund(@alice,'10000'); item=forex
+      submit(item,quantity:'1000',leverage:5)
+      activity
+      tick_quote(item,'2')
+      closing=submit(item,side:'close',quantity:'1000');tick_quote(item,'2')
+      assert_equal 'filled',closing.reload.status
+      assert_empty R::ForexActivity.realized_extremes
+      item.update!(quote:quote('1'))
+      # Simulate journals made by the old release, without position metadata.
+      original=R::Commands.method(:move)
+      R::Commands.define_singleton_method(:move) do |**args|
+        args[:metadata] = args[:metadata].except(:position_id)
+        original.call(**args)
+      end
+      submit(item,quantity:'1000',leverage:5);tick_quote(item)
+      tick_quote(item,'1.1')
+      closing=submit(item,side:'close',quantity:'1000');tick_quote(item,'1.1')
+      assert_equal 'filled',closing.reload.status
+      assert_operator R::ForexActivity.entries.sum(:realized_units), :<, R::Amount.parse('100')
+      R::ForexActivity.award
+      assert_equal [:debut], awarded_keys
+      # Small extra realized gain crosses the net (after fees) boundary.
+      item.update!(quote:quote('1'))
+      submit(item,quantity:'100',leverage:5);tick_quote(item)
+      submit(item,side:'close',quantity:'100');tick_quote(item,'1.01')
+      R::ForexActivity.award
+      assert_includes awarded_keys, :profit_100
+      assert_equal R::ForexActivity.entries.sum(:realized_units).to_i, R::ForexActivity.realized_extremes[@alice.id][:max]
+    ensure
+      R::Commands.define_singleton_method(:move,original) if original
+    end
+  end
+
+  def test_legacy_badges_rename_in_place_and_keep_selected_titles
+    travel_to(Time.utc(2026,10,22,12)) do
+      fund; activity; item=forex
+      submit(item);tick_quote(item)
+      R::ForexActivity.award
+      badge=Badge.find_by!(name:R::ForexActivity::BADGES[:debut].first)
+      old_name=R::ForexActivity::LEGACY_BADGES[:debut]
+      badge.update!(name:old_name)
+      @alice.update!(title:old_name)
+      @alice.user_profile.update!(granted_title_badge_id:badge.id)
+      grant=UserBadge.find_by!(user_id:@alice.id,badge_id:badge.id)
+      R::ForexActivity.award
+      assert_equal old_name,badge.reload.name # safe while old workers still run
+      2.times { R::ForexActivity.award(rename_legacy:true) }
+      assert_equal R::ForexActivity::BADGES[:debut].first,badge.reload.name
+      assert_equal badge.name,@alice.reload.title
+      assert_equal grant.id,UserBadge.find_by!(user_id:@alice.id,badge_id:badge.id).id
+      refute Badge.exists?(name:old_name)
+    end
+  end
+
 end

@@ -68,7 +68,7 @@ export default class extends Component {
             <p>外汇最高 100× · 新活动仓位每边手续费 {{this.fee}}% · 自动授予徽章与称号</p>
             <small>{{#if @activity.ends_at}}预计截止 {{formatDateTime @activity.ends_at}}（按你的时区显示，可随播出安排调整）{{else}}{{@activity.end_label}}{{/if}}</small>
           </div>
-          <div class="rsc-fx-actions"><button class="btn btn-primary" type="button" {{on "click" @browse}}>外汇修行 {{dIcon "arrow-right"}}</button><button class="btn btn-flat" type="button" aria-expanded={{if this.expanded "true" "false"}} aria-controls="rsc-fx-standings" {{on "click" this.toggle}}>活动榜与规则 {{dIcon "chevron-down"}}</button></div>
+          <div class="rsc-fx-actions"><button class="btn btn-primary" type="button" {{on "click" @browse}}>外汇市场 {{dIcon "arrow-right"}}</button><button class="btn btn-flat" type="button" aria-expanded={{if this.expanded "true" "false"}} aria-controls="rsc-fx-standings" {{on "click" this.toggle}}>活动榜与规则 {{dIcon "chevron-down"}}</button></div>
         </div>
         {{#if this.expanded}}<div id="rsc-fx-standings" class="rsc-fx-content">
           <div class="rsc-fx-board-heading"><h3>外汇修行榜 <small>净盈亏 / RSC</small></h3><button class="btn btn-small" type="button" disabled={{this.loading}} {{on "click" this.refreshBoard}}>{{dIcon "arrows-rotate"}} 刷新</button></div>
@@ -82,8 +82,9 @@ export default class extends Component {
               <li>高于 10× 的外汇与虚拟币共用账户权益的高杠杆初始保证金额度。下单比例按钮会结合剩余额度计算。</li>
               <li>仅统计活动开始后新建的外汇仓位；活动前旧仓位及其加仓保留原费率，不进入活动榜。活动仓位的优惠费率保留至平仓。</li>
               <li>净盈亏包含已实现盈亏、开平仓手续费，以及未平仓按最近来源报价估值并扣除预计平仓费的盈亏。活动结束按截止前最后一笔可用来源报价冻结排名，行情可能存在延迟；不强制平仓。截止后只影响后续开仓，已有仓位仍可平仓、补保证金和设置止盈止损。</li>
-              <li>首次活动开仓获“初入汇市”；在三个不同日期开仓或加仓获“外汇修行者”（UTC+8 日期）；结束时净盈亏不为负且没有活动仓位被强平，获“汇市幸存者”。徽章自动授予，称号可在个人设置选择。无需申请或人工领取。</li>
+              <li>盈利、亏损徽章按扣除手续费后的累计已实现净盈亏判断，不含浮盈浮亏；“活到完结”按截止时活动榜成绩判断。每枚徽章仅发一次，均可用作称号，无额外 RSC 奖励，无需申请或人工领取。</li>
             </ul>
+            <dl class="rsc-fx-achievements">{{#each this.data.achievements key="key" as |badge|}}<div><dt>{{dIcon "award"}} {{badge.name}}</dt><dd>{{badge.description}}</dd></div>{{/each}}</dl>
           </details>
           {{#if @admin}}{{#unless @activity.ended}}<details class="rsc-fx-settings"><summary>调整活动结束时间</summary><form {{on "submit" this.save}}><label>结束时间（当前设备时区）<input type="datetime-local" required value={{this.endsDraft}} {{on "input" this.draft}} /></label><button class="btn" type="submit" disabled={{this.saving}}>保存时间</button></form><p class="rsc-muted">若动画停播或延期，请在原定截止前调整；已冻结的活动成绩不会重新计算。</p></details>{{/unless}}{{/if}}
         </div>{{/if}}

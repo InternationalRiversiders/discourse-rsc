@@ -263,7 +263,7 @@ module DiscourseRsc
       Commands.move(user_id: order.user_id, action: "stock_fill", request_id: "order-fill-#{order.id}", settlement: true,
                     postings: { Account.internal("order:#{order.id}").id => -reserve, Account.internal("position:#{position.id}").id => margin,
                                 Account.internal("system:exchange", kind: "system").id => fee, Account.wallet(order.user_id).id => reserve - margin - fee },
-                    metadata: { order_id: order.id, price: Amount.format(price), fee: Amount.format(fee) },
+                    metadata: { position_id: position.id, order_id: order.id, price: Amount.format(price), fee: Amount.format(fee) },
                     event: Commands.event(order.user_id, "stock_filled", { "amount" => Amount.format(margin), "symbol" => instrument.symbol, "instrument_id" => instrument.id, "order_id" => order.id }))
       ForexActivity.record_open(position, order, fee, fresh: fresh_position)
       order.update!(status: "filled", reserved_units: 0, details: order.details.merge("price" => Amount.format(price), "fee" => Amount.format(fee), "gross" => Amount.format(gross), "margin" => Amount.format(margin)))
@@ -280,7 +280,7 @@ module DiscourseRsc
       Commands.move(user_id: order.user_id, action: "stock_close", request_id: "order-close-#{order.id}", settlement: true,
                     postings: { Account.internal("position:#{position.id}").id => -margin, Account.wallet(order.user_id).id => payout,
                                 Account.internal("system:exchange", kind: "system").id => margin - payout },
-                    metadata: { order_id: order.id, reason: kind, price: Amount.format(price), pnl: Amount.format(profit), fee: Amount.format(fee) },
+                    metadata: { position_id: position.id, order_id: order.id, reason: kind, price: Amount.format(price), pnl: Amount.format(profit), fee: Amount.format(fee) },
                     event: Commands.event(order.user_id, kind, { "amount" => Amount.format(payout), "symbol" => instrument.symbol, "instrument_id" => instrument.id, "order_id" => order.id }))
       ForexActivity.record_close(fx_entry, position, quantity, payout - margin, kind) if fx_entry
       remaining = position.quantity_units.to_i - quantity

@@ -11,6 +11,7 @@ gem 'websocket-driver', '0.8.2', require_name: 'websocket/driver'
 enabled_site_setting :rsc_enabled
 register_svg_icon "coins"
 register_svg_icon "chart-line"
+register_svg_icon "award"
 register_svg_icon "triangle-exclamation"
 register_asset "stylesheets/rsc.scss"
 register_asset "stylesheets/rsc-forecast.scss"

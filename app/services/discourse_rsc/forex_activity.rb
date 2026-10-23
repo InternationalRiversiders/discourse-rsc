@@ -2,13 +2,19 @@
 module DiscourseRsc
   class ForexActivity
     KEY = 'fx-kurumi-2026'
-    TITLE = 'FX 战士久留美 · 河畔外汇修行'
+    TITLE = 'FX 战士久留美 · Riverside 联动'
     FEATURED = %w[FX:JPY FX:EUR FX:GBP FX:AUD FX:CAD FX:CHF].freeze
     NAMES = { 'JPY'=>'日元', 'EUR'=>'欧元', 'GBP'=>'英镑', 'AUD'=>'澳元', 'CAD'=>'加元', 'CHF'=>'瑞郎', 'CNY'=>'人民币', 'HKD'=>'港元', 'INR'=>'印度卢比', 'KRW'=>'韩元', 'NZD'=>'新西兰元', 'SGD'=>'新加坡元' }.freeze
+    LEGACY_BADGES = { debut: 'FX战士 · 初入汇市', practice: 'FX战士 · 外汇修行者', survivor: 'FX战士 · 汇市幸存者' }.freeze
     BADGES = {
-      debut: ['FX战士 · 初入汇市', '活动期间首次完成一笔新外汇仓位的开仓。', 3],
-      practice: ['FX战士 · 外汇修行者', '活动期间在三个不同日期完成活动仓位开仓或加仓（按 UTC+8 统计）。', 2],
-      survivor: ['FX战士 · 汇市幸存者', '活动结束时活动净盈亏不为负，且活动仓位没有被强平。', 1]
+      debut: ['我已经完全理解了外汇', '首次完成一笔活动外汇仓位开仓。', 3],
+      practice: ['今天也在盯盘', '在三个不同日期完成活动仓位开仓或加仓（UTC+8）。', 2],
+      liquidated: ['强制毕业', '活动期间首次有活动外汇仓位被强平。', 3],
+      loss_100: ['只是技术性调整', '活动累计已实现净亏损曾达到 100 RSC（含手续费）。', 3],
+      loss_1000: ['这集我看过', '活动累计已实现净亏损曾达到 1,000 RSC（含手续费）。', 2],
+      profit_100: ['先把学费赚回来', '活动累计已实现净盈利曾达到 100 RSC（含手续费）。', 2],
+      profit_1000: ['离两千万还差一点', '活动累计已实现净盈利曾达到 1,000 RSC（含手续费）。', 1],
+      survivor: ['活到完结', '活动结束时净盈亏不为负，且活动仓位没有被强平。', 1]
     }.freeze
 
     def self.time(value)
@@ -123,7 +129,7 @@ module DiscourseRsc
       visible = rows.slice((page - 1) * 30, 30) || []
       users = User.where(id: visible.map { |r| r[:user_id] }).index_by(&:id)
       serialize = ->(row) { row && row.except(:score).merge(net: Amount.format(row[:score]), forum_user: UserIdentity.serialize(users[row[:user_id]] || row[:user_id])) }
-      summary.merge(rows: visible.map { |r| serialize.call(r) }, me: serialize.call(mine), total: rows.size, page: page, pages: pages)
+      summary.merge(achievements: BADGES.map { |key, (name, description, _)| { key: key, name: name, description: description } }, rows: visible.map { |r| serialize.call(r) }, me: serialize.call(mine), total: rows.size, page: page, pages: pages)
     end
     def self.summary
       { key: KEY, title: TITLE, visible: starts_at.present?, active: !!active?, starts_at: starts_at, ends_at: ends_at,
@@ -140,28 +146,77 @@ module DiscourseRsc
       end
       award
     end
-    def self.award
-      rows = results
-      return if rows.empty?
+    # Replay immutable cash postings, in settlement order. This also backfills
+    # milestones crossed before deployment or between award jobs, even if the
+    # user subsequently lost the profit / recovered the loss. No unrealized P/L.
+    def self.realized_extremes
+      return {} unless starts_at
+      sql = ActiveRecord::Base.sanitize_sql_array([<<~SQL, { exchange: 'system:exchange', campaign: KEY, start: starts_at, finish: ends_at || Time.current + 1.microsecond }])
+        SELECT j.actor_user_id AS user_id, -COALESCE(fee.units, 0) AS delta
+        FROM discourse_rsc_journals j
+        LEFT JOIN discourse_rsc_accounts system_account ON system_account.key = :exchange
+        LEFT JOIN discourse_rsc_entries fee ON fee.journal_id = j.id AND fee.account_id = system_account.id
+        WHERE j.operation IN ('stock_fill', 'stock_close') AND j.created_at >= :start AND j.created_at < :finish
+          AND EXISTS (
+            SELECT 1 FROM discourse_rsc_forex_activity_entries fx
+            WHERE fx.campaign_key = :campaign AND fx.user_id = j.actor_user_id AND (
+              j.metadata->>'position_id' = fx.position_id::text OR
+              (NOT (j.metadata ? 'position_id') AND EXISTS (
+                SELECT 1 FROM discourse_rsc_accounts a
+                JOIN discourse_rsc_entries posting ON posting.account_id = a.id
+                WHERE a.key = 'position:' || fx.position_id::text AND posting.journal_id = j.id
+              ))
+            )
+          )
+        ORDER BY j.id
+      SQL
+      totals = Hash.new(0)
+      extrema = Hash.new { |h, id| h[id] = { min: 0, max: 0 } }
+      ActiveRecord::Base.connection.select_all(sql).each do |row|
+        id = row['user_id'].to_i
+        totals[id] += row['delta'].to_i
+        extrema[id][:min] = [extrema[id][:min], totals[id]].min
+        extrema[id][:max] = [extrema[id][:max], totals[id]].max
+      end
+      extrema
+    end
+
+    # During A/B rollout keep the old names until the old workers have stopped;
+    # otherwise those workers would recreate the three legacy badges.
+    def self.badges(rename_legacy: false)
+      BADGES.to_h do |key, (name, description, tier)|
+        badge = Badge.find_by(name: name) || (LEGACY_BADGES[key] && Badge.find_by(name: LEGACY_BADGES[key])) || Badge.new
+        if badge.new_record? || (rename_legacy && badge.name != name)
+          renamed = badge.persisted?
+          badge.assign_attributes(name: name, description: description, long_description: description, badge_type_id: tier,
+            multiple_grant: false, allow_title: true, enabled: true, icon: 'chart-line')
+          badge.save!
+          badge.update_user_titles!(badge.display_name) if renamed
+        end
+        [key, badge]
+      end
+    end
+
+    def self.award(rename_legacy: false)
       ForexActivityEntry.transaction do
         Commands.lock('rsc-fx-activity-awards')
-        badges = BADGES.to_h do |key, (name, description, tier)|
-          badge = Badge.find_or_initialize_by(name: name)
-          if badge.new_record?
-            badge.assign_attributes(description: description, long_description: description, badge_type_id: tier,
-              multiple_grant: false, allow_title: true, enabled: true, icon: 'chart-line')
-            badge.save!
-          end
-          [key, badge]
-        end
+        definitions = badges(rename_legacy: rename_legacy)
+        rows = results
+        extrema = realized_extremes
         users = User.where(id: rows.map { |r| r[:user_id] }).index_by(&:id)
         rows.each do |row|
           user = users[row[:user_id]]; next unless user
           eligible = [:debut]
           eligible << :practice if row[:days] >= 3
+          eligible << :liquidated if row[:liquidated]
+          bounds = extrema.fetch(row[:user_id], { min: 0, max: 0 })
+          [100, 1000].each do |amount|
+            eligible << :"profit_#{amount}" if bounds[:max] >= amount * Amount::UNIT
+            eligible << :"loss_#{amount}" if bounds[:min] <= -amount * Amount::UNIT
+          end
           eligible << :survivor if row[:final] && row[:score] >= 0 && !row[:liquidated]
           eligible.each do |key|
-            badge = badges.fetch(key)
+            badge = definitions.fetch(key)
             next if UserBadge.exists?(user_id: user.id, badge_id: badge.id)
             BadgeGranter.grant(badge, user, granted_by: Discourse.system_user)
           end
