@@ -28,7 +28,7 @@
 
 ## API / 原生 App 接入
 
-`GET /rsc/state.json?section=market` 增加 `forex_activity` 摘要；每个标的返回 `max_leverage`、`fx_activity`、`currency_name` 和针对当前用户持仓计算的 `fee_bps`。`market_category=fx_activity` 筛选外汇。
+`GET /rsc/state.json?section=market` 增加 `forex_activity` 摘要；每个标的返回 `max_leverage`、`fx_activity`、`currency_name` 和针对当前用户持仓计算的 `fee_bps`。`market_category=forex` 筛选外汇，旧参数 `fx_activity` 仍兼容并规范为 `forex`。活动期间原外汇分类显示“久留美活动”，到期自动恢复“外汇”，不增加重复分类。
 
 原生 App 需要随版本适配；网页活动上线不等于原生页面已更新：
 

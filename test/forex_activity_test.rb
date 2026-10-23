@@ -213,6 +213,8 @@ class ForexActivityTest < NativeBusinessTest
       assert_equal 200,session.response.status,session.response.body
       state=JSON.parse(session.response.body)
       assert_equal true,state.dig('forex_activity','active')
+      assert_equal 'forex',state.dig('market_page','category')
+      refute_includes state.dig('market_page','categories'),'fx_activity'
       assert_equal 100,state.dig('market_page','rows',0,'max_leverage')
       assert_equal 1,state.dig('market_page','rows',0,'fee_bps')
       session.get '/rsc/forex-activity.json',headers:headers

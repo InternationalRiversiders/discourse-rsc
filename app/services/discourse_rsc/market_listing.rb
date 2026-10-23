@@ -36,11 +36,12 @@ module DiscourseRsc
       all = catalog
       categories = all.map { |row| row[:category] }.uniq
       category = params[:market_category].presence || (all.any? { |row| tradable?(row) } ? 'tradable' : 'all')
-      category = 'all' unless (categories + %w[all tradable fx_activity]).include?(category)
+      category = 'forex' if category == 'fx_activity' # Compatibility with saved filters from the first release.
+      category = 'all' unless (categories + %w[all tradable]).include?(category)
       query = params[:market_search].to_s.strip.first(100).downcase
       sort = %w[popular symbol gainers losers].include?(params[:market_sort]) ? params[:market_sort] : 'popular'
       found = all.select do |row|
-        (category == 'all' || (category == 'fx_activity' ? row[:category] == 'forex' : category == 'tradable' ? tradable?(row) : row[:category] == category)) &&
+        (category == 'all' || (category == 'tradable' ? tradable?(row) : row[:category] == category)) &&
           %i[symbol display_symbol exchange currency name category].map { |field| row[field] }.join(' ').downcase.include?(query)
       end
       if sort == 'symbol'

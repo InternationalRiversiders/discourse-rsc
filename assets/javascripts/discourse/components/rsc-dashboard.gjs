@@ -385,7 +385,7 @@ export default class RscDashboard extends Component {
   }
   @action async showForexActivity() {
     this.marketDetailOpen = false; this.orderTicketOpen = false; this.selectedId = "";
-    await this.queryMarkets({ market_category: "fx_activity", market_search: "", market_sort: "popular", market_page: 1 });
+    await this.queryMarkets({ market_category: "forex", market_search: "", market_sort: "popular", market_page: 1 });
     if (this.isDestroying || this.isDestroyed) { return; }
     this.marketFilterRevision++;
     requestAnimationFrame(() => document.querySelector("#rsc-markets")?.scrollIntoView({ block: "start" }));
