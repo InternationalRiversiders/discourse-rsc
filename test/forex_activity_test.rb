@@ -45,6 +45,7 @@ class ForexActivityTest < NativeBusinessTest
       refute R::ForexActivity.active?
       assert_equal 10,R::MarketListing.rows([item]).first[:max_leverage]
       assert_equal 5,R::ForexActivity.fee_bps(item)
+      assert_equal false,R::MarketListing.rows([item]).first[:margin_budget_exempt]
     end
   end
   def test_new_quote_confirmation_fee_and_idempotence
@@ -99,12 +100,17 @@ class ForexActivityTest < NativeBusinessTest
       assert_equal 1,R::MarketListing.rows([item],user_id:@alice.id).first[:fee_bps]
     end
   end
-  def test_forex_and_crypto_share_high_risk_budget_and_forex_has_no_cooldown
+  def test_forex_does_not_consume_crypto_budget_and_has_no_cooldown
     travel_to(Time.utc(2026,10,22,12)) do
       fund; activity; coin=instrument('1');coin.update!(symbol:'COIN',category:'crypto',quote:quote('1').merge('bid'=>'1','ask'=>'1'))
       submit(coin,quantity:'20000');tick_quote(coin)
+      crypto_used=R::Risk.high_risk_status(@alice.id)[:budget][:used_margin]
       fx=forex
-      assert_equal 'high_risk_budget',assert_raises(R::Error) { submit(fx,quantity:'6000') }.code
+      opening=submit(fx,quantity:'6000');tick_quote(fx)
+      assert_equal 'filled',opening.reload.status
+      assert_equal crypto_used,R::Risk.high_risk_status(@alice.id)[:budget][:used_margin]
+      assert_equal 'insufficient_balance',assert_raises(R::Error) { submit(fx,quantity:'100000') }.code
+      assert_equal true,R::MarketListing.rows([fx],user_id:@alice.id).first[:margin_budget_exempt]
       remaining=R::Risk.high_risk_status(@alice.id)[:budget][:available_margin]
       assert_operator BigDecimal(remaining),:<,50
       R::Order.create!(user_id:@alice.id,instrument_id:coin.id,side:'close',status:'filled',leverage:100,quantity_units:R::Amount.parse('1'))

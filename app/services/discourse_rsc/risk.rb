@@ -9,11 +9,17 @@ module DiscourseRsc
     def self.check!(user_id, instrument, leverage, margin, excluding_order: nil)
       return unless instrument.category == "crypto" || TradingRules.delayed?(instrument) || (instrument.category == "forex" && leverage > 10)
       return if leverage <= 10 && !SiteSetting.rsc_standard_position_limits_enabled
+      if instrument.category == 'forex' && leverage > 10
+        raise Error.new('high_risk_disabled', status: 403) unless SiteSetting.rsc_high_risk_enabled
+        raise Error.new('forex_activity_ended', status: 409) unless ForexActivity.active_for?(instrument)
+        # Activity FX is limited by wallet cash (including fees and the quote
+        # reservation), not the crypto initial-margin allowance.
+        return
+      end
       positions, pending, equity = portfolio(user_id, excluding_order: excluding_order)
       if leverage > 10
         raise Error.new("high_risk_disabled", status: 403) unless SiteSetting.rsc_high_risk_enabled
-        raise Error.new("forex_activity_ended", status: 409) if instrument.category == "forex" && !ForexActivity.active_for?(instrument)
-        unless instrument.category == "forex" || positions.any? { |p| p.instrument_id == instrument.id && p.leverage > 10 }
+        unless positions.any? { |p| p.instrument_id == instrument.id && p.leverage > 10 }
           raise Error.new("high_risk_cooldown", status: 429) if high_risk_cooldown_until(user_id)
         end
         budget = high_risk_budget(positions, pending, equity)
@@ -34,8 +40,8 @@ module DiscourseRsc
       raise Error.new("portfolio_risk_limit", status: 409) if risk > equity
     end
 
-    # One shared high-risk budget replaces per-symbol, symbol-count and weighted
-    # caps. Ordinary positions do not consume it; all positions inform equity.
+    # Crypto keeps one shared high-risk budget. Activity FX does not consume it,
+    # including after the activity ends; all positions still inform equity.
     def self.portfolio(user_id, excluding_order: nil)
       positions = Position.where(user_id: user_id).includes(:instrument).to_a
       pending = Order.where(user_id: user_id, status: "pending").where.not(side: "close").includes(:instrument).to_a
@@ -54,8 +60,8 @@ module DiscourseRsc
     end
 
     def self.high_risk_budget(positions, pending, equity)
-      high_positions = positions.select { |p| p.leverage > 10 }
-      high_orders = pending.select { |p| p.leverage > 10 }
+      high_positions = positions.select { |p| p.leverage > 10 && p.instrument.category != "forex" }
+      high_orders = pending.select { |p| p.leverage > 10 && p.instrument.category != "forex" }
       used = high_positions.sum { |p| TradingRules.initial_margin(p) } + high_orders.sum { |p| TradingRules.order_margin(p) }
       maximum = equity * SiteSetting.rsc_high_risk_margin_percent / 100
       { equity: equity, maximum_margin: maximum, used_margin: used, available_margin: [maximum - used, 0].max }
@@ -80,9 +86,9 @@ module DiscourseRsc
     end
 
     def self.high_risk_status(user_id)
-      positions = Position.where(user_id: user_id).where("leverage > 10").includes(:instrument)
+      positions = Position.joins(:instrument).where(user_id: user_id).where("leverage > 10").where.not(discourse_rsc_instruments: { category: "forex" }).includes(:instrument)
       pending = Order.where(user_id: user_id, status: "pending").where.not(side: "close")
-        .where("leverage > 10").includes(:instrument)
+        .where("leverage > 10").joins(:instrument).where.not(discourse_rsc_instruments: { category: "forex" }).includes(:instrument)
       budget = high_risk_budget(*portfolio(user_id)).transform_values { |value| Amount.format(value) }
       { budget: budget, margin_percent: SiteSetting.rsc_high_risk_margin_percent, cooldown_until: high_risk_cooldown_until(user_id),
         positions: positions.map { |p| { instrument_id: p.instrument_id, symbol: p.instrument.symbol, hold_until: hold_until(p) } },

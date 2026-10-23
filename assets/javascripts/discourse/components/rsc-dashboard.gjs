@@ -194,6 +194,7 @@ export default class RscDashboard extends Component {
     }
   }
   get marginLimit() {
+    if (this.selected?.margin_budget_exempt) { return null; }
     return Number(this.leverage) > 10 ? (this.data.high_risk?.budget?.available_margin ?? "0") : null;
   }
   get estimate() { return estimate(this.selected, this.quantity, this.leverage, this.data.wallet.balance, this.side, this.marginLimit); }
@@ -275,7 +276,7 @@ export default class RscDashboard extends Component {
   }
   get positionLimitHint() {
     return Number(this.leverage) > 10
-      ? `多个高杠杆品种共用账户权益 ${this.data.high_risk?.margin_percent ?? this.siteSettings.rsc_high_risk_margin_percent}% 的初始保证金额度，不再限制品种数。`
+      ? `多个高杠杆虚拟币品种共用账户权益 ${this.data.high_risk?.margin_percent ?? this.siteSettings.rsc_high_risk_margin_percent}% 的初始保证金额度，不再限制品种数。`
       : this.siteSettings.rsc_standard_position_limits_enabled ? "虚拟币和延迟行情仍受单仓比例与组合额度限制。" : "普通杠杆不设额外单仓比例与组合额度限制，余额须足够支付保证金和手续费。";
   }
   @action marginDraft(id, event) {
@@ -758,7 +759,7 @@ export default class RscDashboard extends Component {
                   {{#if (eq this.selected.category "forex")}}<label>RSC 名义金额<input inputmode="decimal" value={{this.notional}} {{on "input" this.changeNotional}} /></label><p class="rsc-muted">按交易总额换算货币数量，按数量步进向下取整；保证金另按杠杆计算，以当前数量提交。</p>{{/if}}
                   <div class="rsc-fields rsc-ticket-inputs">
                     <div><label>{{uiText "quantity"}}<input required inputmode="decimal" value={{this.quantity}} {{on "input" this.changeQuantity}} /></label>
-                      <span class="rsc-allocation-buttons">{{#each (array 1 2 3 4) as |quarter|}}<button type="button" class="btn btn-small" {{on "click" (fn this.allocate quarter)}}>{{#if (eq quarter 4)}}全仓{{else if (eq quarter 2)}}1/2{{else}}{{quarter}}/4{{/if}}</button>{{/each}}</span>
+                      <span class="rsc-allocation-buttons">{{#each (array 1 2 3 4) as |quarter|}}<button type="button" class="btn btn-small" {{on "click" (fn this.allocate quarter)}}>{{#if (eq quarter 4)}}最大可开{{else if (eq quarter 2)}}1/2{{else}}{{quarter}}/4{{/if}}</button>{{/each}}</span>
                     </div>
                     <div><label>{{uiText "leverage"}} <output>{{this.leverage}}×</output><input class="rsc-leverage-range" aria-label="杠杆滑块" type="range" min="1" max={{this.maxLeverage}} step="1" value={{this.leverage}} {{on "input" (fn this.set "leverage")}} /></label><input aria-label="杠杆倍数" required type="number" min="1" max={{this.maxLeverage}} step="1" value={{this.leverage}} {{on "input" (fn this.set "leverage")}} /></div>
                   </div>
@@ -766,7 +767,7 @@ export default class RscDashboard extends Component {
                     <label class="rsc-checkbox"><input type="checkbox" checked={{this.highRisk}} {{on "change" this.toggleHighRisk}} />{{uiText "high_risk_mode"}}</label>
                     <div class="rsc-risk-status"><strong>高杠杆（11–100×）</strong>{{#if this.data.high_risk.budget}}<span>剩余保证金额度 {{formatAmount this.data.high_risk.budget.available_margin}} / {{formatAmount this.data.high_risk.budget.maximum_margin}} RSC</span>{{/if}}<span>{{#if this.highRiskStatus.occupying}}已持有：{{this.highRiskStatus.occupying}}{{else}}暂无高杠杆仓位{{/if}}</span>{{#if this.highRiskStatus.seconds}}<span>冷却倒计时 <b>{{this.highRiskStatus.countdown}}</b>（现有同标的高杠杆仓位可继续加仓）</span>{{else}}<span>当前无冷却</span>{{/if}}{{#if this.highRiskStatus.hold}}<span>当前仓位还需 {{this.highRiskStatus.hold}} 秒可手动平仓</span>{{/if}}</div>
                   {{/if}}{{/if}}
-                  {{#if (eq this.selected.category "forex")}}<div class="rsc-risk-status"><strong>{{this.selected.currency_name}}交易 · 每边手续费 {{this.forexFee}}%</strong><span>买入做多为看涨{{this.selected.currency_name}}兑美元，卖出做空为看跌。</span>{{#if this.data.forex_activity.active}}<span>活动期间最高 100×，外汇不设额外冷却或持仓等待。</span>{{else}}<span>当前最高 10×。已有高杠杆仓位可从“我的持仓”平仓、追加保证金或设置止盈止损。</span>{{/if}}{{#if this.data.high_risk.budget}}<span>高杠杆剩余初始保证金额度 {{formatAmount this.data.high_risk.budget.available_margin}} RSC，与虚拟币共用。</span>{{/if}}<span>仅使用 RSC 模拟交易。100× 下小幅汇率波动也可能触发强平。</span></div>{{/if}}
+                  {{#if (eq this.selected.category "forex")}}<div class="rsc-risk-status"><strong>{{this.selected.currency_name}}交易 · 每边手续费 {{this.forexFee}}%</strong><span>买入做多为看涨{{this.selected.currency_name}}兑美元，卖出做空为看跌。</span>{{#if this.data.forex_activity.active}}<span>活动期间最高 100×，可按钱包可用余额开仓，不受虚拟币的保证金额度限制。</span>{{else}}<span>当前最高 10×。已有高杠杆仓位可从“我的持仓”平仓、追加保证金或设置止盈止损。</span>{{/if}}<span>“最大可开”会扣除手续费并预留报价变化空间；补保证金不会增加持仓数量。</span><span>仅使用 RSC 模拟交易。100× 下小幅汇率波动也可能触发强平。</span></div>{{/if}}
                   {{#if this.selected.close_only}}<p class="alert alert-info">此杠杆/反向产品目前仅可平仓。</p>{{/if}}
                   <div class="rsc-fields"><label>{{uiText "take_profit"}}<input inputmode="decimal" value={{this.takeProfit}} {{on "input" (fn this.set "takeProfit")}} /></label><label>{{uiText "stop_loss"}}<input inputmode="decimal" value={{this.stopLoss}} {{on "input" (fn this.set "stopLoss")}} /></label></div>
                   {{#if this.quantityError}}<p class="alert alert-error" role="alert">{{this.quantityError}}</p>{{/if}}
