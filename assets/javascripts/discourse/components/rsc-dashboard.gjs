@@ -267,7 +267,7 @@ export default class RscDashboard extends Component {
   }
   get forexFee() { return Number(this.selected?.fee_bps || 0) / 100; }
   get executionHint() {
-    if (this.selected?.execution_mode === "forex_confirmation") { return "等待提交之后的新外汇报价确认，成交前可撤单；没有额外持仓锁定或开仓冷却。"; }
+    if (this.selected?.execution_mode === "forex_confirmation") { return "开仓等待新外汇报价确认，成交前可撤单；平仓使用最新有效报价直接成交，不再额外等待下一笔报价。"; }
     if (this.selected?.execution_mode === "immediate") { return "按当前可用行情成交。"; }
     if (this.selected?.execution_mode !== "crypto_confirmation") { return "等待提交之后的新报价确认；提交后 10 秒内可撤单。普通仓位成交后没有额外持仓锁定。"; }
     const delay = this.siteSettings.rsc_crypto_confirmation_delay_seconds;
@@ -767,13 +767,13 @@ export default class RscDashboard extends Component {
                     <label class="rsc-checkbox"><input type="checkbox" checked={{this.highRisk}} {{on "change" this.toggleHighRisk}} />{{uiText "high_risk_mode"}}</label>
                     <div class="rsc-risk-status"><strong>高杠杆（11–100×）</strong>{{#if this.data.high_risk.budget}}<span>剩余保证金额度 {{formatAmount this.data.high_risk.budget.available_margin}} / {{formatAmount this.data.high_risk.budget.maximum_margin}} RSC</span>{{/if}}<span>{{#if this.highRiskStatus.occupying}}已持有：{{this.highRiskStatus.occupying}}{{else}}暂无高杠杆仓位{{/if}}</span>{{#if this.highRiskStatus.seconds}}<span>冷却倒计时 <b>{{this.highRiskStatus.countdown}}</b>（现有同标的高杠杆仓位可继续加仓）</span>{{else}}<span>当前无冷却</span>{{/if}}{{#if this.highRiskStatus.hold}}<span>当前仓位还需 {{this.highRiskStatus.hold}} 秒可手动平仓</span>{{/if}}</div>
                   {{/if}}{{/if}}
-                  {{#if (eq this.selected.category "forex")}}<div class="rsc-risk-status"><strong>{{this.selected.currency_name}}交易 · 每边手续费 {{this.forexFee}}%</strong><span>买入做多为看涨{{this.selected.currency_name}}兑美元，卖出做空为看跌。</span>{{#if this.data.forex_activity.active}}<span>活动期间最高 100×，可按钱包可用余额开仓，不受虚拟币的保证金额度限制。</span>{{else}}<span>当前最高 10×。已有高杠杆仓位可从“我的持仓”平仓、追加保证金或设置止盈止损。</span>{{/if}}<span>“最大可开”会扣除手续费并预留报价变化空间；补保证金不会增加持仓数量。</span><span>仅使用 RSC 模拟交易。100× 下小幅汇率波动也可能触发强平。</span></div>{{/if}}
+                  {{#if (eq this.selected.category "forex")}}<div class="rsc-risk-status"><strong>{{this.selected.currency_name}}交易 · {{#if this.forexFee}}每边手续费 {{this.forexFee}}%{{else}}免手续费{{/if}}</strong><span>买入做多为看涨{{this.selected.currency_name}}兑美元，卖出做空为看跌。</span>{{#if this.data.forex_activity.active}}<span>活动期间最高 100×，可按钱包可用余额开仓，不受虚拟币的保证金额度限制。</span>{{else}}<span>当前最高 10×。已有高杠杆仓位可从“我的持仓”平仓、追加保证金或设置止盈止损。</span>{{/if}}<span>“最大可开”会扣除手续费并预留报价变化空间；补保证金不会增加持仓数量。</span><span>仅使用 RSC 模拟交易。100× 下小幅汇率波动也可能触发强平。</span></div>{{/if}}
                   {{#if this.selected.close_only}}<p class="alert alert-info">此杠杆/反向产品目前仅可平仓。</p>{{/if}}
                   <div class="rsc-fields"><label>{{uiText "take_profit"}}<input inputmode="decimal" value={{this.takeProfit}} {{on "input" (fn this.set "takeProfit")}} /></label><label>{{uiText "stop_loss"}}<input inputmode="decimal" value={{this.stopLoss}} {{on "input" (fn this.set "stopLoss")}} /></label></div>
                   {{#if this.quantityError}}<p class="alert alert-error" role="alert">{{this.quantityError}}</p>{{/if}}
                   {{#if this.budgetError}}<p class="alert alert-error" role="alert">{{this.budgetError}}</p>{{/if}}
                   {{#if this.positionConflict}}<p class="alert alert-info" role="alert">{{this.positionConflict}}</p>{{/if}}
-                  {{#if this.estimate}}<div class="rsc-order-estimate"><p>名义金额 {{formatAmount this.estimate.gross}} · 保证金 {{formatAmount this.estimate.margin}}</p><p>开仓手续费 {{formatAmount this.estimate.fee}} · 预计占用 {{formatAmount this.estimate.reserve}} RSC</p><small>当前可建仓数量 {{formatQuantity this.estimate.maximum}} · 平仓另收手续费，费用按名义金额计算；实际成交前会复核额度。</small></div>{{/if}}
+                  {{#if this.estimate}}<div class="rsc-order-estimate"><p>名义金额 {{formatAmount this.estimate.gross}} · 保证金 {{formatAmount this.estimate.margin}}</p><p>开仓手续费 {{formatAmount this.estimate.fee}} · 预计占用 {{formatAmount this.estimate.reserve}} RSC</p><small>当前可建仓数量 {{formatQuantity this.estimate.maximum}} · {{#if this.selected.fee_bps}}平仓另收手续费，费用按名义金额计算{{else}}当前品种开平仓免手续费{{/if}}；实际成交前会复核额度。</small></div>{{/if}}
                   <button class="btn btn-primary" type="submit" disabled={{this.tradingDisabled}}>{{uiText "submit_order"}}</button>
                   <details class="rsc-trading-help"><summary>交易规则 · 数量步进 {{formatQuantity this.selected.step}}</summary><p class="rsc-muted">{{this.executionHint}}</p><p class="rsc-muted">最小数量 {{formatQuantity this.selected.minimum}}。四档比例按可用余额与剩余额度共同估算，包含手续费及预占空间；{{this.positionLimitHint}}</p></details>
                 </form>

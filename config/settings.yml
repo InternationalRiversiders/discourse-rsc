@@ -6,7 +6,7 @@ plugins:
   rsc_forex_activity_ends_at:
     default: ""
   rsc_forex_activity_fee_bps:
-    default: 1
+    default: 0
     min: 0
     max: 100
   rsc_sports_team_translation_enabled:

@@ -13,7 +13,7 @@ module DiscourseRsc
       sl = stop_loss.present? ? Amount.positive(stop_loss) : nil
       Safety.ensure_writable!
       unless Command.exists?(key: "stock_submit:#{actor.id}:#{request_id}")
-        MarketData.refresh_if_needed(instrument_id, purpose: :trade)
+        MarketData.refresh_if_needed(instrument_id, purpose: side == "close" ? :exit : :trade)
       end
       input = [instrument_id, side, units.to_s, leverage, high_risk, tp&.to_s, sl&.to_s]
       input << { cancel_pending: true } if cancel_pending
@@ -44,7 +44,7 @@ module DiscourseRsc
         wallet = Account.wallet(actor.id)
         raise Error.new("wallet_frozen", status: 403) unless wallet.status == "active"
         delay = instrument.quote.fetch("delay_seconds", 0).to_i
-        fx_confirmation = ForexActivity.confirmation?(instrument, leverage)
+        fx_confirmation = ForexActivity.confirmation?(instrument, leverage) && side != "close"
         delayed = instrument.category == "crypto" || TradingRules.delayed?(instrument) || fx_confirmation
         fee_bps = ForexActivity.fee_bps(instrument, position: position)
         wait = instrument.category == "crypto" ? (side == "close" ? 0 : SiteSetting.rsc_crypto_confirmation_delay_seconds) : [[delay - 30, 30].max, 1800].min
@@ -159,8 +159,9 @@ module DiscourseRsc
         end
         Order.where(instrument_id: instrument.id, status: "pending").where("execute_at <= ?", Time.current).order(:id).each do |order|
           Risk.lock(order.user_id)
-          # A received old quote cannot confirm a new order.
-          next unless Time.iso8601(instrument.quote.fetch("source_time")) > order.created_at
+          # Opening requires a post-submission quote. Non-delayed FX exits
+          # may use the already validated live quote, including pre-upgrade orders.
+          next unless forex_exit?(instrument, order.side) || Time.iso8601(instrument.quote.fetch("source_time")) > order.created_at
           reference = Amount.parse(order.details.fetch("reference_price"))
           if (price - reference).abs * 100 > reference * 5
             refund_locked(order, "rejected", "price_moved")
@@ -239,7 +240,11 @@ module DiscourseRsc
       quantity = order.quantity_units.to_i
       gross = quantity * price / U
       margin = ceil_div(gross, order.leverage)
-      fee = gross * order.details.fetch("fee_bps", instrument.fee_bps).to_i / 10_000
+      fee_bps = order.details.fetch("fee_bps", instrument.fee_bps).to_i
+      if order.details["forex_campaign"] == ForexActivity::KEY && ForexActivity.active_for?(instrument)
+        fee_bps = [fee_bps, SiteSetting.rsc_forex_activity_fee_bps].min
+      end
+      fee = gross * fee_bps / 10_000
       Risk.check!(order.user_id, instrument, order.leverage, margin, excluding_order: order.id)
       reserve = order.reserved_units.to_i
       if margin + fee > reserve || (position && (position.side != order.side || position.leverage != order.leverage))
@@ -248,7 +253,7 @@ module DiscourseRsc
       end
       tp = order.details["take_profit"] && Amount.parse(order.details["take_profit"])
       sl = order.details["stop_loss"] && Amount.parse(order.details["stop_loss"])
-      fee_bps = order.details.fetch("fee_bps", instrument.fee_bps).to_i
+      order.details = order.details.merge("fee_bps" => fee_bps)
       if tp || sl
         projected = Position.new(side: order.side, quantity_units: (position&.quantity_units.to_i || 0) + quantity, average_units: ((position&.quantity_units.to_i || 0) * (position&.average_units.to_i || 0) + quantity * price) / ((position&.quantity_units.to_i || 0) + quantity), margin_units: (position&.margin_units.to_i || 0) + margin, leverage: order.leverage)
         TradingRules.protection!(projected, instrument, price, tp, sl, fee_bps: fee_bps)
@@ -275,7 +280,8 @@ module DiscourseRsc
       margin = position.margin_units.to_i * quantity / position.quantity_units.to_i
       profit = pnl(position, price, quantity)
       fx_entry = ForexActivity.prepare_close(position) if instrument.category == "forex"
-      fee = quantity * price / U * (fx_entry&.fee_bps || instrument.fee_bps) / 10_000
+      fee_bps = fx_entry&.fee_bps || instrument.fee_bps
+      fee = quantity * price / U * fee_bps / 10_000
       payout = [margin + profit - fee, 0].max
       Commands.move(user_id: order.user_id, action: "stock_close", request_id: "order-close-#{order.id}", settlement: true,
                     postings: { Account.internal("position:#{position.id}").id => -margin, Account.wallet(order.user_id).id => payout,
@@ -286,7 +292,7 @@ module DiscourseRsc
       remaining = position.quantity_units.to_i - quantity
       remaining.zero? ? position.destroy! : position.update!(quantity_units: remaining, margin_units: position.margin_units.to_i - margin)
       ForexActivity.mark(fx_entry, remaining.zero? ? nil : position) if fx_entry
-      order.update!(status: "filled", details: order.details.merge("price" => Amount.format(price), "payout" => Amount.format(payout), "pnl" => Amount.format(profit), "fee" => Amount.format(fee), "margin" => Amount.format(margin), "reason" => kind, "gross" => Amount.format(quantity * price / U)))
+      order.update!(status: "filled", details: order.details.merge("price" => Amount.format(price), "payout" => Amount.format(payout), "pnl" => Amount.format(profit), "fee" => Amount.format(fee), "fee_bps" => fee_bps, "margin" => Amount.format(margin), "reason" => kind, "gross" => Amount.format(quantity * price / U)))
     end
 
     def self.execution_price(instrument, side, price)
@@ -296,7 +302,7 @@ module DiscourseRsc
       if instrument.category == "crypto" && (SiteSetting.rsc_crypto_extra_slippage_enabled || !reliable_book?(instrument.quote))
         bps = 2 + SecureRandom.random_number(4)
         execution = execution * (buy ? 10_000 + bps : 10_000 - bps) / 10_000
-      elsif market.blank?
+      elsif market.blank? && instrument.category != "forex"
         # Match the legacy guard against alternating rounded stock ticks.
         recent = instrument.history.last(60).map { |point| Amount.parse(point.fetch("price")) }
         unique = recent.uniq.sort
@@ -306,6 +312,10 @@ module DiscourseRsc
         end
       end
       [execution, 1].max
+    end
+
+    def self.forex_exit?(instrument, side)
+      instrument.category == "forex" && side == "close" && !TradingRules.delayed?(instrument)
     end
 
     def self.reliable_book?(quote)

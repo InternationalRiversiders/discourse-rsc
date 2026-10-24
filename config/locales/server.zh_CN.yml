@@ -3,7 +3,7 @@ zh_CN:
     rsc_forex_activity_enabled: "启用久留美外汇活动"
     rsc_forex_activity_starts_at: "活动开始时间（ISO 8601，含时区）"
     rsc_forex_activity_ends_at: "活动结束时间（ISO 8601，含时区）；请在结束前调整"
-    rsc_forex_activity_fee_bps: "新活动仓位每边手续费（基点，1 为名义金额的 0.01%）"
+    rsc_forex_activity_fee_bps: "活动每边手续费（基点；0 免手续费，1 为名义金额的 0.01%）。降费也适用于已有活动仓位的后续交易；不改历史费用"
     rsc_sports_team_translation_enabled: "后台自动翻译陌生赛事队名，复用预测市场翻译模型和 Key。每分钟最多一批 16 个名字；结果保存在论坛数据库并缓存，页面不等待 AI。关闭后仍使用已有译名。"
     rsc_sports_team_translation_daily_limit: "队名翻译每日最多批次（UTC 日，每批最多 16 个）；失败也计数并等待 6 小时重试，命中词库不计数。"
     rsc_sports_team_name_overrides: "人工队名词库（JSON 对象），优先于内置和 AI 译名。例如 {\"Arsenal\":\"阿森纳\",\"soccer|Paris FC\":\"巴黎FC\"}；键不区分大小写，可用 sport|原名区分运动。无效 JSON 不生效，删除条目后恢复自动词库。"

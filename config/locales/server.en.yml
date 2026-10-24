@@ -3,7 +3,7 @@ en:
     rsc_forex_activity_enabled: "Enable the Kurumi forex activity"
     rsc_forex_activity_starts_at: "Activity start (ISO 8601, including timezone)"
     rsc_forex_activity_ends_at: "Activity end (ISO 8601, including timezone); set before finalization"
-    rsc_forex_activity_fee_bps: "Fee per side for new activity positions, in basis points"
+    rsc_forex_activity_fee_bps: "Activity fee per side in basis points (0 means free). Reductions apply to future fills of existing activity positions, never past fees"
     rsc_sports_team_translation_enabled: "Translate unknown sports team names in the background using the existing forecast AI model/key. Up to 16 names per minute; persisted in the forum database and cached. Page reads never wait for AI. Disabling retains existing translations."
     rsc_sports_team_translation_daily_limit: "Maximum daily batches (UTC; 16 names each). Failed attempts count and back off for 6 hours. Dictionary hits do not count."
     rsc_sports_team_name_overrides: "Manual JSON team dictionary, overriding built-in and AI names, e.g. {\"Arsenal\":\"阿森纳\",\"soccer|Paris FC\":\"巴黎FC\"}. Case-insensitive keys; sport|name scopes a sport. Invalid JSON is ignored; removing an entry restores automatic names."

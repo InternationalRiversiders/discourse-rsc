@@ -71,10 +71,10 @@ class ForexActivityTest < NativeBusinessTest
     travel_to(Time.utc(2026,10,22,12)) do
       fund; activity; item=forex
       submit(item); tick_quote(item)
-      closing=submit(item,side:'close',quantity:'40');tick_quote(item,'1.002')
+      tick_quote(item,'1.002');closing=submit(item,side:'close',quantity:'40')
       assert_equal 'filled',closing.reload.status
       refute entry.closed_at
-      closing=submit(item,side:'close',quantity:'60');tick_quote(item,'1.003')
+      tick_quote(item,'1.003');closing=submit(item,side:'close',quantity:'60')
       assert_equal 'filled',closing.reload.status
       assert_equal 0,R::Position.count
       assert entry.closed_at
@@ -136,7 +136,7 @@ class ForexActivityTest < NativeBusinessTest
       R::Exchange.add_margin(actor:@alice,position_id:position.id,amount:'1',request_id:SecureRandom.uuid)
       assert_equal before,entry.final_units.to_i
       R::Exchange.protect(actor:@alice,position_id:position.id,take_profit:'1.01',stop_loss:nil,request_id:SecureRandom.uuid)
-      closing=submit(item,side:'close');tick_quote(item,'1.002')
+      tick_quote(item,'1.002');closing=submit(item,side:'close')
       assert_equal 'filled',closing.reload.status
       assert_equal '0.01002',closing.details['fee']
       assert_equal before,entry.final_units.to_i
@@ -178,7 +178,7 @@ class ForexActivityTest < NativeBusinessTest
         item.update!(quote:quote('1'))
         submit(item,leverage:5);tick_quote(item)
       end
-      close=submit(item,side:'close',quantity:'300');tick_quote(item,'1.01')
+      tick_quote(item,'1.01');close=submit(item,side:'close',quantity:'300')
       assert_equal 'filled',close.reload.status
       assert_equal 3,entry.trade_days.size
       SiteSetting.rsc_forex_activity_ends_at=1.second.ago.iso8601
@@ -361,7 +361,7 @@ class ForexActivityTest < NativeBusinessTest
       # Small extra realized gain crosses the net (after fees) boundary.
       item.update!(quote:quote('1'))
       submit(item,quantity:'100',leverage:5);tick_quote(item)
-      submit(item,side:'close',quantity:'100');tick_quote(item,'1.01')
+      tick_quote(item,'1.01');submit(item,side:'close',quantity:'100')
       R::ForexActivity.award
       assert_includes awarded_keys, :profit_100
       assert_equal R::ForexActivity.entries.sum(:realized_units).to_i, R::ForexActivity.realized_extremes[@alice.id][:max]

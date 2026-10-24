@@ -36,8 +36,13 @@ module DiscourseRsc
     end
     def self.fee_bps(instrument, position: nil)
       return instrument.fee_bps unless instrument.category == 'forex'
-      return entry(position)&.fee_bps || instrument.fee_bps if position
+      return (row = entry(position)) ? entry_fee_bps(row) : instrument.fee_bps if position
       active_for?(instrument) ? SiteSetting.rsc_forex_activity_fee_bps : instrument.fee_bps
+    end
+    # A campaign discount applies to future fills only. Once adopted by a live
+    # position, keep its lower rate through expiry; never rewrite past fees.
+    def self.entry_fee_bps(row)
+      active? ? [row.fee_bps, SiteSetting.rsc_forex_activity_fee_bps].min : row.fee_bps
     end
     def self.confirmation?(instrument, leverage = 1)
       instrument.category == 'forex' && (active_for?(instrument) || leverage > 10)
@@ -82,6 +87,7 @@ module DiscourseRsc
       return if row.finalized_at
       ending = ends_at && Time.current >= ends_at
       if position
+        row.fee_bps = entry_fee_bps(row)
         # Select a source observation, never a later quote at an earlier cutoff.
         cutoff = ending ? ends_at : Time.current
         candidates = position.instrument.history.filter_map do |point|

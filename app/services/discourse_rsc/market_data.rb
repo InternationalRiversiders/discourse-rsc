@@ -248,6 +248,26 @@ module DiscourseRsc
       done.size.times.map { done.pop }
     end
 
+    # Only exposed FX symbols need a faster queue. Reuse per-symbol locks,
+    # freshness, session checks and the provider-wide pacing/backoff.
+    def self.sync_forex
+      return [] if Safety.read_only? || !SiteSetting.rsc_market_data_enabled
+      pending_ids = Order.where(status: "pending").distinct.pluck(:instrument_id)
+      ids = pending_ids | Position.distinct.pluck(:instrument_id)
+      items = Instrument.where(id: ids, active: true, category: "forex").to_a
+      items.sort_by! { |item| [pending_ids.include?(item.id) ? 0 : 1, item.synced_at || Time.at(0)] }
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 12
+      done = []
+      items.first(SiteSetting.rsc_market_sync_batch).each do |item|
+        break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+        refreshed = refresh_if_needed(item.id, purpose: :forex_fast)
+        # Evaluate stops and pending orders immediately after receiving a quote.
+        yield refreshed.id if block_given?
+        done << refreshed.id
+      end
+      done
+    end
+
     def self.refresh_if_needed(instrument_id, purpose: :read)
       instrument = Instrument.find(instrument_id)
       return instrument if Safety.read_only? || !SiteSetting.rsc_market_data_enabled ||
@@ -273,6 +293,8 @@ module DiscourseRsc
       return true if correction
       age = case purpose
       when :trade then q['source'] == 'coinbase_ws' ? 3 : 20
+      when :exit then instrument.category == "forex" ? 5 : (q['source'] == 'coinbase_ws' ? 3 : 20)
+      when :forex_fast then 20
       when :fast then 15
       when :background then 15 # The poll runs once/minute; allow its previous batch to finish late.
       when :idle then 15 * 60

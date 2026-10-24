@@ -17,7 +17,7 @@ module Jobs
 
     def execute(args)
       mode = args[:mode]
-      return unless %w[full crypto].include?(mode)
+      return unless %w[full crypto forex].include?(mode)
       key = "rsc:provider-poll:#{mode}"
       return unless args[:token].present? && Discourse.redis.get(key) == args[:token]
       return unless SiteSetting.rsc_enabled && SiteSetting.rsc_native_trial_enabled
@@ -26,6 +26,8 @@ module Jobs
         ids = DiscourseRsc::Position.distinct.pluck(:instrument_id) |
           DiscourseRsc::Order.where(status: 'pending').distinct.pluck(:instrument_id)
         DiscourseRsc::MarketData.sync_crypto(ids).each { |id| Jobs::DiscourseRscTradingTick.new.process(id) }
+      elsif mode == 'forex'
+        DiscourseRsc::MarketData.sync_forex { |id| Jobs::DiscourseRscTradingTick.new.process(id) }
       else
         DistributedMutex.synchronize('rsc-data-sync', validity: 600) do
           DiscourseRsc::MarketData.sync if SiteSetting.rsc_market_data_enabled

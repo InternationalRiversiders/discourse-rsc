@@ -13,6 +13,7 @@ module Jobs
         # require risk/order work; an idle catalog does not delay this task.
         ids.each { |id| process(id) }
         DiscourseRscProviderPoll.enqueue_once('crypto')
+        DiscourseRscProviderPoll.enqueue_once('forex')
         Discourse.redis.set('rsc:trading:last_tick', Time.current.iso8601(6), ex: 300)
       end
     end

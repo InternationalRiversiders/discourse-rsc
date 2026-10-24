@@ -36,14 +36,14 @@ class ForexPrecisionTest < MigrationFeaturesTest
     assert_nil R::MarketData.optional_reciprocal('0')
   end
 
-  def test_forex_immediate_order_preview_matches_execution_spread_and_balance
+  def test_forex_immediate_order_preview_has_no_artificial_spread
     travel_to(Time.utc(2026,10,7,12)) do
       fund(@alice); fund(@bob)
       item=forex
       item.update!(quote:quote('0.0063').merge('pricing_method'=>R::MarketData::FX_PRICING),history:Array.new(20) { |n| {'price'=>n.even? ? '0.0063' : '0.0064'} })
       preview=R::MarketListing.execution_prices(item)
-      assert_equal '0.0063315',preview['long']
-      assert_equal '0.0062685',preview['short']
+      assert_equal '0.0063',preview['long']
+      assert_equal '0.0063',preview['short']
       assert_equal preview,R::MarketListing.rows([item]).first[:execution_prices]
       [['long',@alice],['short',@bob]].each do |side,user|
         order=R::Exchange.submit(actor:user,instrument_id:item.id,side:side,quantity:'100',leverage:1,request_id:SecureRandom.uuid)
