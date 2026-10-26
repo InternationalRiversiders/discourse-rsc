@@ -74,7 +74,7 @@ module DiscourseRsc
       end
       instruments.map do |item|
         metadata = legacy[item.symbol] || {}
-        { id: item.id, symbol: item.symbol, display_symbol: metadata["display_symbol"].presence || item.symbol,
+        { id: item.id, symbol: item.symbol, display_symbol: ForexCatalog.base(item) || metadata["display_symbol"].presence || item.symbol,
           exchange: metadata["exchange"], currency: item.currency, name: item.name, category: item.category, quote: item.quote, market_closed: MarketSessions.closed?(item, schedules: schedules),
           search_aliases: item.category == 'forex' ? ForexCatalog.search_text(ForexCatalog.base(item)) : nil,
           minimum_notional: nil,
