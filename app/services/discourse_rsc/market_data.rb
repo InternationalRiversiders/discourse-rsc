@@ -397,13 +397,25 @@ module DiscourseRsc
 
     def self.search(query)
       raise Error.new("invalid_search") unless query.is_a?(String) && query.strip.length.between?(2, 60)
+      # Yahoo's search often omits FX, especially country names in Chinese.
+      # Explicit currency matches need no external request; approval still checks quotes.
+      currencies = ForexCatalog.search(query)
+      exact_currency = currencies.any? do |item|
+        base = item[:symbol].delete_suffix('=X')
+        [base, "FX:#{base}", "#{base}=X", "#{base}USD=X", "#{base}/USD", "USD/#{base}", "#{base}USD", "USD#{base}", *ForexCatalog::CURRENCIES[base].first(2)].any? { |value| value.casecmp?(query.strip) }
+      end
+      return currencies if currencies.any? && (exact_currency || query.match?(/\p{Han}/))
       Discourse.cache.fetch("rsc:search:#{Digest::SHA256.hexdigest(query)}", expires_in: 5.minutes) do
         result = ProviderHttp.get("query1.finance.yahoo.com", "/v1/finance/search", q: query, quotesCount: 12, newsCount: 0)
-        Array(result["quotes"]).filter_map do |item|
+        remote = Array(result["quotes"]).filter_map do |item|
           next unless item["symbol"] && item["isYahooFinance"] != false && Catalog.supported_external?(item["symbol"], item["quoteType"])
           { symbol: item["symbol"], name: item["shortname"] || item["longname"] || item["symbol"], exchange: item["exchange"], type: item["quoteType"] }
         end
+        (currencies + remote).uniq { |item| item[:symbol] }
       end
+    rescue Error
+      raise if currencies.blank?
+      currencies
     end
 
     def self.history(instrument, range)

@@ -4,6 +4,7 @@
 
 ## 交易与统计
 
+- 外汇目录扩充为 27 个币种，新增 BRL/MXN/ZAR/TRY/SEK/NOK/DKK/PLN/CZK/HUF/THB/IDR/MYR/PHP/TWD。列表和品种查找支持国家名、中文币名、英文名、币种代码；沿用每单位外币的 USD/RSC 报价和活动规则。来源可能停更或滞后，目录收录不代表始终可成交，仍检查来源时间和休市。品种别名不会重复建档。
 - `rsc_forex_activity_enabled`、`rsc_forex_activity_starts_at`、`rsc_forex_activity_ends_at` 控制活动窗口；时间字符串含时区。`rsc_high_risk_enabled` 仍是高杠杆总开关。
 - 活动期间外汇可选 1–100×；活动外汇按钱包可用余额及费用预留开仓，不受 `rsc_high_risk_margin_percent` 限制，也不占用虚拟币额度；活动结束后的存量外汇仓位仍不占用虚拟币额度。外汇不使用虚拟币的冷却或最短持仓时间。
 - `rsc_forex_activity_fee_bps` 默认 0，活动免手续费。旧外汇仓位及其加仓保留原费率，不纳入活动。活动降费适用于已有活动仓位及待成交活动单的后续成交；已扣费用不追溯改写。更低费率随活动条目保存，结束后的平仓也沿用。

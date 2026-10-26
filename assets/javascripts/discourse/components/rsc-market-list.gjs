@@ -88,7 +88,7 @@ export default class extends Component {
           (this.category === "all" ||
             this.category === "tradable" ||
             this.category === item.category) &&
-          `${item.symbol} ${item.display_symbol || ""} ${item.exchange || ""} ${item.currency || ""} ${item.name} ${item.category}`
+          `${item.symbol} ${item.display_symbol || ""} ${item.exchange || ""} ${item.currency || ""} ${item.name} ${item.category} ${item.currency_name || ""} ${item.search_aliases || ""}`
             .toLocaleLowerCase()
             .includes(query)
       )

@@ -61,6 +61,7 @@ after_initialize do
     app/services/discourse_rsc/market_sessions
     app/services/discourse_rsc/trading_rules
     app/services/discourse_rsc/exchange
+    app/services/discourse_rsc/forex_catalog
     app/services/discourse_rsc/catalog
     app/services/discourse_rsc/provider_http
     app/services/discourse_rsc/forecast_translation

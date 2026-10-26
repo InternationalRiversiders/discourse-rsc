@@ -96,18 +96,27 @@ module DiscourseRsc
         provider:provider,provider_symbol:provider_code,category:category,currency:meta.fetch('currency','USD'),
         asset_type:metal ? 'metal' : {'EQUITY'=>'stock','ETF'=>'etf','MUTUALFUND'=>'fund','INDEX'=>'index','CURRENCY'=>'forex','CRYPTOCURRENCY'=>'crypto'}.fetch(meta['instrumentType'],'stock'),
         fee_bps:fee,minimum_units:unit,step_units:unit}
+      if category == 'forex'
+        base = code.delete_suffix('=X').delete_suffix('USD')
+        attributes.merge!(symbol: "FX:#{base}", name: ForexCatalog::CURRENCIES.dig(base, 0) || name, currency: 'USD')
+      end
       quote = MarketData.fetch_quote(Instrument.new(attributes))
       attributes.merge(quote:quote,history:[{at:quote['source_time'],price:quote['price']}],synced_at:Time.current)
     end
 
-    def self.seed
+    def self.seed(symbols: nil)
       path = File.expand_path("../../../config/market-symbols.txt", __dir__)
       count = 0
       File.foreach(path) do |line|
         next if line.strip.empty? || line.start_with?("#")
         symbol, name, currency, category, asset, fee = line.strip.split("|")
+        next if symbols && !symbols.include?(symbol)
         next if Instrument.exists?(symbol: symbol)
         provider, code = provider({ "symbol" => symbol, "name" => name, "market_category" => category })
+        if category == 'forex'
+          aliases = [symbol, code, "#{symbol.delete_prefix('FX:')}USD=X"]
+          next if Instrument.where(symbol: aliases).or(Instrument.where(provider_symbol: aliases)).exists?
+        end
         Instrument.create!(symbol: symbol, name: name, asset_type: asset.to_s, currency: currency, category: category, provider: provider, provider_symbol: code, fee_bps: fee.to_i,
                            minimum_units: Amount.parse(category == "crypto" ? "0.000001" : "0.01"), step_units: Amount.parse(category == "crypto" ? "0.000001" : "0.01"))
         count += 1

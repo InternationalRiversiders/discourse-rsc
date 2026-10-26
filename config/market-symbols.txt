@@ -1552,6 +1552,21 @@ FX:HKD|Hong Kong Dollar|USD|forex|forex|5|forex-major|9
 FX:SGD|Singapore Dollar|USD|forex|forex|5|forex-major|10
 FX:INR|Indian Rupee|USD|forex|forex|5|forex-major|11
 FX:KRW|South Korean Won|USD|forex|forex|5|forex-major|12
+FX:BRL|Brazilian Real|USD|forex|forex|5|forex-extended|13
+FX:MXN|Mexican Peso|USD|forex|forex|5|forex-extended|14
+FX:ZAR|South African Rand|USD|forex|forex|5|forex-extended|15
+FX:TRY|Turkish Lira|USD|forex|forex|5|forex-extended|16
+FX:SEK|Swedish Krona|USD|forex|forex|5|forex-extended|17
+FX:NOK|Norwegian Krone|USD|forex|forex|5|forex-extended|18
+FX:DKK|Danish Krone|USD|forex|forex|5|forex-extended|19
+FX:PLN|Polish Zloty|USD|forex|forex|5|forex-extended|20
+FX:CZK|Czech Koruna|USD|forex|forex|5|forex-extended|21
+FX:HUF|Hungarian Forint|USD|forex|forex|5|forex-extended|22
+FX:THB|Thai Baht|USD|forex|forex|5|forex-extended|23
+FX:IDR|Indonesian Rupiah|USD|forex|forex|5|forex-extended|24
+FX:MYR|Malaysian Ringgit|USD|forex|forex|5|forex-extended|25
+FX:PHP|Philippine Peso|USD|forex|forex|5|forex-extended|26
+FX:TWD|Taiwan Dollar|USD|forex|forex|5|forex-extended|27
 
 # Existing US-listed index ETFs remain US securities.
 AMEX:SPY|SPDR S&P 500 ETF Trust|USD|us|etf|5|us-index-etf|501

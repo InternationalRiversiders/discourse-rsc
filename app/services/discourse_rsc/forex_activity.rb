@@ -4,7 +4,6 @@ module DiscourseRsc
     KEY = 'fx-kurumi-2026'
     TITLE = 'FX 战士久留美 · Riverside 联动'
     FEATURED = %w[FX:JPY FX:EUR FX:GBP FX:AUD FX:CAD FX:CHF].freeze
-    NAMES = { 'JPY'=>'日元', 'EUR'=>'欧元', 'GBP'=>'英镑', 'AUD'=>'澳元', 'CAD'=>'加元', 'CHF'=>'瑞郎', 'CNY'=>'人民币', 'HKD'=>'港元', 'INR'=>'印度卢比', 'KRW'=>'韩元', 'NZD'=>'新西兰元', 'SGD'=>'新加坡元' }.freeze
     LEGACY_BADGES = { debut: 'FX战士 · 初入汇市', practice: 'FX战士 · 外汇修行者', survivor: 'FX战士 · 汇市幸存者' }.freeze
     BADGES = {
       debut: ['我已经完全理解了外汇', '首次完成一笔活动外汇仓位开仓。', 3],
@@ -29,7 +28,7 @@ module DiscourseRsc
     end
     def self.active_for?(instrument); instrument.category == 'forex' && active?; end
     def self.currency_name(instrument)
-      NAMES[instrument.symbol.delete_prefix('FX:')] || instrument.name
+      ForexCatalog.name(instrument)
     end
     def self.entry(position)
       ForexActivityEntry.find_by(position_id: position.id, campaign_key: KEY) if position&.persisted?

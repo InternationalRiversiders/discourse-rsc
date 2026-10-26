@@ -42,7 +42,7 @@ module DiscourseRsc
       sort = %w[popular symbol gainers losers].include?(params[:market_sort]) ? params[:market_sort] : 'popular'
       found = all.select do |row|
         (category == 'all' || (category == 'tradable' ? tradable?(row) : row[:category] == category)) &&
-          %i[symbol display_symbol exchange currency name category].map { |field| row[field] }.join(' ').downcase.include?(query)
+          %i[symbol display_symbol exchange currency name category currency_name search_aliases].map { |field| row[field] }.join(' ').downcase.include?(query)
       end
       if sort == 'symbol'
         found = found.sort_by { |row| row[:symbol] }
@@ -76,6 +76,7 @@ module DiscourseRsc
         metadata = legacy[item.symbol] || {}
         { id: item.id, symbol: item.symbol, display_symbol: metadata["display_symbol"].presence || item.symbol,
           exchange: metadata["exchange"], currency: item.currency, name: item.name, category: item.category, quote: item.quote, market_closed: MarketSessions.closed?(item, schedules: schedules),
+          search_aliases: item.category == 'forex' ? ForexCatalog.search_text(ForexCatalog.base(item)) : nil,
           minimum_notional: nil,
           execution_prices: execution ? execution_prices(item) : nil,
           popularity: counts.fetch(item.id, 0), last_order_at: last[item.id], catalog_rank: metadata["catalog_rank"]&.to_i, catalog_id: metadata["id"]&.to_i || item.id,

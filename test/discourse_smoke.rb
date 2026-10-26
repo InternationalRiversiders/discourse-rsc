@@ -10,6 +10,10 @@ CreateRscAccounting.new.migrate(:up) unless ActiveRecord::Base.connection.table_
 
 class DiscourseSmokeTest < Minitest::Test
   def setup
+    # Cases reuse users and travel across dates. Keep throttles within each case
+    # so a future-dated request cannot rate-limit an unrelated earlier-date test.
+    RateLimiter.clear_all_global!
+    Discourse.redis.keys("#{RateLimiter.key_prefix}*").each { |key| Discourse.redis.del(key) }
     Discourse.cache.delete('rsc:trading-hours')
     %w[rsc:market:catalog:v1 rsc:market:metadata:v1 rsc:sports:team-dictionary:v1].each { |key| Rails.cache.delete(key) }
     SiteSetting.rsc_sports_team_translation_enabled = false
