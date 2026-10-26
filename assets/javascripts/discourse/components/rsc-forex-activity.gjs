@@ -2,16 +2,21 @@ import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
 import { on } from "@ember/modifier";
+import { fn } from "@ember/helper";
+import { eq } from "discourse/truth-helpers";
 import { ajax } from "discourse/lib/ajax";
 import { extractError } from "discourse/lib/ajax-error";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
-import ForumUser from "./rsc-user";
+import dAvatar from "discourse/ui-kit/helpers/d-avatar";
+import RscForexTrader from "./rsc-forex-trader";
 import RscPagination from "./rsc-pagination";
 import { formatDateTime } from "../lib/campus-time";
 import { signedAmount } from "../lib/rsc-format";
 
 const tone = (value) => Number(value) > 0 ? "positive" : Number(value) < 0 ? "negative" : "neutral";
+const detailId = (id) => `rsc-fx-trader-${id}`;
 export default class extends Component {
+  @tracked activeTraderId = null;
   @tracked expanded = false;
   @tracked loading = false;
   @tracked data;
@@ -22,6 +27,7 @@ export default class extends Component {
   get fee() { return Number(this.args.activity?.fee_bps || 0) / 100; }
   @action async toggle() {
     this.expanded = !this.expanded;
+    this.activeTraderId = null;
     if (this.expanded) {
       const date = new Date(this.args.activity.ends_at);
       this.endsDraft = this.args.activity.ends_at && !Number.isNaN(date.getTime())
@@ -34,7 +40,10 @@ export default class extends Component {
     this.loading = true; this.error = "";
     try {
       const data = await ajax("/rsc/forex-activity.json", { data: { page } });
-      if (!this.isDestroying && !this.isDestroyed) { this.data = data; }
+      if (!this.isDestroying && !this.isDestroyed) {
+        this.data = data;
+        if (!data.rows.some((row) => row.user_id === this.activeTraderId)) { this.activeTraderId = null; }
+      }
     } catch (error) {
       if (!this.isDestroying && !this.isDestroyed) { this.error = extractError(error); }
     } finally {
@@ -42,6 +51,7 @@ export default class extends Component {
     }
   }
   @action refreshBoard() { return this.load(this.data?.page || 1); }
+  @action trader(id) { this.activeTraderId = this.activeTraderId === id ? null : id; }
   @action draft(event) { this.endsDraft = event.target.value; }
   @action async save(event) {
     event.preventDefault();
@@ -75,7 +85,11 @@ export default class extends Component {
           {{#if this.error}}<p class="alert alert-error" role="alert">{{this.error}}</p>{{/if}}
           {{#if this.data.me}}<p class="rsc-fx-mine">我的排名 <strong>#{{this.data.me.rank}}</strong> · 净盈亏 <strong class={{tone this.data.me.net}}>{{signedAmount this.data.me.net}}</strong> · 已修行 {{this.data.me.days}} 天</p>{{/if}}
           {{#if this.loading}}<p role="status">正在加载活动榜…</p>{{/if}}
-          <ol class="rsc-fx-ranks" aria-label="活动排行榜">{{#each this.data.rows key="user_id" as |row|}}<li><span class="rsc-fx-rank">{{row.rank}}</span><ForumUser @user={{row.forum_user}} @name="已注销用户" /><strong class={{tone row.net}}>{{signedAmount row.net}}</strong><small>{{row.days}} 天</small></li>{{else}}{{#unless this.loading}}<li class="rsc-fx-empty">尚无活动仓位，首次开仓成交后自动加入。</li>{{/unless}}{{/each}}</ol>
+          <ol class="rsc-fx-ranks" aria-label="活动排行榜">{{#each this.data.rows key="user_id" as |row|}}<li><span class="rsc-fx-rank">{{row.rank}}</span>
+            {{#if row.forum_user.username}}<button type="button" class="rsc-forum-user rsc-fx-user-button" title="查看活动持仓与交易记录" aria-expanded={{if (eq this.activeTraderId row.user_id) "true" "false"}} aria-controls={{detailId row.user_id}} {{on "click" (fn this.trader row.user_id)}}>{{dAvatar row.forum_user imageSize="small" loading="lazy"}}<span>{{row.forum_user.username}}</span></button>{{else}}<span>已注销用户</span>{{/if}}
+            <strong class={{tone row.net}}>{{signedAmount row.net}}</strong><small>{{row.days}} 天</small>
+            {{#if (eq this.activeTraderId row.user_id)}}<RscForexTrader @id={{detailId row.user_id}} @userId={{row.user_id}} @username={{row.forum_user.username}} @close={{fn this.trader row.user_id}} />{{/if}}
+          </li>{{else}}{{#unless this.loading}}<li class="rsc-fx-empty">尚无活动仓位，首次开仓成交后自动加入。</li>{{/unless}}{{/each}}</ol>
           {{#if this.data}}<RscPagination @page={{this.data}} @busy={{this.loading}} @change={{this.load}} />{{/if}}
           <details class="rsc-fx-rules"><summary>参与规则与奖励</summary>
             <ul><li>仅使用 RSC 的社区模拟交易活动。外汇活动期间可选 1–100×，没有额外冷却或持仓锁定；开仓等待新报价，平仓使用最新有效报价直接成交，不加随机滑点或额外保护价差；休市、行情过期及正常强平规则仍适用。</li>

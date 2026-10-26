@@ -2150,6 +2150,18 @@
   .rsc-fx-mine { padding: .7rem; background: var(--primary-very-low); border-radius: 8px; }
   .rsc-fx-ranks { list-style: none; padding: 0; margin: .7rem 0; li { display: grid; grid-template-columns: 2rem minmax(0, 1fr) minmax(5rem, auto) 3rem; align-items: center; gap: .7rem; padding: .7rem .3rem; border-bottom: 1px solid var(--primary-low); strong, small { text-align: right; } strong { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; } } .rsc-forum-user { min-width: 0; span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } } li.rsc-fx-empty { display: block; color: var(--primary-medium); } }
   .rsc-fx-rank { font-weight: 700; color: var(--primary-medium); }
+  .rsc-fx-user-button { display: flex; align-items: center; gap: .4rem; padding: .2rem 0; border: 0; background: transparent; color: var(--primary); font: inherit; text-align: left; cursor: pointer; min-width: 0; max-width: 100%; img { flex-shrink: 0; } &:focus-visible { outline: 2px solid var(--tertiary); outline-offset: 2px; } }
+  .rsc-fx-trader { grid-column: 1 / -1; min-width: 0; padding: .8rem; background: var(--primary-very-low); border-radius: 8px;
+    .rsc-fx-trader-heading, .rsc-fx-trade-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .4rem; }
+    h4 { margin: 0; overflow-wrap: anywhere; }
+    .rsc-fx-trader-summary { font-size: .85rem; }
+    .rsc-fx-trade { padding: .7rem 0; border-top: 1px solid var(--primary-low); }
+    .rsc-fx-trade-heading { font-size: .9rem; time { color: var(--primary-medium); font-size: .8rem; } }
+    dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .6rem; margin: .6rem 0; div { min-width: 0; } dt { color: var(--primary-medium); font-size: .8rem; } dd { margin: .2rem 0 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; } }
+    .rsc-fx-trader-note { margin-bottom: 0; font-size: .8rem; }
+    .rsc-pagination { flex-wrap: wrap; }
+    small { display: block; text-align: left; }
+  }
   .rsc-fx-rules, .rsc-fx-settings { margin-top: .8rem; summary { cursor: pointer; } ul { padding-inline-start: 1.3rem; } li { margin-block: .5rem; line-height: 1.65; } }
   .rsc-fx-achievements { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: .6rem; margin: 1rem 0 0;
     > div { padding: .75rem; border-radius: 8px; background: var(--primary-very-low); min-width: 0; }

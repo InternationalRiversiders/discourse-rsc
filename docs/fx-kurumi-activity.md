@@ -4,6 +4,7 @@
 
 ## 交易与统计
 
+- 活动榜头像/用户名可展开活动档案，分页查看当前活动持仓和活动期间已成交记录（包括主动平仓、止盈止损及强平）。记录按不可变成交流水的时间和活动仓位关联筛选，不包含活动前旧仓位、其他品种、未成交委托或活动截止后的成交；不返回钱包余额、全账户收益或止盈止损设置。接口 `GET /rsc/forex-activity/traders/:id.json` 支持 `section=positions|orders`、`page`，沿用 RSC 成员和目标账户可见性限制。
 - 外汇目录扩充为 27 个币种，新增 BRL/MXN/ZAR/TRY/SEK/NOK/DKK/PLN/CZK/HUF/THB/IDR/MYR/PHP/TWD。列表和品种查找支持国家名、中文币名、英文名、币种代码；沿用每单位外币的 USD/RSC 报价和活动规则。来源可能停更或滞后，目录收录不代表始终可成交，仍检查来源时间和休市。品种别名不会重复建档。
 - `rsc_forex_activity_enabled`、`rsc_forex_activity_starts_at`、`rsc_forex_activity_ends_at` 控制活动窗口；时间字符串含时区。`rsc_high_risk_enabled` 仍是高杠杆总开关。
 - 活动期间外汇可选 1–100×；活动外汇按钱包可用余额及费用预留开仓，不受 `rsc_high_risk_margin_percent` 限制，也不占用虚拟币额度；活动结束后的存量外汇仓位仍不占用虚拟币额度。外汇不使用虚拟币的冷却或最短持仓时间。

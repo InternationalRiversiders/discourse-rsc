@@ -79,6 +79,7 @@ after_initialize do
     app/services/discourse_rsc/sports_presentation
     app/services/discourse_rsc/sports_data
     app/services/discourse_rsc/forex_activity
+    app/services/discourse_rsc/forex_activity_trader
     app/services/discourse_rsc/risk
     app/services/discourse_rsc/valuation
     app/services/discourse_rsc/market_listing

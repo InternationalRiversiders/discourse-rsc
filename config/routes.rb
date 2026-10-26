@@ -24,6 +24,7 @@ DiscourseRsc::Engine.routes.draw do
   get "/packet/:token/public" => "public_packets#show"
   get "/state" => "dashboard#state"
   get "/forex-activity" => "dashboard#forex_activity"
+  get "/forex-activity/traders/:id" => "dashboard#forex_activity_trader"
   post "/forex-activity/settings" => "dashboard#forex_activity_settings"
   post "/orders" => "dashboard#order"
   post "/orders/:id/cancel" => "dashboard#cancel_order"

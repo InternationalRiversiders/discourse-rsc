@@ -77,6 +77,11 @@ module DiscourseRsc
       render_json_dump(ForexActivity.summary)
     end
 
+    def forex_activity_trader
+      RateLimiter.new(current_user, 'rsc-forex-activity-trader', 30, 1.minute).performed!
+      render_json_dump(ForexActivityTrader.show(positive_id(:id), section: params.fetch(:section, 'positions'), page: params.fetch(:page, 1)))
+    end
+
     def order
       RateLimiter.new(current_user, "rsc-orders", 30, 1.minute).performed!
       result = Exchange.submit(actor: current_user, instrument_id: positive_id(:instrument_id), side: params.require(:side),
