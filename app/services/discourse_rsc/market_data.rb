@@ -105,38 +105,44 @@ module DiscourseRsc
       raise Error.new("quote_unavailable", status: 409)
     end
 
-    # An independent FX feed is optional. Missing credentials or a failed fallback
-    # must never make a stale primary quote look fresh or change CNY into CNH.
+    # Browsing, catalog sync and ordinary polling use the primary feed only.
     def self.fetch_quote(instrument)
-      primary_error = nil
-      primary = begin
-        fetch_primary_quote(instrument)
-      rescue Error, KeyError, ArgumentError => error
-        primary_error = error
-        nil
-      end
-      if forex_base(instrument) && SiteSetting.rsc_twelve_data_api_key.present?
-        source = Time.iso8601(primary['source_time']) rescue nil
-        unless source && source >= 120.seconds.ago && source <= 5.seconds.from_now
-          begin
-            return forex_fallback(instrument)
-          rescue Error, KeyError, ArgumentError, TypeError
-            # Keep the original source timestamp/error when neither feed works.
-          end
-        end
-      end
-      raise primary_error if primary_error
+      fetch_primary_quote(instrument)
+    end
+
+    # Execution may spend a backup credit, even when primary retry backoff is
+    # active. A failed backup never relabels an old quote as fresh.
+    def self.execution_quote(instrument, primary)
+      return primary unless forex_base(instrument) && SiteSetting.rsc_twelve_data_api_key.present?
+      source = Time.iso8601(primary['source_time']) rescue nil
+      return primary if source && source >= 120.seconds.ago && source <= 5.seconds.from_now
+      forex_fallback(instrument)
+    rescue Error, KeyError, ArgumentError, TypeError
       primary
     end
+
+    # Free-tier backup: leave 50 of the 800 daily credits for manual checks or
+    # other consumers. Cache hits do not consume credits. Shared across workers.
+    FALLBACK_RESERVE = <<~LUA
+      if tonumber(redis.call('GET', KEYS[2]) or '0') >= 750 then return -2 end
+      if not redis.call('SET', KEYS[1], '1', 'NX', 'EX', 8) then return -1 end
+      local used = redis.call('INCR', KEYS[2])
+      redis.call('EXPIRE', KEYS[2], 172800)
+      return used
+    LUA
 
     def self.forex_fallback(instrument)
       base = forex_base(instrument)
       pair = "USD/#{base}"
+      requested = false
       quote = Discourse.cache.fetch("rsc:fx-fallback:v1:#{base}", expires_in: 45.seconds) do
-        # Shared across all FX symbols/workers; at most one fallback request / 8s.
-        raise Error.new('provider_busy', status: 503) unless Discourse.redis.set('rsc:fx-fallback:slot', '1', nx: true, ex: 8)
+        raise Error.new('provider_cooldown', status: 503) if Discourse.redis.exists?("rsc:fx-fallback:retry:#{base}")
+        used = ProviderHttp.evaluate(FALLBACK_RESERVE,
+          keys: ['rsc:fx-fallback:slot', "rsc:fx-fallback:requests:#{Time.current.utc.to_date}"], argv: [])
+        raise Error.new('provider_busy', status: 503) if used.negative?
+        requested = true
         data = ProviderHttp.get('api.twelvedata.com', '/exchange_rate', symbol: pair,
-          apikey: SiteSetting.rsc_twelve_data_api_key, dp: 12)
+          apikey: SiteSetting.rsc_twelve_data_api_key, dp: 11)
         raise Error.new('provider_invalid_data', status: 503) unless data['symbol'] == pair
         at = Time.at(Integer(data.fetch('timestamp'))).utc
         raise Error.new('quote_stale', status: 409) unless at >= 120.seconds.ago && at <= 5.seconds.from_now
@@ -149,8 +155,19 @@ module DiscourseRsc
           'session_start'=>day.iso8601, 'session_end'=>(day+1.day).iso8601, 'fallback'=>true }
       end
       source = Time.iso8601(quote.fetch('source_time'))
-      raise Error.new('quote_stale', status: 409) unless source >= 120.seconds.ago && source <= 5.seconds.from_now
+      unless source >= 120.seconds.ago && source <= 5.seconds.from_now
+        Discourse.cache.delete("rsc:fx-fallback:v1:#{base}")
+        return forex_fallback(instrument) unless requested
+        raise Error.new('quote_stale', status: 409)
+      end
       quote
+    rescue Error, KeyError, ArgumentError, TypeError => error
+      # An unsupported pair or old backup feed must not spend credits every tick.
+      if requested && !(error.is_a?(Error) && %w[provider_busy provider_cooldown].include?(error.code))
+        code = error.is_a?(Error) ? error.code : 'provider_invalid_data'
+        Discourse.redis.setex("rsc:fx-fallback:retry:#{base}", 60, code)
+      end
+      raise
     end
 
     def self.fetch_primary_quote(instrument)
@@ -300,7 +317,9 @@ module DiscourseRsc
     # freshness, session checks and the provider-wide pacing/backoff.
     def self.sync_forex
       return [] if Safety.read_only? || !SiteSetting.rsc_market_data_enabled
-      pending_ids = Order.where(status: "pending").distinct.pluck(:instrument_id)
+      pending = Order.where(status: "pending")
+      pending_ids = pending.distinct.pluck(:instrument_id)
+      executable_ids = pending.where("execute_at <= ? AND expires_at > ?", Time.current, Time.current).distinct.pluck(:instrument_id)
       ids = pending_ids | Position.distinct.pluck(:instrument_id)
       items = Instrument.where(id: ids, active: true, category: "forex").to_a
       items.sort_by! { |item| [pending_ids.include?(item.id) ? 0 : 1, item.synced_at || Time.at(0)] }
@@ -308,7 +327,7 @@ module DiscourseRsc
       done = []
       items.first(SiteSetting.rsc_market_sync_batch).each do |item|
         break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
-        refreshed = refresh_if_needed(item.id, purpose: :forex_fast)
+        refreshed = refresh_if_needed(item.id, purpose: executable_ids.include?(item.id) ? :execution : :forex_fast)
         # Evaluate stops and pending orders immediately after receiving a quote.
         yield refreshed.id if block_given?
         done << refreshed.id
@@ -325,6 +344,11 @@ module DiscourseRsc
       DistributedMutex.synchronize("rsc-quote:#{instrument.id}", validity: 90) do
         instrument.reload
         sync_one(instrument) if refresh_due?(instrument, purpose: purpose)
+        if %i[trade exit execution].include?(purpose) && !MarketSessions.closed?(instrument)
+          primary = instrument.quote
+          quote = execution_quote(instrument, primary)
+          record_quote(instrument, quote) unless quote.equal?(primary)
+        end
       end
       instrument.reload
     end
@@ -340,9 +364,9 @@ module DiscourseRsc
       return false if instrument.provider_error.present? && instrument.synced_at && instrument.synced_at > retry_age.seconds.ago
       return true if correction
       age = case purpose
-      when :trade then q['source'] == 'coinbase_ws' ? 3 : 20
+      when :trade, :protection then q['source'] == 'coinbase_ws' ? 3 : 20
       when :exit then instrument.category == "forex" ? 5 : (q['source'] == 'coinbase_ws' ? 3 : 20)
-      when :forex_fast then 20
+      when :forex_fast, :execution then 20
       when :fast then 15
       when :background then 15 # The poll runs once/minute; allow its previous batch to finish late.
       when :idle then 15 * 60

@@ -118,7 +118,7 @@ class ForexExecutionTest < ForexActivityTest
       calls=[];processed=[];original=R::MarketData.method(:refresh_if_needed)
       R::MarketData.define_singleton_method(:refresh_if_needed) { |id,**options| calls << [id,options[:purpose]];R::Instrument.find(id) }
       R::MarketData.sync_forex { |id| processed << id }
-      assert_equal [[item.id,:forex_fast]],calls
+      assert_equal [[item.id,:execution]],calls
       assert_equal [item.id],processed
       item.update!(quote:quote('1').merge('received_at'=>10.seconds.ago.iso8601))
       refute R::MarketData.refresh_due?(item,purpose: :forex_fast)

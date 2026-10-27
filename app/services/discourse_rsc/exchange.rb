@@ -111,7 +111,7 @@ module DiscourseRsc
       Safety.ensure_writable!
       unless Command.exists?(key: "stock_protect:#{actor.id}:#{request_id}")
         candidate = Position.find_by!(id: position_id, user_id: actor.id)
-        MarketData.refresh_if_needed(candidate.instrument_id, purpose: :trade)
+        MarketData.refresh_if_needed(candidate.instrument_id, purpose: :protection)
       end
       Commands.run(user_id: actor.id, action: "stock_protect", request_id: request_id, input: [position_id, tp&.to_s, sl&.to_s]) do
         candidate = Position.find_by!(id: position_id, user_id: actor.id)

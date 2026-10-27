@@ -8,7 +8,7 @@ module DiscourseRsc
     before_action :ensure_rsc_member, except: [:issue]
 
     rescue_from DiscourseRsc::Error do |error|
-      render json: { errors: [I18n.t("discourse_rsc.errors.#{error.code}", default: error.code)],
+      render json: { errors: [Error.user_message(error.code)],
                      error_code: error.code }, status: error.status
     end
 

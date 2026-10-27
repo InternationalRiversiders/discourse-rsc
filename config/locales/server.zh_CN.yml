@@ -83,6 +83,11 @@ zh_CN:
       stock_refunded: 委托结束，退回 %{amount} RSC
       red_packet_claimed_by: 领取了你的红包 %{amount} RSC
     errors:
+      request_failed: 操作暂未完成，请刷新后重试；如果仍有问题，请联系管理员。
+      price_moved: 等待成交期间价格变化过大，本笔委托未成交，已释放占用资金。请查看最新价格后重新下单。
+      invalid_request: 请求参数不完整或格式不正确，请刷新页面后重试。
+      recipient_not_found: 未找到收款用户，请检查论坛用户名。
+      games_excluded: 此功能暂未开放。
       forecast_ai_unconfigured: "请先为预测市场配置可用的 Discourse AI 翻译模型。"
       forecast_ai_invalid: "AI 审核未返回有效结果，申请仍待审核。"
       forecast_ai_stale: "自动审核已关闭，或申请及规则已变化，请重新核对。"
@@ -107,7 +112,7 @@ zh_CN:
       invalid_section: 交易档案栏目无效。
       read_only: RSC 目前为只读预览，交易、奖励、结算与通知已暂停。
       user_has_history: 该账号有 RSC 资产或账务历史，不能直接删除或合并。请保留用户 ID，可使用论坛匿名化功能。
-      invalid_amount: 金额格式或精度不正确。
+      invalid_amount: 请输入有效数字，小数位数不能超过允许的精度，请检查金额和数量。
       amount_overflow: 金额超出支持范围。
       invalid_user: 用户无效。
       invalid_request_id: 请求编号格式不正确。
@@ -115,7 +120,7 @@ zh_CN:
       idempotency_conflict: 同一请求编号不能用于不同的交易。
       account_not_found: 账户不存在。
       wallet_frozen: 账户已冻结。
-      insufficient_balance: 余额不足。
+      insufficient_balance: 可用余额不足以支付本次交易，请减少金额或数量，并留出手续费。
       login_required: 请先登录。
       membership_required: 用户尚未获得使用 RSC 的权限。
       self_transfer: 不能给自己转账或打赏。
@@ -127,17 +132,17 @@ zh_CN:
       trial_disabled: 原生业务试用尚未开启。
       invalid_order: 委托参数不正确。
       invalid_quantity: 数量不满足最小值或步进要求。
-      order_pending: 此品种已有待处理委托。
+      order_pending: 此品种已有委托等待成交，请到委托记录查看或撤单后再下单，避免重复提交。
       too_many_orders: 待处理委托过多。
-      position_unavailable: 可平仓数量不足。
+      position_unavailable: 可平仓数量不足，持仓可能已成交或被自动平仓，请刷新持仓后重试。
       position_locked: 此持仓尚未达到最短持有时间。
-      position_conflict: 加仓必须使用相同方向与杠杆。
+      position_conflict: 此品种已有持仓，加仓方向和杠杆需与原持仓一致；如需反向交易，请先平仓。
       order_not_pending: 此委托已处理。
       cancellation_locked: 当前尚不在可撤单时间内，请查看委托的撤单时间。
       invalid_protection: 止盈或止损价格方向不正确。
-      quote_unavailable: 行情暂不可用。
+      quote_unavailable: 暂时无法取得有效报价，请稍后重试；外汇平仓可提交委托等待报价恢复。
       quote_stale: 报价源暂未提供有效的新价格，请稍后重试。外汇平仓可提交等待报价的委托。
-      market_closed: 当前不在交易时段。
+      market_closed: 当前市场休市，请在开市后交易。
       match_locked: 赛事已封盘。
       invalid_pick: 预测选项不正确。
       odds_unavailable: 赔率不可用或已过期。
@@ -184,10 +189,10 @@ zh_CN:
       provider_currency: 暂不支持此报价币种。
       provider_response_too_large: 数据源响应过大，请稍后重试。
       provider_http_400: 数据源暂时无法响应（400），请稍后重试。
-      provider_http_401: 数据源暂时无法响应（401），请稍后重试。
-      provider_http_403: 数据源暂时无法响应（403），请稍后重试。
+      provider_http_401: 行情服务授权失败，请联系管理员检查配置。
+      provider_http_403: 行情服务暂时拒绝访问，请稍后重试；持续出现请联系管理员。
       provider_http_404: 数据源暂时无法响应（404），请稍后重试。
-      provider_http_429: 数据源暂时无法响应（429），请稍后重试。
+      provider_http_429: 行情服务请求过于频繁，系统正在等待恢复，请稍后重试。
       provider_http_500: 数据源暂时无法响应（500），请稍后重试。
       provider_http_502: 数据源暂时无法响应（502），请稍后重试。
       provider_http_503: 数据源暂时无法响应（503），请稍后重试。
