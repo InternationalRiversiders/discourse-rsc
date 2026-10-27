@@ -236,6 +236,8 @@ zh_CN:
         quantity: 数量
         leverage: 杠杆
         order_hint: 提交后预留资金，等待后续行情确认成交。提交后的 10 秒内可撤单。
+        refresh_and_submit: "刷新报价并提交"
+        refresh_quote_before_order: "当前报价已过期。提交时会重新获取有效报价，未取得有效报价不会直接成交；平仓可进入等待报价的委托。"
         submit_order: 提交委托
         no_quotes: 暂无可用行情
         positions: 我的持仓

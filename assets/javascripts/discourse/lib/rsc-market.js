@@ -76,3 +76,9 @@ export function sparkline(history) {
     )
     .join(" ");
 }
+
+// Refresh-on-submit is an execution request, not a claim that this quote is live.
+export function canRefreshForTrade(item) {
+  return item?.category === "forex" && item.active !== false &&
+    item.market_closed === false && item.status === "stale_quote";
+}

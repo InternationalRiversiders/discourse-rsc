@@ -28,7 +28,7 @@ import {
   signedAmount,
 } from "../lib/rsc-format";
 import { estimate, payout, quantityForFraction, quantityForNotional, notionalForQuantity, openingQuantity, atomic } from "../lib/rsc-estimate";
-import { marketView } from "../lib/rsc-market";
+import { marketView, canRefreshForTrade } from "../lib/rsc-market";
 import { i18n } from "discourse-i18n";
 
 const uiText = (value) => i18n(`discourse_rsc.ui.${value}`);
@@ -138,11 +138,12 @@ export default class RscDashboard extends Component {
     return this.selected && marketView(this.selected, this.quoteClock);
   }
   get writeDisabled() { return this.busy || this.data.read_only || this.data.wallet.status !== "active"; }
+  get needsExecutionQuote() { return canRefreshForTrade(this.selectedMarket); }
   get tradingDisabled() {
     return (
       this.data.read_only ||
       this.busy || Number(this.leverage) > this.maxLeverage || this.highRiskStatus.blocked || !!this.quantityError || !!this.budgetError || !!this.positionConflict ||
-      !this.selectedMarket?.tradable ||
+      (!this.selectedMarket?.tradable && !this.needsExecutionQuote) ||
       this.data.wallet.status !== "active" ||
       (this.side !== "close" && this.selected?.close_only)
     );
@@ -774,7 +775,8 @@ export default class RscDashboard extends Component {
                   {{#if this.budgetError}}<p class="alert alert-error" role="alert">{{this.budgetError}}</p>{{/if}}
                   {{#if this.positionConflict}}<p class="alert alert-info" role="alert">{{this.positionConflict}}</p>{{/if}}
                   {{#if this.estimate}}<div class="rsc-order-estimate"><p>名义金额 {{formatAmount this.estimate.gross}} · 保证金 {{formatAmount this.estimate.margin}}</p><p>开仓手续费 {{formatAmount this.estimate.fee}} · 预计占用 {{formatAmount this.estimate.reserve}} RSC</p><small>当前可建仓数量 {{formatQuantity this.estimate.maximum}} · {{#if this.selected.fee_bps}}平仓另收手续费，费用按名义金额计算{{else}}当前品种开平仓免手续费{{/if}}；实际成交前会复核额度。</small></div>{{/if}}
-                  <button class="btn btn-primary" type="submit" disabled={{this.tradingDisabled}}>{{uiText "submit_order"}}</button>
+                  {{#if this.needsExecutionQuote}}<p class="rsc-muted" role="status">{{uiText "refresh_quote_before_order"}}</p>{{/if}}
+                  <button class="btn btn-primary" type="submit" disabled={{this.tradingDisabled}}>{{#if this.needsExecutionQuote}}{{uiText "refresh_and_submit"}}{{else}}{{uiText "submit_order"}}{{/if}}</button>
                   <details class="rsc-trading-help"><summary>交易规则 · 数量步进 {{formatQuantity this.selected.step}}</summary><p class="rsc-muted">{{this.executionHint}}</p><p class="rsc-muted">最小数量 {{formatQuantity this.selected.minimum}}。四档比例按可用余额与剩余额度共同估算，包含手续费及预占空间；{{this.positionLimitHint}}</p></details>
                 </form>
               </section>{{/if}}

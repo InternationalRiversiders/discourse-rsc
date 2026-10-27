@@ -242,6 +242,8 @@ en:
         leverage: Leverage
         order_hint: Funds are reserved until a subsequent quote confirms the order.
           Cancel within 10 seconds of submission.
+        refresh_and_submit: "Refresh quote and submit"
+        refresh_quote_before_order: "This quote is stale. Submission requests a fresh quote; no trade executes without one. Forex exits can wait in the order queue."
         submit_order: Submit order
         no_quotes: No quotes available
         positions: My positions
