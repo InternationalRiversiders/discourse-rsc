@@ -25,7 +25,15 @@ module DiscourseRsc
           raise Error.new("high_risk_disabled", status: 403)
         end
         Risk.daily!(actor.id, instrument, side: side)
-        price = price!(instrument, trading: true)
+        waiting_quote = false
+        price = begin
+          price!(instrument, trading: true)
+        rescue Error => error
+          raise unless forex_exit?(instrument, side) && instrument.active && %w[quote_stale quote_unavailable].include?(error.code)
+          raise Error.new("market_closed", status: 409) if MarketSessions.closed?(instrument)
+          waiting_quote = true
+          nil
+        end
         raise Error.new("invalid_quantity") unless units >= instrument.minimum_units && (units % instrument.step_units.to_i).zero?
         pending = Order.where(user_id: actor.id, instrument_id: instrument.id, status: "pending").order(:id).lock.to_a
         replacing = side == "close" && cancel_pending && pending.all? { |order| order.side != "close" }
@@ -45,14 +53,14 @@ module DiscourseRsc
         raise Error.new("wallet_frozen", status: 403) unless wallet.status == "active"
         delay = instrument.quote.fetch("delay_seconds", 0).to_i
         fx_confirmation = ForexActivity.confirmation?(instrument, leverage) && side != "close"
-        delayed = instrument.category == "crypto" || TradingRules.delayed?(instrument) || fx_confirmation
+        delayed = instrument.category == "crypto" || TradingRules.delayed?(instrument) || fx_confirmation || waiting_quote
         fee_bps = ForexActivity.fee_bps(instrument, position: position)
         wait = instrument.category == "crypto" ? (side == "close" ? 0 : SiteSetting.rsc_crypto_confirmation_delay_seconds) : [[delay - 30, 30].max, 1800].min
-        wait = 0 if fx_confirmation && !TradingRules.delayed?(instrument)
+        wait = 0 if waiting_quote || (fx_confirmation && !TradingRules.delayed?(instrument))
         order = Order.create!(user_id: actor.id, instrument_id: instrument.id, side: side, leverage: leverage,
                               status: delayed ? "pending" : "executing", quantity_units: units,
                               execute_at: Time.current + wait.seconds, expires_at: Time.current + (instrument.category == "crypto" ? 15 : 30).minutes,
-                              details: { "reference_price" => Amount.format(price), "delayed" => TradingRules.delayed?(instrument), "take_profit" => tp && Amount.format(tp), "stop_loss" => sl && Amount.format(sl) }.merge(ForexActivity.order_details(instrument, position, side)).merge("fee_bps" => fee_bps, "fx_confirmation" => fx_confirmation))
+                              details: { "reference_price" => price && Amount.format(price), "delayed" => TradingRules.delayed?(instrument), "take_profit" => tp && Amount.format(tp), "stop_loss" => sl && Amount.format(sl) }.merge(ForexActivity.order_details(instrument, position, side)).merge("fee_bps" => fee_bps, "fx_confirmation" => fx_confirmation, "waiting_quote" => waiting_quote, "position_id" => side == "close" ? position.id : nil))
         if side != "close"
           gross = units * price / U
           TradingRules.opening!(instrument, gross)
@@ -74,7 +82,7 @@ module DiscourseRsc
         unless delayed
           side == "close" ? close_locked(instrument, order, position, price, "stock_closed") : open_locked(instrument, order, position, price)
         end
-        { order_id: order.id, status: order.status }
+        { order_id: order.id, status: order.status, waiting_quote: waiting_quote }
       end
     end
 
@@ -87,7 +95,7 @@ module DiscourseRsc
         Risk.lock(actor.id)
         order = Order.lock.find(candidate.id)
         raise Error.new("order_not_pending", status: 409) unless order.status == "pending"
-        window_open = instrument.category == "crypto" || order.details["fx_confirmation"] || Time.current <= order.created_at + 10.seconds
+        window_open = instrument.category == "crypto" || forex_exit?(instrument, order.side) || order.details["fx_confirmation"] || Time.current <= order.created_at + 10.seconds
         unless window_open || order.expires_at <= Time.current || instrument.provider_error.present? || order.details["error"].present?
           raise Error.new("cancellation_locked", status: 409)
         end
@@ -162,13 +170,13 @@ module DiscourseRsc
           # Opening requires a post-submission quote. Non-delayed FX exits
           # may use the already validated live quote, including pre-upgrade orders.
           next unless forex_exit?(instrument, order.side) || Time.iso8601(instrument.quote.fetch("source_time")) > order.created_at
-          reference = Amount.parse(order.details.fetch("reference_price"))
-          if (price - reference).abs * 100 > reference * 5
+          reference = order.details["reference_price"] && Amount.parse(order.details["reference_price"])
+          if !order.details["waiting_quote"] && reference && (price - reference).abs * 100 > reference * 5
             refund_locked(order, "rejected", "price_moved")
             next
           end
           position = Position.find_by(user_id: order.user_id, instrument_id: instrument.id)
-          if Account.wallet(order.user_id).status != "active" || (order.side == "close" && (!position || position.quantity_units < order.quantity_units))
+          if Account.wallet(order.user_id).status != "active" || (order.side == "close" && (!position || position.quantity_units < order.quantity_units || (order.details["position_id"] && order.details["position_id"].to_i != position.id)))
             refund_locked(order, "rejected", Account.wallet(order.user_id).status != "active" ? "wallet_frozen" : "position_unavailable")
           elsif order.side == "close"
             close_locked(instrument, order, position, price, "stock_closed")

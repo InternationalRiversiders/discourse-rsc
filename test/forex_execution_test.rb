@@ -21,7 +21,11 @@ class ForexExecutionTest < ForexActivityTest
       assert_equal 'immediate',R::MarketListing.rows([item]).first[:close_execution_mode]
       assert_equal 0,R::Entry.sum(:units)
       travel 121.seconds
-      assert_equal 'quote_stale',assert_raises(R::Error) { submit(item,side:'close',quantity:'60') }.code
+      waiting=submit(item,side:'close',quantity:'60')
+      assert_equal 'pending',waiting.status
+      assert waiting.details['waiting_quote']
+      R::Exchange.process(item.id)
+      assert_equal 'pending',waiting.reload.status
       assert_equal 1,R::Position.count
     end
   end

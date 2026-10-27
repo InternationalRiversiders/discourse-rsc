@@ -137,7 +137,7 @@ en:
       cancellation_locked: The order is outside its cancellation window.
       invalid_protection: Invalid protection.
       quote_unavailable: Quote unavailable.
-      quote_stale: Quote stale.
+      quote_stale: No fresh quote is available. Please retry later. Forex exits can be queued until a valid quote arrives.
       market_closed: Market closed.
       match_locked: Match locked.
       invalid_pick: Invalid pick.

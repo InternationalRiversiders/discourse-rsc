@@ -105,7 +105,55 @@ module DiscourseRsc
       raise Error.new("quote_unavailable", status: 409)
     end
 
+    # An independent FX feed is optional. Missing credentials or a failed fallback
+    # must never make a stale primary quote look fresh or change CNY into CNH.
     def self.fetch_quote(instrument)
+      primary_error = nil
+      primary = begin
+        fetch_primary_quote(instrument)
+      rescue Error, KeyError, ArgumentError => error
+        primary_error = error
+        nil
+      end
+      if forex_base(instrument) && SiteSetting.rsc_twelve_data_api_key.present?
+        source = Time.iso8601(primary['source_time']) rescue nil
+        unless source && source >= 120.seconds.ago && source <= 5.seconds.from_now
+          begin
+            return forex_fallback(instrument)
+          rescue Error, KeyError, ArgumentError, TypeError
+            # Keep the original source timestamp/error when neither feed works.
+          end
+        end
+      end
+      raise primary_error if primary_error
+      primary
+    end
+
+    def self.forex_fallback(instrument)
+      base = forex_base(instrument)
+      pair = "USD/#{base}"
+      quote = Discourse.cache.fetch("rsc:fx-fallback:v1:#{base}", expires_in: 45.seconds) do
+        # Shared across all FX symbols/workers; at most one fallback request / 8s.
+        raise Error.new('provider_busy', status: 503) unless Discourse.redis.set('rsc:fx-fallback:slot', '1', nx: true, ex: 8)
+        data = ProviderHttp.get('api.twelvedata.com', '/exchange_rate', symbol: pair,
+          apikey: SiteSetting.rsc_twelve_data_api_key, dp: 12)
+        raise Error.new('provider_invalid_data', status: 503) unless data['symbol'] == pair
+        at = Time.at(Integer(data.fetch('timestamp'))).utc
+        raise Error.new('quote_stale', status: 409) unless at >= 120.seconds.ago && at <= 5.seconds.from_now
+        price = reciprocal(data.fetch('rate'))
+        day = Time.current.utc.beginning_of_day
+        { 'price'=>price, 'local_price'=>price, 'local_currency'=>'USD', 'fx_rate'=>'1',
+          'source'=>'twelve_data', 'source_time'=>at.iso8601, 'received_at'=>Time.current.iso8601(6),
+          'delay_seconds'=>0, 'delay_reported'=>true, 'pricing_method'=>FX_PRICING,
+          'base_currency'=>base, 'inverse_rate'=>decimal(data.fetch('rate')),
+          'session_start'=>day.iso8601, 'session_end'=>(day+1.day).iso8601, 'fallback'=>true }
+      end
+      source = Time.iso8601(quote.fetch('source_time'))
+      raise Error.new('quote_stale', status: 409) unless source >= 120.seconds.ago && source <= 5.seconds.from_now
+      quote
+    end
+
+    def self.fetch_primary_quote(instrument)
       code = instrument.provider_symbol.presence || instrument.symbol
       case instrument.provider
       when "coinbase"
