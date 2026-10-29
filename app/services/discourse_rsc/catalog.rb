@@ -61,17 +61,8 @@ module DiscourseRsc
 
     def self.list(actor:, symbol:, reason:, request_id:, action:)
       requested_code = MarketData.symbol(symbol)
-      code = if requested_code.start_with?('CRYPTO:'); requested_code.split(':', 2).last.tr('/', '-')
-        elsif requested_code.include?(':'); provider({'symbol'=>requested_code}).last
-        else requested_code; end
-      code = MarketData.symbol(code)
-      code = code.sub(/\A([A-Z]{3})USD=X\z/, '\1=X')
-      aliases = [requested_code, code]
-      if /\A(?!USD)[A-Z]{3}=X\z/.match?(code)
-        base = code.delete_suffix('=X')
-        aliases += ["#{base}USD=X", "FX:#{base}"]
-      end
-      find_existing = -> { Instrument.find_by(symbol: aliases) || Instrument.find_by(provider_symbol: aliases) }
+      code, aliases = identifiers(requested_code)
+      find_existing = -> { find_instrument(aliases) }
       DistributedMutex.synchronize("rsc-listing:#{code}", validity: 90) do
         # Remote I/O must never hold the global trade lock or a money transaction.
         candidate = external_candidate(code) unless find_existing.call
@@ -95,6 +86,48 @@ module DiscourseRsc
       end
     end
     private_class_method :list
+
+    def self.identifiers(symbol)
+      requested_code = MarketData.symbol(symbol)
+      code = if requested_code.start_with?('CRYPTO:'); requested_code.split(':', 2).last.tr('/', '-')
+        elsif requested_code.include?(':'); provider({'symbol'=>requested_code}).last
+        else requested_code; end
+      code = MarketData.symbol(code)
+      code = code.sub(/\A([A-Z]{3})USD=X\z/, '\1=X')
+      aliases = [requested_code, code]
+      if /\A(?!USD)[A-Z]{3}=X\z/.match?(code)
+        base = code.delete_suffix('=X')
+        aliases += ["#{base}USD=X", "FX:#{base}"]
+      end
+      [code, aliases]
+    end
+
+    def self.find_instrument(aliases)
+      item = Instrument.where(symbol: aliases).order(active: :desc, id: :asc).first ||
+        Instrument.where(provider_symbol: aliases).order(active: :desc, id: :asc).first
+      if item && !item.active? && item.metadata['canonical_instrument_id']
+        canonical = Instrument.find_by(id: item.metadata['canonical_instrument_id'], active: true,
+          provider: item.provider, provider_symbol: item.provider_symbol)
+        return canonical if canonical
+      end
+      item
+    end
+
+    def self.external_metadata(code, category, meta)
+      exchange = if code.end_with?('.SS'); 'SSE'
+        elsif code.end_with?('.SZ'); 'SZSE'
+        elsif category == 'forex'; 'FX'
+        elsif category == 'crypto'; 'CRYPTO'
+        else { 'NMS'=>'NASDAQ', 'NGM'=>'NASDAQ', 'NCM'=>'NASDAQ', 'NYQ'=>'NYSE', 'PCX'=>'ARCA' }.fetch(meta['exchangeName'], meta['exchangeName']); end
+      display = if category == 'forex'; code.delete_suffix('=X').delete_suffix('USD')
+        elsif category == 'crypto'; code.sub(/-USD\z/, '/USD')
+        else code.sub(/\.(SS|SZ|HK|T|TO|V|AX|NS|BO|L|PA|AS|BR|LS|MC|MI|CO|ST|HE|OL|VI|WA|IR|DE|SW|SI)\z/, ''); end
+      hours = { 'cn'=>'09:30-11:30,13:00-15:00 Asia/Shanghai',
+        'hk'=>'09:30-12:00,13:00-16:00 Asia/Hong_Kong', 'us'=>'09:30-16:00 America/New_York',
+        'forex'=>'24/5', 'crypto'=>'24/7' }[category]
+      { 'display_symbol'=>display, 'exchange'=>exchange, 'trading_hours'=>hours,
+        'provider_name'=>meta['longName'].presence || meta['shortName'], 'listed_via'=>'external' }.compact
+    end
 
     def self.supported_external?(code, type)
       return false unless %w[EQUITY ETF MUTUALFUND INDEX CURRENCY CRYPTOCURRENCY].include?(type)
@@ -123,7 +156,6 @@ module DiscourseRsc
       name = meta['longName'].presence || meta['shortName'].presence || code
       metal = %w[ETF MUTUALFUND].include?(meta['instrumentType']) && (%w[BAR GLD GLDM IAU OUNZ PALL PPLT SGOL SIVR SLV].include?(code.split('.').first) || (!name.upcase.include?('MINER') && name.upcase.match?(/GOLD TRUST|GOLD SHARES|SILVER TRUST|SILVER SHARES|PHYSICAL (GOLD|SILVER|PLATINUM|PALLADIUM)/)))
       category = 'metals' if metal
-      raise Error.new('market_opening_disabled') if %w[ca in au].include?(category)
       unit = Amount.parse(category == 'crypto' ? '0.000001' : '0.01')
       fee = {'crypto'=>20,'cn'=>13,'us'=>5,'indices'=>5,'forex'=>5,'metals'=>5}.fetch(category,10)
       attributes = {symbol:code,name:name,
@@ -135,29 +167,10 @@ module DiscourseRsc
         attributes.merge!(symbol: "FX:#{base}", name: ForexCatalog::CURRENCIES.dig(base, 0) || name, currency: 'USD')
       end
       quote = MarketData.fetch_quote(Instrument.new(attributes))
-      attributes.merge(quote:quote,history:[{at:quote['source_time'],price:quote['price']}],synced_at:Time.current)
+      attributes.merge(metadata: external_metadata(code, category, meta), quote:quote,history:[{at:quote['source_time'],price:quote['price']}],synced_at:Time.current)
     rescue KeyError, ArgumentError, TypeError
       raise Error.new('provider_invalid_data', status: 503)
     end
 
-    def self.seed(symbols: nil)
-      path = File.expand_path("../../../config/market-symbols.txt", __dir__)
-      count = 0
-      File.foreach(path) do |line|
-        next if line.strip.empty? || line.start_with?("#")
-        symbol, name, currency, category, asset, fee = line.strip.split("|")
-        next if symbols && !symbols.include?(symbol)
-        next if Instrument.exists?(symbol: symbol)
-        provider, code = provider({ "symbol" => symbol, "name" => name, "market_category" => category })
-        if category == 'forex'
-          aliases = [symbol, code, "#{symbol.delete_prefix('FX:')}USD=X"]
-          next if Instrument.where(symbol: aliases).or(Instrument.where(provider_symbol: aliases)).exists?
-        end
-        Instrument.create!(symbol: symbol, name: name, asset_type: asset.to_s, currency: currency, category: category, provider: provider, provider_symbol: code, fee_bps: fee.to_i,
-                           minimum_units: Amount.parse(category == "crypto" ? "0.000001" : "0.01"), step_units: Amount.parse(category == "crypto" ? "0.000001" : "0.01"))
-        count += 1
-      end
-      count
-    end
   end
 end

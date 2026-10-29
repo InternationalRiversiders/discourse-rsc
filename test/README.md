@@ -50,7 +50,6 @@ bash test/run-browser-isolated.sh
 
 截图保存在 [docs/screenshots](../docs/screenshots)。隔离镜像未配置完整外部头像、WebAuthn 和外部资源访问，可能出现论坛核心头像或外部资源加载错误；不影响上述 RSC 流程，不能将其视为生产主题环境的完整验收。
 
-公开行情响应已作只读检查和离线回归；合成资产及真实可映射账号子集已完成导入演练、对账，真实子集还验证了备份恢复，详见 [真实数据演练](../docs/real-data-rehearsal.md)。尚未完成付费数据源套餐联调、含缺失身份的真实全量资产导入、线上主题/其他插件组合和长期运行验收。测试通过不代表生产已经切换。
 
 调试时可设置 `RSC_KEEP_TEST_CONTAINER=1` 保留独立容器及日志；验收后需删除该测试容器和私有临时凭据。默认执行会自动清理。
 
@@ -62,7 +61,7 @@ Display parity regressions: `node test/format_test.mjs` checks decimal truncatio
 
 `native_adaptation_test.rb` 加入持仓/撤单窗口、保护价、冻结持仓、追加保证金、流动性、未来豁免、通知定位、公开汇总权限、合并流水分页及归属、老比赛、旧申请/订单元数据和不重复记账。默认后端脚本已包含。
 
-`node test/estimate-test.mjs` 以 BigInt 验证三类成交模式的数量边界，不以浮点数提交资金。新增浏览器检查包括统一流水、通知实际导航及离开后的手机列表恢复。旧打赏组件共存和六插件私有入口检查的具体结果见 [适配记录](../docs/native-adaptation-2026-09-21.md)；脚本默认新建论坛只安装 RSC，不能冒充生产完整插件组合测试。
+`node test/estimate-test.mjs` 以 BigInt 验证三类成交模式的数量边界，不以浮点数提交资金。新增浏览器检查包括统一流水、通知实际导航及离开后的手机列表恢复。脚本默认新建论坛只安装 RSC，不能冒充生产完整插件组合测试。
 
 ## 访问与奖励回归（2026-09-21）
 

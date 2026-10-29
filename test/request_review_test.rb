@@ -126,12 +126,11 @@ class RequestReviewTest < FinalReviewTest
 
   def test_lunch_weekend_dst_and_fx_sessions_retain_legacy_rules
     item = stale_stock
-    archive('market_instruments', {id: 900, symbol: item.symbol, trading_hours: '09:30-11:30,13:00-15:00 Asia/Shanghai'})
+    item.update!(metadata: {'trading_hours'=>'09:30-11:30,13:00-15:00 Asia/Shanghai'})
     assert R::MarketSessions.closed?(item, Time.utc(2026,9,21,3,45))
     refute R::MarketSessions.closed?(item, Time.utc(2026,9,21,5,15))
     assert R::MarketSessions.closed?(item, Time.utc(2026,9,20,5,15))
-    record = R::LegacyRecord.find_by!(source_table: 'market_instruments')
-    record.update!(data: record.data.merge('trading_hours' => '09:30-16:00 America/New_York'))
+    item.update!(metadata: {'trading_hours'=>'09:30-16:00 America/New_York'})
     Discourse.cache.delete('rsc:trading-hours')
     refute R::MarketSessions.closed?(item, Time.utc(2026,9,21,13,45))
     assert R::MarketSessions.closed?(item, Time.utc(2026,1,20,13,45))
@@ -148,7 +147,7 @@ class RequestReviewTest < FinalReviewTest
     minute = (local.hour * 60 + local.min + 60) % (24 * 60 - 1)
     start = format('%02d:%02d', minute / 60, minute % 60)
     finish = format('%02d:%02d', (minute + 1) / 60, (minute + 1) % 60)
-    archive('market_instruments', {id: 901, symbol: item.symbol, trading_hours: "#{start}-#{finish} Asia/Shanghai"})
+    item.update!(metadata: {'trading_hours'=>"#{start}-#{finish} Asia/Shanghai"})
     with_quote_fetcher do |calls|
       R::MarketData.refresh_if_needed(item.id)
       assert_empty calls

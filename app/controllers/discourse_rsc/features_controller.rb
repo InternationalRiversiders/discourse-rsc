@@ -107,11 +107,13 @@ module DiscourseRsc
       instruments=Instrument.order(:symbol)
       instruments=instruments.where(category: category) if category
       instruments=instruments.where("symbol ILIKE :q OR name ILIKE :q",q:"%#{Instrument.sanitize_sql_like(search)}%") if search.present?
-      instrument_page=Reports.relation_page(instruments,page:params.fetch(:instrument_page,1)) { |i| {id:i.id,symbol:i.symbol,name:i.name,asset_type:i.asset_type,provider:i.provider,active:i.active,error:i.provider_error,synced_at:i.synced_at} }
+      instrument_page=Reports.relation_page(instruments,page:params.fetch(:instrument_page,1)) { |i| {id:i.id,symbol:i.symbol,name:i.name,asset_type:i.asset_type,provider:i.provider,provider_symbol:i.provider_symbol,display_symbol:i.display_symbol,exchange:i.exchange,listing_note:i.metadata['listing_note'],active:i.active,error:i.provider_error,synced_at:i.synced_at} }
       funds=Reports.relation_page(Journal.order(id: :desc),page:params.fetch(:fund_page,1)) { |j| {id:j.id,actor_user_id:j.actor_user_id,operation:j.operation,metadata:j.metadata,created_at:j.created_at} }
       audits=Reports.relation_page(Audit.order(id: :desc),page:params.fetch(:audit_page,1))
       requests=Reports.relation_page(MarketRequest.order(id: :desc),page:params.fetch(:request_page,1))
+      requests[:rows] = MarketRequest.present(requests[:rows])
       render_json_dump(
+        catalog_summary: Instrument.catalog_summary,
         wallets:wallet_page[:rows],instruments:instrument_page[:rows],funds:funds[:rows],audits:audits[:rows],requests:requests[:rows],
         pagination:{wallet:wallet_page[:pagination],instrument:instrument_page[:pagination],fund:funds[:pagination],audit:audits[:pagination],request:requests[:pagination]},
         events: Event.where(delivered_at: nil).order(:id).limit(30).map { |e| e.attributes.slice("id", "kind", "attempts", "last_error", "next_attempt_at") },

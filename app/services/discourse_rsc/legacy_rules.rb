@@ -11,6 +11,8 @@ module DiscourseRsc
         LegacyRecord.where(source_table:'market_instruments').pluck(:data).each do |row|
           item=instruments[row['symbol']];next unless item
           mapping[row['id'].to_s]=item
+          metadata = row.slice('display_symbol', 'exchange', 'trading_hours', 'catalog_rank').merge('catalog_id' => row['id']).merge(item.metadata)
+          item.update!(metadata: metadata) if item.metadata != metadata
           if item.asset_type.blank? && row['asset_type'].present?;item.update!(asset_type:row['asset_type']);result[:instruments]+=1;end
         end
         legacy_orders=LegacyRecord.where(source_table:'exchange_orders').pluck(:data)

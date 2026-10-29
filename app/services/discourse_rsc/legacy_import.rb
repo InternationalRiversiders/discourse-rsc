@@ -135,6 +135,7 @@ module DiscourseRsc
         crypto = row["market_category"] == "crypto"
         provider, code = Catalog.provider(row)
         @instruments[row.fetch("id")] = Instrument.create!(symbol: row.fetch("symbol"), name: row.fetch("name"), category: row.fetch("market_category", "us"),
+          metadata: row.slice("display_symbol", "exchange", "trading_hours", "catalog_rank").merge("catalog_id" => row["id"]),
           asset_type: row.fetch("asset_type", ""), currency: row.fetch("currency", "USD"), provider: provider, provider_symbol: code,
           minimum_units: units(row.fetch("min_quantity", "1")), step_units: units(row.fetch("quantity_step", "1")), fee_bps: row.fetch("fee_bps", 10), active: row["is_active"] != 0)
       end

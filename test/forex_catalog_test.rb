@@ -39,7 +39,7 @@ class ForexCatalogTest < ForexPrecisionTest
     Discourse.cache.delete("rsc:search:#{Digest::SHA256.hexdigest('Brazil')}")
   end
 
-  def test_seed_and_approval_use_one_fx_market_and_reciprocal_price
+  def test_approval_aliases_use_one_fx_market_and_reciprocal_price
     data = chart('5')
     data['chart']['result'][0]['meta'].merge!('symbol'=>'BRL=X', 'currency'=>'BRL', 'instrumentType'=>'CURRENCY')
     SiteSetting.rsc_market_data_enabled = true
@@ -51,12 +51,12 @@ class ForexCatalogTest < ForexPrecisionTest
       assert_equal 'USD', item.currency
       assert_equal '0.2', item.quote['price']
       assert_equal 'BRL', item.quote['base_currency']
-      assert_equal 0, R::Catalog.seed(symbols: ['FX:BRL'])
+      assert_equal item.id, R::Catalog.approve(actor: @admin, symbol: 'FX:BRL', request_id: SecureRandom.uuid)['instrument_id']
       item.update!(symbol: 'BRL=X') # Previously approved external symbol.
-      assert_equal 0, R::Catalog.seed(symbols: ['FX:BRL'])
+      assert_equal item.id, R::Catalog.approve(actor: @admin, symbol: 'FX:BRL', request_id: SecureRandom.uuid)['instrument_id']
       assert_equal 1, R::Instrument.count
     end
-    assert_equal 1, R::Catalog.seed(symbols: ['FX:MXN'])
-    assert_equal 'MXN=X', R::Instrument.find_by!(symbol: 'FX:MXN').provider_symbol
+    refute R::Catalog.respond_to?(:seed)
+    refute R::Instrument.exists?(symbol: 'FX:MXN')
   end
 end

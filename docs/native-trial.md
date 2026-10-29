@@ -1,6 +1,6 @@
 # 原生页面与运行方式
 
-钱包、红包、股市、赛事预测、排行榜和管理页均运行在 Discourse 内；后端为插件 Rails Engine，前端为原生 Ember/GJS 页面。没有嵌入旧 Next.js 页面，也不调用旧 Express 服务。详细功能和边界见 [迁移记录](migration-completion.md)。
+钱包、红包、股市、赛事预测、排行榜和管理页均运行在 Discourse 内；后端为插件 Rails Engine，前端为原生 Ember/GJS 页面。没有嵌入旧 Next.js 页面，也不调用旧 Express 服务。详细功能和边界见 迁移记录。
 
 ## 插件如何工作
 
@@ -32,6 +32,6 @@
 
 每日奖励直接读取论坛帖子和访问记录。正式切换前应停用旧 RiversideCoin 奖励任务，并导入已发放记录避免重复。`rsc_reward_to_post` 是打赏主题组件，切换时停用该主题组件以免出现两个打赏入口。
 
-安装代码与迁移真实资产是两件事。正式切换必须先验证全量导入报告、供应商时效和定时任务；导入及对账步骤见 [迁移记录](migration-completion.md)。本次没有执行生产切换。
+安装代码与迁移真实资产是两件事。正式切换必须先验证全量导入报告、供应商时效和定时任务；导入及对账步骤见 迁移记录。本次没有执行生产切换。
 
 默认 `rsc_read_only=true`：即使打开 `rsc_enabled` 与 `rsc_native_trial_enabled`，仍只读。仅在隔离的合成数据测试库中设为 false 来测试资金操作；真实快照预览保持 true。已配置的两个私有入口见 [连接说明](private-testing.md)。

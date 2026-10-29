@@ -185,8 +185,7 @@ class CompletionTest < NativeBusinessTest
     refute R::Catalog.supported_external?('UNKNOWN','INDEX')
     meta=data['chart']['result'].first['meta'];meta['symbol']='DEMO.TO'
     with_provider(data) do
-      error=assert_raises(R::Error) { R::Catalog.external_candidate('DEMO.TO') }
-      assert_equal 'market_opening_disabled',error.code
+      assert_equal 'ca',R::Catalog.external_candidate('DEMO.TO')[:category]
     end
     assert_equal 1,R::Instrument.count
   end

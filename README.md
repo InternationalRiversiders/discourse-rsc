@@ -1,66 +1,36 @@
 # Discourse RSC
 
-已正式上线于 [河畔 RSC](https://river-side.cc/rsc)，见 [上线、对账及运行验证记录](docs/production-cutover-2026-09-21.md)。
+RiversideCoin 的原生 Discourse 插件，提供行情交易、赛事预测、事件预测、排行榜、RSC 钱包、红包与帖子打赏。使用论坛登录、PostgreSQL、Sidekiq 和站内通知，不依赖旧独立 RSC 服务。
 
-RiversideCoin 的原生 Discourse 重构：Ruby/Rails 后端、论坛 PostgreSQL、原生页面、后台任务和站内通知。保留钱包、打赏、红包、每日活跃奖励、股市和赛事预测；棋牌游戏按约定不迁移。原代码与数据库备份保留，新版独立运行。
+## 数据与状态
 
-插件安装默认关闭、只读。现有论坛迁移需要停旧写入、校验导出、导入、对账后再启用；具体流程与兼容边界见上线记录。普通用户以论坛账户和用户组权限使用，无需旧 JWT 或原 Express/Next.js 服务。
+标的以 `discourse_rsc_instruments` 为准：`active` 表示是否启用，`name` 是名称，`symbol` 是稳定的内部标识，`provider_symbol` 是行情接口代码。显示代码、交易所和交易时段保存在该行的 `metadata`。收录状态与开市、报价时效、是否允许成交分别判断。
 
-久留美外汇活动的规则、排期、原生 App 接口及发布步骤见 [活动说明](docs/fx-kurumi-activity.md)。
+不再保留固定旧目录或“哪些已上市”的 Markdown 清单，也不提供从旧清单重新导入的管理操作。新增标的通过在线校验或管理员维护写入数据库；停用不删除历史关联。旧归档仅用于历史查询与显式迁移，不参与日常目录和交易时段的读取。数据库备份包含标的状态和元数据。
 
-## 原生页面
+`discourse_rsc_market_requests` 保存用户添加请求和校验结果。`POST /rsc/market-requests.json` 自动校验支持的行情品种，成功返回 `id`、`status: approved` 和 `instrument_id`；失败保留中文原因供重试。后台依据实际标的显示“已收录／已停用／校验失败／待校验”，原始申请状态留作历史，不代表当前交易资格。收录和重试无需填写审批原因。
 
-- `/rsc`：余额、转账、发红包、我的红包和资金流水。
-- `/rsc/market`：行情列表、市场分类、搜索/排序/分页、标的详情、下单、委托、持仓、平仓和止盈止损。
-- `/rsc/leaderboard`：资产、盈亏、收益率和成交次数排行。
-- `/rsc/admin`：资金、钱包、标的、奖励、赛果和审计管理。
-- `/rsc/sports`：比赛卡片、赔率、提交/修改预测、预测记录。
-- `/rsc/packets/:token`：分享、领取及退回红包。
-- 论坛侧栏入口、帖子操作栏打赏按钮、头像菜单中的 RSC 通知。
+事件预测的题目、加入申请及内容审核分别存入 `discourse_rsc_forecast_markets`、`discourse_rsc_forecast_requests`，继续按其内容审核规则处理，不因取消行情标的审批而自动放行。
 
-页面沿用论坛登录态、主题变量和移动端布局。金额以字符串提交，服务端按 18 位整数最小单位计算。图表像素坐标可以使用浮点数，资金计算不使用浮点数。
+## 页面与维护
 
-行情首页与旧版的体验对照见 [前端改进记录](docs/frontend-parity.md)。
+- `/rsc/market`：行情、持仓、下单、委托和品种查找；`/rsc` 默认进入行情交易。
+- `/rsc/sports`、`/rsc/forecast`：赛事预测与事件预测。
+- `/rsc/leaderboard`、`/rsc/account`：排行榜与 RSC 钱包。
+- `/rsc/admin`：数据库目录、收录记录、资金、奖励、赛果与审计管理。
+- `/rsc/packets/:token`：红包分享与领取。
 
-钱包、行情、赛事与排行榜的最新样式及桌面/手机/深色截图见 [视觉优化记录](docs/frontend-design.md)。
+插件通过 Git 安装，数据库迁移随论坛部署执行。使用组由 `rsc_allowed_groups` 控制，管理组由 `rsc_admin_groups` 控制，站点管理员具有管理权限。初次安装默认关闭且只读；配置应以论坛站点设置为准，不以旧上线记录推断当前开关。
 
-## 已实现的后端
+资金按 18 位整数最小单位计算，使用复式账本、事务锁和幂等请求。请求使用论坛会话与 CSRF；`request_id` 为 8–100 位字母、数字、下划线或连字符。添加标的不会创建订单或改变用户余额。
 
-- 双边账务分录、账户行锁、幂等请求、数据库收支平衡检查、不可修改的历史。
-- 用户组权限、发行、转账、打赏、北京时间合计每日限额。
-- 等额/随机红包、领取、防重复、收回和到期退款。
-- 原生帖子/访问数据的每日奖励计算、封顶和防重复发放。
-- 普通模式 1–10 倍、高风险虚拟币最高 100 倍的多空委托、资金预留、后续报价确认、5% 价格保护、撤单/超时退款、持仓、平仓、止盈止损和强平。
-- 赛前提交/修改预测、锁定赔率、赛果确认等待、胜负结算及取消退款。
-- 资金事务内记录通知事件，后台投递到 Discourse `Notification`；支持冻结账户接收必要的内部结算退款。
+行情更新按持仓、挂单和浏览需求调度，闲置标的使用有上限的后台轮询；来源限流、报价时效和异常复核继续生效。实时行情、活动、通知和内容审核开关均以数据库设置为准。
 
-虚拟币高风险模式最高 100 倍，并包含组合保证金限制和冷却规则，默认关闭。外部行情与赛事由服务端适配器写入；手工报价和赛果复核只允许管理员操作并记录原因。完整变更、数据源边界和导入流程见 [剩余迁移记录](docs/migration-completion.md)。
+## 验证与接口说明
 
-## 插件如何运行
+隔离测试入口：`bash test/run-isolated.sh`。测试使用独立数据库与容器，不连接生产卷。具体方法见 [测试说明](test/README.md)。
 
-`plugin.rb` 注册资源、设置和扩展；`db/migrate` 随论坛部署执行 PostgreSQL 迁移；Rails Engine 在 `/rsc` 挂载接口；原生页面通过这些接口使用账本。Discourse 的后台任务负责检查订单、结算和投递通知，不再依赖独立 Node 服务或每日奖励 cron。安装流程与剩余迁移工作见 [原生页面与运行方式](docs/native-trial.md)。
-
-目标版本是 Discourse `2026.9.0-latest`。插件通过正常 Git clone 随论坛构建安装，不固定 Discourse 或其他插件的版本。
-
-## 测试与设置
-
-```sh
-bash test/run-isolated.sh
-```
-
-脚本创建独立数据库和论坛容器，结束后清理。浏览器测试及截图说明见 [test/README.md](test/README.md)。
-
-先在隔离论坛验证 `rsc_enabled` 和 `rsc_native_trial_enabled`，通过 `rsc_allowed_groups` 指定使用者；`rsc_admin_groups` 指定管理员，站点管理员自动获得管理权限。每日奖励单独由 `rsc_daily_rewards_enabled` 控制，默认关闭。
-
-请求使用 Discourse 登录和 CSRF；金额为字符串；`request_id` 为 8–100 位字母、数字、下划线或连字符。同一请求编号重放相同内容返回原结果，内容不同返回 409。发送人、成交价格、结算结果均不接受客户端指定。
-
-已准备独立的 [私有测试入口](docs/private-testing.md)：真实快照只读预览与演示数据操作站，均不连接生产库。
-
-最新行情限流、休市规则与统一顶部入口核对见 [复核记录](docs/request-and-navigation-review-2026-09-21.md)。
-
-实时行情由 Sidekiq 维护共享的 Coinbase WebSocket 订阅，需启用 `rsc_crypto_stream_enabled`；订单和风控每 15 秒检查一次。HTTP 行情在独立后台队列获取，Yahoo 跨进程共用每秒一次的限流。安装时自动安装插件声明的 WebSocket Ruby 依赖。
-
-最新上线修复包含系统账号奖励排除、批量奖励资格核对及已发记录跳过。当前完整业务与账本验证合计 134 项测试、801 项断言。
+外汇活动接口见 [活动接口说明](docs/fx-kurumi-activity.md)，事件预测见 [事件预测接口](docs/forecast-market.md)。这些文档描述接口和行为，不维护生产标的数量、当前名单或已部署状态。
 
 ### 外汇异常报价复核
 
@@ -69,9 +39,3 @@ bash test/run-isolated.sh
 可疑报价保存在隔离状态，不覆盖上次接受的价格，不写入已接受历史，也不用于成交、止盈止损或强平。每个品种最多每 20 秒主动重查一次；备用源继续共享缓存、失败退避及每日 750 次预算。重复时间戳不算新确认。新鲜跨源报价一致、同源回到原价附近，或没有新鲜跨源冲突且同源连续三笔新报价在至少 60 秒内保持一致，才恢复报价。配额不足或来源持续分歧时维持等待，平仓委托可撤销；不按旧价假成交。
 
 新外汇成交保存来源、原汇率、源时间、接收时间、复核方法及成交时间。订单详情区分提交参考价与成交价。历史 K 线仍为供应商参考数据，不宣称已逐笔清洗。此保护无法保证识别所有错误报价，不自动改写旧成交或补偿余额。
-
-### Automatic market listing
-
-The existing `POST /rsc/market-requests.json` endpoint now validates and lists supported instruments immediately for RSC members. It returns the compatible `id` / `status` fields plus `instrument_id`; no administrator approval or reason is needed. The admin listing endpoint also accepts an omitted reason. Existing market access controls, provider limits, per-user request throttles, supported-market checks and administrator deactivation remain enforced. This does not change event-prediction content review.
-
-Failed lookups remain pending for retry with a Chinese explanation in request details; successful retries clear that explanation. Symbol-level locking and existing alias matching prevent duplicate listings, and listing invalidates the shared catalog cache. Remote quote requests run outside trading/database locks. No order is placed by adding an instrument.

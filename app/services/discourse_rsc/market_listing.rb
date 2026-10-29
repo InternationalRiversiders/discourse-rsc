@@ -66,20 +66,14 @@ module DiscourseRsc
       schedules = MarketSessions.hours
       counts = Order.group(:instrument_id).count
       last = Order.group(:instrument_id).maximum(:created_at)
-      legacy = Rails.cache.fetch('rsc:market:metadata:v1', expires_in: 10.minutes) do
-        fields = %w[symbol display_symbol exchange catalog_rank id]
-        LegacyRecord.where(source_table: "market_instruments")
-          .pluck(*fields.map { |field| Arel.sql("data->>'#{field}'") })
-          .to_h { |values| row = fields.zip(values).to_h; [row['symbol'], row] }
-      end
       instruments.map do |item|
-        metadata = legacy[item.symbol] || {}
-        { id: item.id, symbol: item.symbol, display_symbol: ForexCatalog.base(item) || metadata["display_symbol"].presence || item.symbol,
-          exchange: metadata["exchange"], currency: item.currency, name: item.name, category: item.category, quote: item.quote, market_closed: MarketSessions.closed?(item, schedules: schedules),
+        metadata = item.metadata
+        { id: item.id, symbol: item.symbol, display_symbol: item.display_symbol,
+          exchange: item.exchange, currency: item.currency, name: item.name, category: item.category, quote: item.quote, market_closed: MarketSessions.closed?(item, schedules: schedules),
           search_aliases: item.category == 'forex' ? ForexCatalog.search_text(ForexCatalog.base(item)) : nil,
           minimum_notional: nil,
           execution_prices: execution ? execution_prices(item) : nil,
-          popularity: counts.fetch(item.id, 0), last_order_at: last[item.id], catalog_rank: metadata["catalog_rank"]&.to_i, catalog_id: metadata["id"]&.to_i || item.id,
+          popularity: counts.fetch(item.id, 0), last_order_at: last[item.id], catalog_rank: metadata["catalog_rank"]&.to_i, catalog_id: metadata["catalog_id"]&.to_i || item.id,
           fee_bps: ForexActivity.fee_bps(item, position: positions[item.id]), fx_activity: ForexActivity.active_for?(item), margin_budget_exempt: ForexActivity.active_for?(item), close_execution_mode: Exchange.forex_exit?(item, "close") ? "immediate" : nil, max_leverage: (item.category == "crypto" || ForexActivity.active_for?(item)) && SiteSetting.rsc_high_risk_enabled ? 100 : 10, currency_name: item.category == "forex" ? ForexActivity.currency_name(item) : nil, close_only: TradingRules.close_only?(item), execution_mode: item.category == "crypto" ? "crypto_confirmation" : (TradingRules.delayed?(item) ? "delayed_confirmation" : (ForexActivity.confirmation?(item, positions[item.id]&.leverage || 1) ? "forex_confirmation" : "immediate")), history: item.history.last(16), minimum: Amount.format(item.minimum_units), step: Amount.format(item.step_units) }
       end.sort_by do |row|
         [-row[:popularity], -(row[:last_order_at]&.to_f || 0), row[:quote]["price"].nil? ? 1 : 0, row[:catalog_rank] || 2147483647, row[:catalog_id]]

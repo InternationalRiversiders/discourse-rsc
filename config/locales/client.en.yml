@@ -426,7 +426,6 @@ en:
         settlement_review: Results and corrections
         notification_queue: Notification queue
         audit_log: Audit log
-        seed_catalog: Seed legacy market catalog
         manual_quote: Update manual quote
         price: Price (RSC)
         previous_close: Previous close (RSC)

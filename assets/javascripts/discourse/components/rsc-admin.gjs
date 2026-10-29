@@ -18,7 +18,6 @@ const uiText = (key) => i18n(`discourse_rsc.ui.${key}`);
 const categoryText = (key) => uiText(`category_${key}`);
 const json = (value) => JSON.stringify(value, null, 2);
 const fields = {
-  seed_catalog: [],
   manual_quote: [
     "id",
     "price",
@@ -42,7 +41,6 @@ const fields = {
     "fee_bps",
     "active",
   ],
-  reject_request: ["id"],
   match_result: ["id", "result"],
   issuance: ["user_id", "amount"],
 };
@@ -341,21 +339,21 @@ export default class extends Component {
           {{on "click" (fn this.preview true)}}
         >{{uiText "pay_rewards"}}</button>{{#if this.rewards}}<p>共 {{this.rewards.length}} 人 · 待发放 {{this.pendingRewardAmount}} RSC</p><label>奖励状态<select aria-label="奖励状态" {{on "change" this.filterRewards}}><option value="all">全部</option><option value="pending">待发放</option><option value="paid">已发放</option><option value="frozen">钱包冻结</option></select></label><div class="rsc-table"><table><thead><tr><th>用户</th><th>奖励</th><th>状态</th></tr></thead><tbody>{{#each this.rewardRows as |row|}}<tr><td><ForumUser @user={{row.forum_user}} @name={{row.username}} /></td><td>{{row.score}} RSC</td><td>{{#if row.paid}}已发放{{else if row.frozen}}钱包冻结{{else}}待发放{{/if}}</td></tr>{{else}}<tr><td colspan="3">暂无符合条件的记录。</td></tr>{{/each}}</tbody></table></div><RscPagination @page={{this.rewardPagination}} @change={{this.changeRewardPage}} />{{/if}}</section>
       <RscAdminTools @readOnly={{this.data.read_only}} @requests={{this.data.requests}} @refresh={{this.refresh}} />
-      <section class="rsc-card"><h2>{{uiText "data_sources"}}</h2><label>{{uiText "category"}}<select value={{this.instrumentCategory}} {{on "change" this.instrumentCategoryChanged}}><option value="">全部市场</option>{{#each options.category as |category|}}<option value={{category}}>{{categoryText category}}</option>{{/each}}</select></label><form {{on "submit" this.instrumentSearch}}><label>按标的代码或名称搜索<input value={{this.instrumentQuery}} {{on "input" this.instrumentQueryChanged}} /></label><button class="btn" type="submit">搜索</button></form><button
+      <section class="rsc-card"><h2>{{uiText "data_sources"}}</h2><p class="rsc-muted">数据库共 {{this.data.catalog_summary.total}} 个标的 · 已收录 {{this.data.catalog_summary.active}} · 已停用 {{this.data.catalog_summary.inactive}}。收录不代表当前开市或报价可成交。</p><label>{{uiText "category"}}<select value={{this.instrumentCategory}} {{on "change" this.instrumentCategoryChanged}}><option value="">全部市场</option>{{#each options.category as |category|}}<option value={{category}}>{{categoryText category}}</option>{{/each}}</select></label><form {{on "submit" this.instrumentSearch}}><label>按标的代码或名称搜索<input value={{this.instrumentQuery}} {{on "input" this.instrumentQueryChanged}} /></label><button class="btn" type="submit">搜索</button></form><button
           class="btn"
           type="button"
           disabled={{this.writeDisabled}}
           {{on "click" this.sync}}
         >{{uiText "sync_now"}}</button><div class="rsc-table"><table><tbody
             >{{#each this.data.instruments as |item|}}<tr><td
-                  >{{item.symbol}}</td><td>{{item.name}}</td><td
-                  >{{item.provider}}</td><td>{{item.synced_at}}</td><td
+                  >{{item.display_symbol}} <small>{{item.exchange}}</small><br /><small>{{item.symbol}}</small></td><td>{{item.name}}</td><td>{{#if item.active}}已收录{{else}}已停用{{/if}}{{#if item.listing_note}}<br /><small>{{item.listing_note}}</small>{{/if}}</td><td
+                  >{{item.provider}} · {{item.provider_symbol}}</td><td>{{item.synced_at}}</td><td
                   >{{item.error}}</td></tr>{{/each}}</tbody></table></div><RscPagination @page={{this.data.pagination.instrument}} @change={{fn this.pageChanged "instrument"}} /></section>
       <section class="rsc-card"><h2>{{uiText "market_requests"}}</h2><div
           class="rsc-table"
         ><table><tbody>{{#each this.data.requests as |item|}}<tr><td
                   >#{{item.id}}</td><td>{{item.symbol}}</td><td
-                  >{{item.status}}</td><td
+                  >{{item.listing_status_label}}{{#if item.listing_error}}<br /><small>{{item.listing_error}}</small>{{/if}}</td><td
                   >{{item.user_id}}{{#if item.details.metadata.requested_name}} · {{item.details.metadata.requested_name}}{{/if}}</td></tr>{{/each}}</tbody></table></div><RscPagination @page={{this.data.pagination.request}} @change={{fn this.pageChanged "request"}} /></section>
       <details class="rsc-card"><summary>{{uiText
             "settlement_review"

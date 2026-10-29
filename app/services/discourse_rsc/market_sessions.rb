@@ -3,7 +3,7 @@ module DiscourseRsc
   module MarketSessions
     def self.hours
       Discourse.cache.fetch('rsc:trading-hours', expires_in: 5.minutes) do
-        LegacyRecord.where(source_table: 'market_instruments').pluck(:data).to_h { |row| [row['symbol'], row['trading_hours']] }
+        Instrument.pluck(:symbol, Arel.sql("metadata->>'trading_hours'")).to_h
       end
     end
 

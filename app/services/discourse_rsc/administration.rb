@@ -69,7 +69,6 @@ module DiscourseRsc
           category = input.fetch("category", "us")
           raise Error.new("invalid_provider") unless %w[yahoo coinbase twelve_data kraken okx manual].include?(provider)
           raise Error.new("invalid_category") unless MarketData::CATEGORIES.include?(category)
-          raise Error.new('market_opening_disabled') if %w[ca in au].include?(category) && input['active'].to_s != 'false'
           instrument = Instrument.lock.find_or_initialize_by(symbol: symbol)
           if instrument.persisted? && (Position.exists?(instrument_id: instrument.id) || Order.exists?(instrument_id: instrument.id, status: "pending"))
             raise Error.new("instrument_has_positions", status: 409) if provider != instrument.provider || category != instrument.category || input["active"].to_s == "false"
@@ -77,7 +76,7 @@ module DiscourseRsc
           instrument.update!(name: input.fetch("name", symbol).to_s.first(100), provider: provider, provider_symbol: MarketData.symbol(input.fetch("provider_symbol", symbol)),
                              category: category, asset_type: input.fetch("asset_type", instrument.asset_type.presence || (category == "crypto" ? "crypto" : "stock")).to_s.first(30), currency: input.fetch("currency", "USD"), active: input["active"].to_s != "false",
                              fee_bps: Integer(input.fetch("fee_bps", 5)), minimum_units: Amount.positive(input.fetch("minimum", "1")), step_units: Amount.positive(input.fetch("step", "1")))
-          MarketRequest.where(symbol: symbol, status: "pending").update_all(status: "approved", updated_at: Time.current)
+          MarketRequest.where(symbol: [symbol, instrument.provider_symbol], status: "pending").update_all(status: "approved", updated_at: Time.current) if instrument.active?
           { instrument_id: instrument.id }
         when "manual_quote"
           instrument = Instrument.lock.find(Integer(input.fetch("id")))
@@ -90,8 +89,6 @@ module DiscourseRsc
                     "session_start" => starts.iso8601, "session_end" => ends.iso8601 }
           instrument.update!(quote: quote, history: (instrument.history + [{ at: Time.current.iso8601(6), price: price }]).last(1440))
           { instrument_id: instrument.id }
-        when "seed_catalog"
-          { created: Catalog.seed }
         when "reject_request"
           request = MarketRequest.lock.find(Integer(input.fetch("id")))
           request.update!(status: "rejected")

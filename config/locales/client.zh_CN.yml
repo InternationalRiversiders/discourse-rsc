@@ -418,7 +418,6 @@ zh_CN:
         settlement_review: 赛果与更正检查
         notification_queue: 通知队列
         audit_log: 管理审计
-        seed_catalog: 导入旧版标的目录
         manual_quote: 更新手工报价
         price: 价格（RSC）
         previous_close: 昨收（RSC）
