@@ -5,7 +5,7 @@ module DiscourseRsc
     # Delayed trades reserve against the reference price with their own buffer.
     def self.execution_prices(item)
       return if item.category == "crypto" || TradingRules.delayed?(item)
-      price = Amount.positive(item.quote["price"])
+      price = Exchange.price!(item)
       %w[long short].to_h { |side| [side, Amount.format(Exchange.execution_price(item, side, price))] }
     rescue Error
       nil
@@ -23,7 +23,7 @@ module DiscourseRsc
 
     def self.tradable?(row, now = Time.current)
       q = row[:quote]
-      return false if q['legacy_snapshot'] || q['price'].to_f <= 0 || row[:market_closed]
+      return false if ForexQuoteGuard.pending?(q) || q['legacy_snapshot'] || q['price'].to_f <= 0 || row[:market_closed]
       received = Time.iso8601(q.fetch('received_at')); source = Time.iso8601(q.fetch('source_time'))
       delay = [q['delay_seconds'].to_i, 0].max
       fresh = received >= now - 120 && received <= now + 5 && source <= now + 5 && source >= now - delay - 120

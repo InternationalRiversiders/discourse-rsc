@@ -138,6 +138,12 @@ class ForexPrecisionTest < MigrationFeaturesTest
       before=R::Position.order(:id).pluck(:id,:average_units,:quantity_units,:margin_units)
       ledger=[R::Journal.count,R::Entry.count]
       with_provider(chart('159')) { assert R::MarketData.sync_one(item) }
+      assert R::ForexQuoteGuard.pending?(item.reload.quote)
+      2.times do
+        travel 30.seconds
+        with_provider(chart('159')) { assert R::MarketData.sync_one(item) }
+      end
+      refute R::ForexQuoteGuard.pending?(item.reload.quote)
       assert_equal before,R::Position.order(:id).pluck(:id,:average_units,:quantity_units,:margin_units)
       assert_equal ledger,[R::Journal.count,R::Entry.count]
       assert_operator R::Exchange.pnl(R::Position.find_by!(user_id:@alice.id),R::Amount.parse(item.reload.quote['price'])),:>,0

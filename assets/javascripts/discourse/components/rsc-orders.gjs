@@ -14,7 +14,7 @@ export default class RscOrders extends Component {
     <section id="rsc-orders" class="rsc-card">
       <h2>{{uiText "orders"}}</h2>
       <div class="rsc-scroll"><table class="rsc-compact-table rsc-orders-table">
-        <thead><tr><th>时间</th><th>品种 / 方向</th><th class="rsc-number">数量</th><th class="rsc-number">成交价</th><th class="rsc-number">手续费</th><th class="rsc-number" title="平仓盈亏，手续费另列">盈亏（费前）</th><th>状态 / 详情</th></tr></thead>
+        <thead><tr><th>提交时间</th><th>品种 / 方向</th><th class="rsc-number">数量</th><th class="rsc-number">成交价</th><th class="rsc-number">手续费</th><th class="rsc-number" title="平仓盈亏，手续费另列">盈亏（费前）</th><th>状态 / 详情</th></tr></thead>
         <tbody>{{#each @orders as |order|}}
           <tr id="rsc-order-{{order.id}}">
             <td><time datetime={{order.created_at}}>{{dateLabel order.created_at}}<small>{{timeLabel order.created_at}}</small></time></td>
@@ -28,10 +28,14 @@ export default class RscOrders extends Component {
             <td class="rsc-order-status"><span>{{#if (eq order.status "pending")}}{{#if order.details.waiting_quote}}等待有效报价 · 待平仓{{else}}{{uiText order.status}}{{/if}}{{else}}{{uiText order.status}}{{/if}}</span>
               <details><summary>详情</summary><div class="rsc-order-details">
                 {{#if order.details.reason}}{{#unless (eq order.details.reason "legacy_import")}}<p>{{uiText order.details.reason}}</p>{{/unless}}{{/if}}
+                <p>提交时间 {{when order.created_at}}</p>
+                {{#if order.details.executed_at}}<p>成交时间 {{when order.details.executed_at}}</p>{{/if}}
+                {{#if order.details.reference_price}}<p>提交参考价 {{formatPrice order.details.reference_price}}</p>{{/if}}
+                {{#if order.details.execution_quote}}<p>成交报价来源 {{order.details.execution_quote.source}} · 报价时间 {{when order.details.execution_quote.source_time}}</p>{{/if}}
                 {{#if order.details.gross}}<p>名义金额 {{formatAmount order.details.gross}} RSC</p>{{/if}}
                 {{#if order.details.payout}}<p>返还 {{formatAmount order.details.payout}} RSC</p>{{/if}}
                 {{#if order.details.error}}<p role="status">{{order.error_message}}</p>{{/if}}
-                {{#if (eq order.status "pending")}}{{#if order.details.waiting_quote}}<p>恢复有效报价后按当时价格自动平仓，期间可随时撤单；到期未成交自动失效。等待期间仍可能触发强平。</p>{{/if}}<p>预占 {{formatAmount order.reserved}} RSC</p><p>最早处理 {{when order.execute_at}}</p><p>{{#if order.cancel_at}}可撤单时间 {{when order.cancel_at}}{{else}}撤单截止 {{when order.cancel_until}}{{/if}}</p><p>到期 {{when order.expires_at}}</p>{{/if}}
+                {{#if (eq order.status "pending")}}{{#if order.details.waiting_quote}}<p>恢复有效报价后按当时价格自动平仓，期间可随时撤单；到期未成交自动失效。仅经核验的有效报价会触发止损或强平。</p>{{/if}}<p>预占 {{formatAmount order.reserved}} RSC</p><p>最早处理 {{when order.execute_at}}</p><p>{{#if order.cancel_at}}可撤单时间 {{when order.cancel_at}}{{else}}撤单截止 {{when order.cancel_until}}{{/if}}</p><p>到期 {{when order.expires_at}}</p>{{/if}}
                 <p>金额单位 RSC；平仓盈亏未扣手续费。</p>
               </div></details>
               {{#if (eq order.status "pending")}}<button class="btn btn-small" type="button" disabled={{if @busy true (not order.can_cancel)}} {{on "click" (fn @cancel order)}}>{{uiText "cancel"}}</button>{{/if}}

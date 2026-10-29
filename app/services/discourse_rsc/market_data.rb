@@ -275,6 +275,14 @@ module DiscourseRsc
       instrument.with_lock do
         old_time = Time.iso8601(instrument.quote["source_time"]) rescue Time.at(0)
         if Time.iso8601(quote.fetch("source_time")) >= old_time
+          if instrument.category == 'forex'
+            quote = ForexQuoteGuard.apply(instrument.quote, quote)
+            return false unless quote
+            if ForexQuoteGuard.pending?(quote)
+              instrument.update!(quote: quote, provider_error: 'quote_verifying', synced_at: Time.current)
+              return false
+            end
+          end
           quote = observe_delay(instrument.quote, quote, category: instrument.category)
           attributes = {quote: quote, provider_error: nil, synced_at: Time.current}
           last_point = Time.iso8601(instrument.history.last&.fetch('at', nil)) rescue Time.at(0)
@@ -344,13 +352,35 @@ module DiscourseRsc
       DistributedMutex.synchronize("rsc-quote:#{instrument.id}", validity: 90) do
         instrument.reload
         sync_one(instrument) if refresh_due?(instrument, purpose: purpose)
-        if %i[trade exit execution].include?(purpose) && !MarketSessions.closed?(instrument)
+        verify_forex_quote(instrument) if instrument.category == 'forex' && ForexQuoteGuard.pending?(instrument.quote)
+        if %i[trade exit execution].include?(purpose) && !MarketSessions.closed?(instrument) && !ForexQuoteGuard.pending?(instrument.quote)
           primary = instrument.quote
           quote = execution_quote(instrument, primary)
           record_quote(instrument, quote) unless quote.equal?(primary)
+          verify_forex_quote(instrument) if ForexQuoteGuard.pending?(instrument.quote)
         end
       end
       instrument.reload
+    end
+
+    # Re-fetch only quarantined observations, at most once per symbol per 20s.
+    # ProviderHttp and forex_fallback still enforce their shared quotas/backoff.
+    # No database lock is held during the network calls.
+    def self.verify_forex_quote(instrument)
+      return if MarketSessions.closed?(instrument)
+      return unless Discourse.redis.set("rsc:fx-review:#{instrument.id}", '1', nx: true, ex: 20)
+      begin
+        record_quote(instrument, fetch_primary_quote(instrument))
+      rescue Error, KeyError, ArgumentError, TypeError
+        # Keep the accepted quote and quarantine; failed HTTP is not evidence.
+      end
+      return unless ForexQuoteGuard.pending?(instrument.quote)
+      return unless forex_base(instrument) && SiteSetting.rsc_twelve_data_api_key.present?
+      begin
+        record_quote(instrument, forex_fallback(instrument))
+      rescue Error, KeyError, ArgumentError, TypeError
+        # Quota exhaustion leaves orders waiting, never bypasses verification.
+      end
     end
 
     def self.refresh_due?(instrument, purpose: :read, schedules: nil)
@@ -360,7 +390,7 @@ module DiscourseRsc
       received = Time.iso8601(q['received_at']) rescue nil
       # Failures do not manufacture a fresh quote. Provider-wide cooldown is an
       # additional guard and is shared even when different symbols are requested.
-      retry_age = instrument.provider_error == 'provider_busy' ? 15 : 120
+      retry_age = %w[provider_busy quote_verifying].include?(instrument.provider_error) ? 15 : 120
       return false if instrument.provider_error.present? && instrument.synced_at && instrument.synced_at > retry_age.seconds.ago
       return true if correction
       age = case purpose

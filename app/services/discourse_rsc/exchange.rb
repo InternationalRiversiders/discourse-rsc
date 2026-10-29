@@ -29,7 +29,7 @@ module DiscourseRsc
         price = begin
           price!(instrument, trading: true)
         rescue Error => error
-          raise unless forex_exit?(instrument, side) && instrument.active && %w[quote_stale quote_unavailable].include?(error.code)
+          raise unless forex_exit?(instrument, side) && instrument.active && %w[quote_stale quote_unavailable quote_verifying].include?(error.code)
           raise Error.new("market_closed", status: 409) if MarketSessions.closed?(instrument)
           waiting_quote = true
           nil
@@ -214,6 +214,7 @@ module DiscourseRsc
 
     def self.price!(instrument, trading: false)
       quote = instrument.quote
+      raise Error.new('quote_verifying', status: 409) if instrument.category == 'forex' && ForexQuoteGuard.pending?(quote)
       if trading && MarketData.forex_base(instrument) && quote["pricing_method"] != MarketData::FX_PRICING
         raise Error.new("quote_stale", status: 409)
       end
@@ -261,7 +262,7 @@ module DiscourseRsc
       end
       tp = order.details["take_profit"] && Amount.parse(order.details["take_profit"])
       sl = order.details["stop_loss"] && Amount.parse(order.details["stop_loss"])
-      order.details = order.details.merge("fee_bps" => fee_bps)
+      order.details = order.details.merge("fee_bps" => fee_bps).merge(ForexQuoteGuard.execution_details(instrument))
       if tp || sl
         projected = Position.new(side: order.side, quantity_units: (position&.quantity_units.to_i || 0) + quantity, average_units: ((position&.quantity_units.to_i || 0) * (position&.average_units.to_i || 0) + quantity * price) / ((position&.quantity_units.to_i || 0) + quantity), margin_units: (position&.margin_units.to_i || 0) + margin, leverage: order.leverage)
         TradingRules.protection!(projected, instrument, price, tp, sl, fee_bps: fee_bps)
@@ -283,6 +284,7 @@ module DiscourseRsc
     end
 
     def self.close_locked(instrument, order, position, price, kind)
+      order.details = order.details.merge(ForexQuoteGuard.execution_details(instrument))
       price = execution_price(instrument, position.side == "long" ? "short" : "long", price)
       quantity = order.quantity_units.to_i
       margin = position.margin_units.to_i * quantity / position.quantity_units.to_i

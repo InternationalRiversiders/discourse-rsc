@@ -137,6 +137,7 @@ en:
       cancellation_locked: The order is outside its cancellation window.
       invalid_protection: Invalid protection.
       quote_unavailable: Quote unavailable.
+      quote_verifying: 报价变化较大或来源不一致，正在核验，请稍后重试。外汇平仓可提交等待委托，核验期间不会使用可疑报价成交或触发强平。
       quote_stale: No fresh quote is available. Please retry later. Forex exits can be queued until a valid quote arrives.
       market_closed: Market closed.
       match_locked: Match locked.

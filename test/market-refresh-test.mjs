@@ -13,3 +13,8 @@ for(const changed of [{market_closed:true},{active:false},{category:'us'},{categ
 }
 assert.equal(canRefreshForTrade(undefined),false);
 console.log('Stale FX can request refresh; closed/inactive/no-price/non-FX remain blocked.');
+
+const verifying=marketView({...item,quote:{...item.quote,source_time:at(-1000),verification:{status:'pending'}}},now);
+assert.equal(verifying.status,'quote_verifying');
+assert.equal(verifying.tradable,false);
+assert.equal(canRefreshForTrade(verifying),true);

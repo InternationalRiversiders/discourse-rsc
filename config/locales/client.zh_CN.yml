@@ -336,6 +336,7 @@ zh_CN:
         latest_price: 最新价 / RSC
         daily_change: 涨跌幅
         no_quote: 暂无报价
+        quote_verifying: 报价核验中
         stale_quote: 报价已过期
         session_closed: 休市
         delayed_quote: 延迟确认

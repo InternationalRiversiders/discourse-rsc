@@ -342,6 +342,7 @@ en:
         latest_price: Last / RSC
         daily_change: Change
         no_quote: No quote
+        quote_verifying: 报价核验中
         stale_quote: Stale quote
         session_closed: Closed
         delayed_quote: Delayed execution

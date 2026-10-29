@@ -208,6 +208,7 @@ export default class extends Component {
           role="alert"
           class="rsc-muted"
         >{{this.error}}</p>{{/if}}
+      {{#if (eq @instrument.category "forex")}}<p class="rsc-muted">历史图为行情源参考数据；成交、止损和强平使用经系统核验的报价。核验期间展示上一笔已接受报价。</p>{{/if}}
       {{#if this.data.stale}}<p class="rsc-muted" role="status">{{uiText "chart_stale"}}</p>{{/if}}
       {{#if this.data.archived}}<p class="rsc-muted">{{uiText
             "archived_chart"

@@ -141,6 +141,7 @@ zh_CN:
       cancellation_locked: 当前尚不在可撤单时间内，请查看委托的撤单时间。
       invalid_protection: 止盈或止损价格方向不正确。
       quote_unavailable: 暂时无法取得有效报价，请稍后重试；外汇平仓可提交委托等待报价恢复。
+      quote_verifying: 报价变化较大或来源不一致，正在核验，请稍后重试。外汇平仓可提交等待委托，核验期间不会使用可疑报价成交或触发强平。
       quote_stale: 报价源暂未提供有效的新价格，请稍后重试。外汇平仓可提交等待报价的委托。
       market_closed: 当前市场休市，请在开市后交易。
       match_locked: 赛事已封盘。

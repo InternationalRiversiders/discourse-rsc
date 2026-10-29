@@ -6,7 +6,7 @@ export function marketView(item, now = Date.now()) {
   const source = Date.parse(quote.source_time);
   const delay = Math.max(0, Number(quote.delay_seconds) || 0);
   const fresh =
-    !quote.legacy_snapshot &&
+    !quote.legacy_snapshot && quote.verification?.status !== "pending" &&
     Number.isFinite(received) &&
     Number.isFinite(source) &&
     received >= now - 120000 &&
@@ -25,6 +25,8 @@ export function marketView(item, now = Date.now()) {
     ? "no_quote"
     : knownClosed
       ? "session_closed"
+      : quote.verification?.status === "pending"
+        ? "quote_verifying"
       : !fresh
         ? "stale_quote"
         : !open
@@ -80,5 +82,5 @@ export function sparkline(history) {
 // Refresh-on-submit is an execution request, not a claim that this quote is live.
 export function canRefreshForTrade(item) {
   return item?.category === "forex" && item.active !== false &&
-    item.market_closed === false && item.status === "stale_quote";
+    item.market_closed === false && ["stale_quote", "quote_verifying"].includes(item.status);
 }
