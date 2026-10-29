@@ -32,11 +32,12 @@ export default class extends Component {
   @action async request(symbol) {
     this.busy = true;
     try {
-      await ajax("/rsc/market-requests.json", {
+      const result = await ajax("/rsc/market-requests.json", {
         type: "POST",
         data: { symbol },
       });
       this.notice = uiText("request_sent");
+      this.args.added?.(result.instrument_id);
     } catch (error) {
       this.notice = extractError(error);
     } finally {

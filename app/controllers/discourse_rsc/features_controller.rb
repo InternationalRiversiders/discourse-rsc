@@ -34,13 +34,7 @@ module DiscourseRsc
 
     def market_request
       RateLimiter.new(current_user, "rsc-market-request", 10, 1.day).performed!
-      symbol = MarketData.symbol(params.require(:symbol))
-      request = MarketRequest.find_or_create_by!(user_id: current_user.id, symbol: symbol)
-      request.with_lock do
-        listed = Instrument.where(active: true).where('symbol = ? OR provider_symbol = ?', symbol, symbol).exists?
-        request.update!(status: listed ? 'approved' : 'pending', details: request.details.merge('request_count' => request.details.fetch('request_count', 0).to_i + 1))
-      end
-      render_json_dump(id: request.id, status: request.status)
+      render_json_dump(Catalog.request(actor: current_user, symbol: params.require(:symbol)))
     end
     def admin_activity
       render_json_dump(AdminReports.activity(kind: params.fetch(:kind, 'all'), query: params[:q], status: params.fetch(:status, 'all'), topic_id: params[:topic_id], page: params.fetch(:page, 1)))
@@ -55,7 +49,7 @@ module DiscourseRsc
     end
     def market_approve
       RateLimiter.new(current_user, 'rsc-admin-approve', 12, 1.minute).performed!
-      render_json_dump(Catalog.approve(actor: current_user, symbol: params.require(:symbol), reason: params.require(:reason), request_id: params.require(:request_id)))
+      render_json_dump(Catalog.approve(actor: current_user, symbol: params.require(:symbol), reason: params[:reason], request_id: params.require(:request_id)))
     end
     def settle
       result = Sports.settle_pending

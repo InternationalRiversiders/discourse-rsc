@@ -28,11 +28,38 @@ module DiscourseRsc
       end
       ["yahoo", mapped]
     end
-    def self.approve(actor:, symbol:, reason:, request_id:)
+    # Keep the legacy endpoint for App clients, but listing no longer needs a human review.
+    def self.request(actor:, symbol:)
       Safety.ensure_writable!
-      raise Error.new("admin_required", status: 403) unless Access.admin?(actor)
-      raise Error.new("provider_disabled", status: 503) unless SiteSetting.rsc_market_data_enabled
-      raise Error.new("reason_required") unless reason.is_a?(String) && reason.strip.length.between?(1, 500)
+      Access.ensure_member!(actor)
+      raise Error.new('provider_disabled', status: 503) unless SiteSetting.rsc_market_data_enabled
+      symbol = MarketData.symbol(symbol)
+      request = MarketRequest.create_or_find_by!(user_id: actor.id, symbol: symbol)
+      request.with_lock do
+        request.update!(status: 'pending', details: request.details.merge('request_count' => request.details.fetch('request_count', 0).to_i + 1))
+      end
+      begin
+        result = list(actor: actor, symbol: symbol, reason: '自动校验收录', request_id: SecureRandom.uuid, action: 'market_auto_list')
+        result.merge('id' => request.id, 'status' => 'approved')
+      rescue Error => error
+        request.with_lock do
+          unless request.status == 'approved'
+            request.update!(details: request.details.merge('last_error_code' => error.code,
+              'last_error' => Error.user_message(error.code), 'checked_at' => Time.current.iso8601))
+          end
+        end
+        raise
+      end
+    end
+
+    def self.approve(actor:, symbol:, request_id:, reason: nil)
+      Safety.ensure_writable!
+      raise Error.new('admin_required', status: 403) unless Access.admin?(actor)
+      raise Error.new('provider_disabled', status: 503) unless SiteSetting.rsc_market_data_enabled
+      list(actor: actor, symbol: symbol, reason: reason.to_s.strip.first(500), request_id: request_id, action: 'market_approve')
+    end
+
+    def self.list(actor:, symbol:, reason:, request_id:, action:)
       requested_code = MarketData.symbol(symbol)
       code = if requested_code.start_with?('CRYPTO:'); requested_code.split(':', 2).last.tr('/', '-')
         elsif requested_code.include?(':'); provider({'symbol'=>requested_code}).last
@@ -45,22 +72,29 @@ module DiscourseRsc
         aliases += ["#{base}USD=X", "FX:#{base}"]
       end
       find_existing = -> { Instrument.find_by(symbol: aliases) || Instrument.find_by(provider_symbol: aliases) }
-      # Remote I/O must never hold the global trade lock or a money transaction.
-      candidate = external_candidate(code) unless find_existing.call
-      Commands.run(user_id: actor.id, action: 'market_approve', request_id: request_id, input: [requested_code, reason.strip]) do
-        Commands.lock('rsc-exchange')
-        item = find_existing.call
-        existed = !!item
-        if item
-          raise Error.new('instrument_inactive') unless item.active?
-        else
-          item = Instrument.create!(candidate)
+      DistributedMutex.synchronize("rsc-listing:#{code}", validity: 90) do
+        # Remote I/O must never hold the global trade lock or a money transaction.
+        candidate = external_candidate(code) unless find_existing.call
+        result = Commands.run(user_id: actor.id, action: action, request_id: request_id, input: [requested_code, reason]) do
+          Commands.lock('rsc-exchange')
+          item = find_existing.call
+          existed = !!item
+          if item
+            raise Error.new('instrument_inactive') unless item.active?
+          else
+            item = Instrument.create!(candidate)
+          end
+          MarketRequest.where(symbol: aliases + [item.symbol], status: 'pending').find_each do |request|
+            request.update!(status: 'approved', details: request.details.except('last_error', 'last_error_code').merge('checked_at' => Time.current.iso8601, 'instrument_id' => item.id))
+          end
+          Audit.create!(actor_user_id: actor.id, action: action, details: { symbol: code, instrument_id: item.id, reason: reason }, created_at: Time.current)
+          { instrument_id: item.id, existing: existed }
         end
-        MarketRequest.where(symbol: aliases + [item.symbol], status: 'pending').update_all(status: 'approved', updated_at: Time.current)
-        Audit.create!(actor_user_id: actor.id, action: 'market_approve', details: { symbol: code, instrument_id: item.id, reason: reason.strip }, created_at: Time.current)
-        { instrument_id: item.id, existing: existed }
+        Rails.cache.delete('rsc:market:catalog:v1')
+        result
       end
     end
+    private_class_method :list
 
     def self.supported_external?(code, type)
       return false unless %w[EQUITY ETF MUTUALFUND INDEX CURRENCY CRYPTOCURRENCY].include?(type)
@@ -102,6 +136,8 @@ module DiscourseRsc
       end
       quote = MarketData.fetch_quote(Instrument.new(attributes))
       attributes.merge(quote:quote,history:[{at:quote['source_time'],price:quote['price']}],synced_at:Time.current)
+    rescue KeyError, ArgumentError, TypeError
+      raise Error.new('provider_invalid_data', status: 503)
     end
 
     def self.seed(symbols: nil)

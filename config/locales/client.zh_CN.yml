@@ -365,10 +365,10 @@ zh_CN:
         category_sg: 新加坡
         category_in: 印股
         chart_mode: 折线 / K 线
-        external_search: 找不到标的？搜索并申请添加
+        external_search: 找不到标的？搜索并加入交易
         search: 搜索
-        request_market: 申请添加
-        request_sent: 申请已提交，等待管理员审核
+        request_market: 加入交易
+        request_sent: 标的已收录，正在打开行情
         tip_summary: 打赏记录
         leaderboard: 排行榜
         administration: RSC 管理
@@ -414,7 +414,7 @@ zh_CN:
         preview: 预览
         data_sources: 行情同步状态
         sync_now: 排队同步行情与赛事
-        market_requests: 标的申请
+        market_requests: 标的收录记录
         settlement_review: 赛果与更正检查
         notification_queue: 通知队列
         audit_log: 管理审计

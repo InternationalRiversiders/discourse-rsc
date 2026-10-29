@@ -373,8 +373,8 @@ en:
         chart_mode: Line / Candles
         external_search: Search external markets
         search: Search
-        request_market: Request market
-        request_sent: Request submitted for review
+        request_market: Add to trading
+        request_sent: Market added. Opening its quote.
         tip_summary: Post tips
         leaderboard: Leaderboard
         administration: RSC administration
@@ -422,7 +422,7 @@ en:
         preview: Preview
         data_sources: Market data status
         sync_now: Queue market and sports sync
-        market_requests: Market requests
+        market_requests: Market listing requests
         settlement_review: Results and corrections
         notification_queue: Notification queue
         audit_log: Audit log

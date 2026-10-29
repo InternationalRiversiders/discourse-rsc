@@ -22,7 +22,6 @@ export default class extends Component {
   @tracked demand;
   @tracked lookup = "";
   @tracked candidates = [];
-  @tracked reason = "";
   @tracked busy = false;
   @tracked error = "";
   @tracked notice = "";
@@ -54,14 +53,8 @@ export default class extends Component {
     finally { this.busy=false; }
   }
   @action async approve(symbol) {
-    if(!this.reason.trim()) { this.error="请先填写审批原因。";return; }
-    const result=await this.write("market-approve",{symbol,reason:this.reason});
-    if(result) { this.notice=`已收录 ${symbol}，对应申请已通过。`; }
-  }
-  @action async reject(id) {
-    if(!this.reason.trim()) { this.error="请先填写审批原因。";return; }
-    const result=await this.write("action",{operation:"reject_request",input:{id,reason:this.reason}});
-    if(result) { this.notice="申请已拒绝，原因已写入审计。"; }
+    const result=await this.write("market-approve",{symbol});
+    if(result) { this.notice=`已收录 ${symbol}，可在行情交易中查看。`; }
   }
   @action async settle() {
     const result=await this.write("settle",{});
@@ -85,11 +78,11 @@ export default class extends Component {
         {{#if row.topic_id}}<p>话题 #{{row.topic_id}} · 帖子 #{{row.post_id}}</p>{{/if}}</td></tr>{{else}}<tr><td colspan="6">没有符合条件的记录。</td></tr>{{/each}}
       </tbody></table></div><RscPagination @page={{this.activity.pagination}} @change={{this.load}} />{{/if}}
     </section>
-    <section class="rsc-card rsc-admin-approval">{{#if this.error}}<p class="alert alert-error" role="alert">{{this.error}}</p>{{/if}}{{#if this.notice}}<p class="alert alert-success" role="status">{{this.notice}}</p>{{/if}}<h2>标的搜索与申请审批</h2>
+    <section class="rsc-card rsc-admin-approval">{{#if this.error}}<p class="alert alert-error" role="alert">{{this.error}}</p>{{/if}}{{#if this.notice}}<p class="alert alert-success" role="status">{{this.notice}}</p>{{/if}}<h2>标的搜索与收录</h2>
       <form class="rsc-fields" {{on "submit" this.find}}><label>外部代码或名称<input required minlength="2" maxlength="60" value={{this.lookup}} {{on "input" (fn this.change "lookup")}} /></label><button type="submit" class="btn" disabled={{this.busy}}>搜索外部标的</button></form>
-      <label>审批原因<input maxlength="500" value={{this.reason}} {{on "input" (fn this.change "reason")}} /></label>
+      <p class="rsc-muted">用户添加标的会自动校验并收录，无需审批。以下保留暂未成功的请求，可重试校验。</p>
       {{#each this.candidates as |item|}}<p>{{item.symbol}} · {{item.name}} · {{item.exchange}} <button type="button" class="btn btn-small" disabled={{this.writeDisabled}} {{on "click" (fn this.approve item.symbol)}}>确认收录</button></p>{{/each}}
-      {{#each @requests as |item|}}{{#if (eq item.status "pending")}}<p>#{{item.id}} · {{item.symbol}} · 用户 #{{item.user_id}} · 请求 {{item.details.request_count}} 次 <button type="button" class="btn btn-small" disabled={{this.writeDisabled}} {{on "click" (fn this.approve item.symbol)}}>通过申请</button> <button type="button" class="btn btn-small" disabled={{this.writeDisabled}} {{on "click" (fn this.reject item.id)}}>拒绝</button></p>{{/if}}{{/each}}
+      {{#each @requests as |item|}}{{#if (eq item.status "pending")}}<p>#{{item.id}} · {{item.symbol}} · 用户 #{{item.user_id}} · 请求 {{item.details.request_count}} 次 <button type="button" class="btn btn-small" disabled={{this.writeDisabled}} {{on "click" (fn this.approve item.symbol)}}>重试收录</button>{{#if item.details.last_error}} <span class="rsc-muted">{{item.details.last_error}}</span>{{/if}}</p>{{/if}}{{/each}}
       <button type="button" class="btn" {{on "click" (fn this.searches 1)}}>查看搜索需求统计</button>
       {{#if this.demand}}<div class="rsc-table"><table><thead><tr><th>搜索词</th><th>次数</th><th>用户数</th><th>无结果</th><th>最近搜索</th></tr></thead><tbody>{{#each this.demand.rows as |row|}}<tr><td>{{row.query}}</td><td>{{row.count}}</td><td>{{row.users}}</td><td>{{row.empty_results}}</td><td>{{when row.last_at}}</td></tr>{{else}}<tr><td colspan="5">暂无搜索记录。</td></tr>{{/each}}</tbody></table></div><RscPagination @page={{this.demand.pagination}} @change={{this.searches}} />{{/if}}
     </section>

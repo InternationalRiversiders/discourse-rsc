@@ -69,3 +69,9 @@ bash test/run-isolated.sh
 可疑报价保存在隔离状态，不覆盖上次接受的价格，不写入已接受历史，也不用于成交、止盈止损或强平。每个品种最多每 20 秒主动重查一次；备用源继续共享缓存、失败退避及每日 750 次预算。重复时间戳不算新确认。新鲜跨源报价一致、同源回到原价附近，或没有新鲜跨源冲突且同源连续三笔新报价在至少 60 秒内保持一致，才恢复报价。配额不足或来源持续分歧时维持等待，平仓委托可撤销；不按旧价假成交。
 
 新外汇成交保存来源、原汇率、源时间、接收时间、复核方法及成交时间。订单详情区分提交参考价与成交价。历史 K 线仍为供应商参考数据，不宣称已逐笔清洗。此保护无法保证识别所有错误报价，不自动改写旧成交或补偿余额。
+
+### Automatic market listing
+
+The existing `POST /rsc/market-requests.json` endpoint now validates and lists supported instruments immediately for RSC members. It returns the compatible `id` / `status` fields plus `instrument_id`; no administrator approval or reason is needed. The admin listing endpoint also accepts an omitted reason. Existing market access controls, provider limits, per-user request throttles, supported-market checks and administrator deactivation remain enforced. This does not change event-prediction content review.
+
+Failed lookups remain pending for retry with a Chinese explanation in request details; successful retries clear that explanation. Symbol-level locking and existing alias matching prevent duplicate listings, and listing invalidates the shared catalog cache. Remote quote requests run outside trading/database locks. No order is placed by adding an instrument.

@@ -783,7 +783,7 @@ export default class RscDashboard extends Component {
 </div>
           {{else}}{{#unless this.data.instruments.length}}<p class="rsc-empty">{{uiText "no_quotes"}}</p>{{/unless}}{{/if}}
         </div>
-        <RscDiscovery />
+        <RscDiscovery @added={{this.selectMarket}} />
         <p class="rsc-muted">持仓名义金额 {{formatAmount this.data.portfolio.notional}} RSC · 委托占用 {{formatAmount this.data.portfolio.reserved}} RSC</p>
         <RscOrders @orders={{this.data.orders}} @busy={{this.busy}} @cancel={{this.cancel}} />
       {{else if (eq @section "sports")}}
