@@ -32,25 +32,6 @@ class QuoteRefreshTest < ForexQuoteGuardTest
       assert_equal 'pending',data[:instrument][:quote].dig('verification','status')
     end
   end
-  def test_spot_checks_are_globally_paced_and_reserve_emergency_budget
-    travel_to(Time.utc(2026,10,30,12)) do
-      item=forex;item.update!(provider:'yahoo',provider_symbol:'CNY=X',quote:observation('0.15'))
-      other=R::Instrument.create!(symbol:'FX:EUR',name:'EUR',category:'forex',provider:'yahoo',provider_symbol:'EUR=X',quote:observation('1'))
-      SiteSetting.rsc_twelve_data_api_key='isolated-test-key'
-      old=R::MarketData.method(:forex_fallback);calls=0
-      R::MarketData.define_singleton_method(:forex_fallback){|i|calls+=1;i.quote.merge('source'=>'twelve_data')}
-      R::MarketData.spotcheck_forex(item,purpose: :read);assert_equal 0,calls
-      R::MarketData.spotcheck_forex(item,purpose: :forex_fast);assert_equal 1,calls
-      R::MarketData.spotcheck_forex(other,purpose: :forex_fast);assert_equal 1,calls
-      Discourse.redis.del('rsc:fx-spot:global')
-      Discourse.redis.set("rsc:fx-fallback:requests:#{Time.current.utc.to_date}",300)
-      R::MarketData.spotcheck_forex(other,purpose: :forex_fast);assert_equal 1,calls
-    ensure
-      R::MarketData.define_singleton_method(:forex_fallback,old) if old
-      SiteSetting.rsc_twelve_data_api_key=''
-      Discourse.redis.del("rsc:fx-fallback:requests:#{Time.current.utc.to_date}")
-    end
-  end
   def test_quote_and_chart_share_provider_response
     data=JSON.parse(File.read('/rsc/test/fixtures/yahoo-chart.json'))
     calls=0

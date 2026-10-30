@@ -3,7 +3,7 @@ module DiscourseRsc
   # Quarantine observations before they reach marks, executions or liquidations.
   # A cache hit is not a second observation. No prices are averaged or invented.
   module ForexQuoteGuard
-    VERSION = 2
+    VERSION = 3
     MATCH_BPS = 5 # 0.05%: cross-feed agreement / candidate cluster tolerance.
     FIELDS = %w[price source source_time received_at inverse_rate base_currency pricing_method delay_seconds].freeze
 
@@ -60,16 +60,24 @@ module DiscourseRsc
       end
       observations[source] = samples.last(3)
       observations.select! { |_, values| values.last && Time.iso8601(values.last['source_time']) >= now - 300 }
+      jump = !near?(previous, incoming, review_bps(previous, incoming))
+      # Yahoo is the primary, not one half of a continuously voting pair. A
+      # fresh, normal move against the accepted price must not be quarantined
+      # by an older backup sample (or a previous cross-feed-only dispute).
+      # Real jumps still take the review path below, even if repeated by Yahoo.
+      if source == 'yahoo' && !jump
+        reason = pending?(previous) ? 'primary_recovered' : previous['source'] == source ? 'continuous' : 'primary_resumed'
+        return accepted(incoming, reason, observations: observations)
+      end
       others = observations.reject { |key, _| key == source }.values.filter_map do |values|
         values.last if fresh?(values.last, now)
       end
       conflict = others.any? { |q| !near?(q, incoming) }
       agreement = others.any? { |q| near?(q, incoming) }
       switched = previous['source'] != source
-      jump = !near?(previous, incoming, review_bps(previous, incoming))
       disputed = state['disputed'] || conflict || state['reason'] == 'source_disagreement'
       preferred = state['preferred_source']
-      # A recovering primary must agree with the backup before taking over.
+      # A primary jump cannot displace the verified backup without agreement.
       if preferred == 'twelve_data' && source != preferred && !agreement
         return previous.merge('verification' => state.merge('observations'=>observations))
       end

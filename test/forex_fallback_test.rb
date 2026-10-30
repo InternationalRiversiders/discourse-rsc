@@ -18,7 +18,6 @@ class ForexFallbackTest < ForexActivityTest
   def setup
     super
     SiteSetting.rsc_twelve_data_api_key='isolated-test-key'
-    Discourse.redis.setex('rsc:fx-spot:global',3600,'test')
     Discourse.cache.delete('rsc:fx-fallback:v1:CNY');Discourse.redis.del('rsc:fx-fallback:slot', 'rsc:fx-fallback:retry:CNY', "rsc:fx-fallback:requests:#{Time.current.utc.to_date}")
   end
   def teardown
@@ -38,11 +37,20 @@ class ForexFallbackTest < ForexActivityTest
     end
   end
   def test_no_credentials_or_fresh_primary_skips_fallback
-    item=fx;primary=quote('0.15')
+    item=fx;primary=quote('0.15').merge('source'=>'yahoo')
     feeds(primary,{}) do |calls|
       assert_equal primary,R::MarketData.execution_quote(item,primary);assert_empty calls
       SiteSetting.rsc_twelve_data_api_key='';primary['source_time']=10.minutes.ago.iso8601
       assert_equal primary,R::MarketData.execution_quote(item,primary);assert_empty calls
+    end
+  end
+  def test_source_age_does_not_hide_expired_receive_timestamp
+    item=fx
+    primary=quote('0.15').merge('source'=>'twelve_data','source_time'=>150.seconds.ago.iso8601,'received_at'=>130.seconds.ago.iso8601)
+    feeds(primary,{'symbol'=>'USD/CNY','rate'=>'6.67','timestamp'=>Time.current.to_i}) do |calls|
+      result=R::MarketData.execution_quote(item,primary)
+      assert_equal 1,calls.size
+      assert R::ForexQuoteGuard.fresh?(result)
     end
   end
   def test_bad_fallback_never_relabels_stale_primary_or_hides_provider_failure

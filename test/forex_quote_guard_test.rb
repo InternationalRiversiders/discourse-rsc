@@ -71,14 +71,15 @@ class ForexQuoteGuardTest < ForexActivityTest
       assert_equal 'cross_source',item.quote.dig('verification','method')
     end
   end
-  def test_alternating_source_clusters_never_confirm_each_other
+  def test_backup_disagreement_cannot_veto_a_normal_primary
     travel_to(Time.utc(2026,10,28,12)) do
       item=forex;item.update!(quote:observation('0.1502765'))
       8.times do
         travel 30.seconds;accept(item,'0.15001',source:'twelve_data')
         assert G.pending?(item.quote)
         travel 1.second;accept(item,'0.1502765',source:'yahoo')
-        assert G.pending?(item.quote)
+        refute G.pending?(item.quote)
+        assert_equal 'yahoo',item.quote['source']
       end
     end
   end
@@ -165,10 +166,12 @@ class ForexQuoteGuardTest < ForexActivityTest
     end
   end
 
-  def test_conflict_survives_expired_samples_and_backup_can_take_over
+  def test_real_jump_survives_expired_samples_and_backup_can_take_over
     travel_to(Time.utc(2026,10,28,12)) do
-      item=forex;item.update!(quote:observation('0.1503'))
-      travel 10.seconds;accept(item,'0.15',source:'twelve_data')
+      item=forex;item.update!(quote:observation('0.1497'))
+      travel 10.seconds;accept(item,'0.1503')
+      assert G.pending?(item.quote)
+      accept(item,'0.15',source:'twelve_data')
       assert G.pending?(item.quote)
       travel 6.minutes
       3.times do
@@ -176,7 +179,6 @@ class ForexQuoteGuardTest < ForexActivityTest
         travel 60.seconds
       end
       3.times do |n|
-        # The backup timestamp is older than the primary, but still usable.
         accept(item,'0.1503')
         accept(item,'0.15',source:'twelve_data',at:100.seconds.ago)
         assert G.pending?(item.quote) if n<2
@@ -190,7 +192,7 @@ class ForexQuoteGuardTest < ForexActivityTest
       assert_equal '0.15',item.quote['price']
       assert_equal 'twelve_data',item.quote['source']
       accept(item,'0.15001')
-      assert_equal 'cross_source',item.quote.dig('verification','method')
+      assert_equal 'primary_resumed',item.quote.dig('verification','method')
       assert_nil item.quote.dig('verification','preferred_source')
     end
   end

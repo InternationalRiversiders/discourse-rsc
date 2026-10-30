@@ -119,8 +119,7 @@ module DiscourseRsc
     # active. A failed backup never relabels an old quote as fresh.
     def self.execution_quote(instrument, primary)
       return primary unless forex_base(instrument) && SiteSetting.rsc_twelve_data_api_key.present?
-      source = Time.iso8601(primary['source_time']) rescue nil
-      return primary if source && source >= ForexQuoteGuard.max_age(primary).seconds.ago && source <= 5.seconds.from_now
+      return primary if ForexQuoteGuard.fresh?(primary)
       forex_fallback(instrument)
     rescue Error, KeyError, ArgumentError, TypeError
       primary
@@ -363,7 +362,6 @@ module DiscourseRsc
         instrument.reload
         sync_one(instrument) if refresh_due?(instrument, purpose: purpose)
         verify_forex_quote(instrument) if instrument.category == 'forex' && (ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data')
-        spotcheck_forex(instrument, purpose: purpose)
         if %i[trade exit execution].include?(purpose) && !MarketSessions.closed?(instrument) && !ForexQuoteGuard.pending?(instrument.quote)
           primary = instrument.quote
           quote = execution_quote(instrument, primary)
@@ -386,6 +384,9 @@ module DiscourseRsc
         # Keep the accepted quote and quarantine; failed HTTP is not evidence.
       end
       return unless ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data'
+      # A failed/anomalous primary does not require another backup request while
+      # the already verified backup is still usable. Preserve its real clocks.
+      return if !ForexQuoteGuard.pending?(instrument.quote) && ForexQuoteGuard.fresh?(instrument.quote)
       return unless forex_base(instrument) && SiteSetting.rsc_twelve_data_api_key.present?
       begin
         record_quote(instrument, forex_fallback(instrument))
@@ -397,21 +398,6 @@ module DiscourseRsc
           instrument.update!(quote: instrument.quote.merge('verification'=>state))
         end
       end
-    end
-
-    # Low-rate checks can discover a persistently wrong primary, without a
-    # clock-time burst: at most one globally / 5min, one per symbol / 30min.
-    # Stop routine checks at 300 credits, preserving 450 for trades/reviews.
-    def self.spotcheck_forex(instrument, purpose:)
-      return unless %i[forex_fast trade exit execution].include?(purpose) && forex_base(instrument)
-      return if MarketSessions.closed?(instrument) || SiteSetting.rsc_twelve_data_api_key.blank? || ForexQuoteGuard.pending?(instrument.quote)
-      return if Discourse.redis.get("rsc:fx-fallback:requests:#{Time.current.utc.to_date}").to_i >= 300
-      return if Discourse.redis.exists?("rsc:fx-spot:#{instrument.id}")
-      return unless Discourse.redis.set('rsc:fx-spot:global', '1', nx: true, ex: 300)
-      Discourse.redis.setex("rsc:fx-spot:#{instrument.id}", 1800, '1')
-      record_quote(instrument, forex_fallback(instrument))
-    rescue Error, KeyError, ArgumentError, TypeError
-      nil
     end
 
     def self.closing_refresh_due?(instrument, fetched_at: nil)
