@@ -225,7 +225,7 @@ module DiscourseRsc
       received = Time.iso8601(quote["received_at"])
       source = Time.iso8601(quote["source_time"])
       delay = quote.fetch("delay_seconds", 0).to_i
-      raise Error.new("quote_stale", status: 409) if received < now - 120.seconds || received > now + 5.seconds || source > now + 5.seconds || source < now - (delay + 120).seconds
+      raise Error.new("quote_stale", status: 409) if received < now - 120.seconds || received > now + 5.seconds || source > now + 5.seconds || source < now - (delay + ForexQuoteGuard.max_age(quote)).seconds
       if trading && instrument.category != "crypto"
         raise Error.new("market_closed", status: 409) if MarketSessions.closed?(instrument, now)
         raise Error.new("market_closed", status: 409) unless quote["session_start"] && quote["session_end"] && now >= Time.iso8601(quote["session_start"]) && now < Time.iso8601(quote["session_end"])

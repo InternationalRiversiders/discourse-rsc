@@ -26,7 +26,7 @@ module DiscourseRsc
       return false if ForexQuoteGuard.pending?(q) || q['legacy_snapshot'] || q['price'].to_f <= 0 || row[:market_closed]
       received = Time.iso8601(q.fetch('received_at')); source = Time.iso8601(q.fetch('source_time'))
       delay = [q['delay_seconds'].to_i, 0].max
-      fresh = received >= now - 120 && received <= now + 5 && source <= now + 5 && source >= now - delay - 120
+      fresh = received >= now - 120 && received <= now + 5 && source <= now + 5 && source >= now - delay - ForexQuoteGuard.max_age(q)
       fresh && (row[:category] == 'crypto' || (now >= Time.iso8601(q.fetch('session_start')) && now < Time.iso8601(q.fetch('session_end'))))
     rescue ArgumentError, KeyError, TypeError
       false

@@ -68,7 +68,12 @@ module DiscourseRsc
     end
 
     def self.yahoo_chart(value, range = "1d")
-      ProviderHttp.get("query1.finance.yahoo.com", "/v8/finance/chart/#{ERB::Util.url_encode(symbol(value))}", range: range, interval: RANGES.fetch(range), includePrePost: false).dig("chart", "result", 0) || raise(Error.new("provider_no_data", status: 503))
+      # Quote and chart consumers share one short-lived provider snapshot.
+      DistributedMutex.synchronize("rsc-yahoo:#{symbol(value)}:#{range}", validity: 30) do
+        Discourse.cache.fetch("rsc:yahoo-chart:v2:#{symbol(value)}:#{range}", expires_in: 15.seconds) do
+          ProviderHttp.get("query1.finance.yahoo.com", "/v8/finance/chart/#{ERB::Util.url_encode(symbol(value))}", range: range, interval: RANGES.fetch(range), includePrePost: false).dig("chart", "result", 0) || raise(Error.new("provider_no_data", status: 503))
+        end
+      end
     end
 
     def self.usd_rate(currency)
@@ -115,7 +120,7 @@ module DiscourseRsc
     def self.execution_quote(instrument, primary)
       return primary unless forex_base(instrument) && SiteSetting.rsc_twelve_data_api_key.present?
       source = Time.iso8601(primary['source_time']) rescue nil
-      return primary if source && source >= 120.seconds.ago && source <= 5.seconds.from_now
+      return primary if source && source >= ForexQuoteGuard.max_age(primary).seconds.ago && source <= 5.seconds.from_now
       forex_fallback(instrument)
     rescue Error, KeyError, ArgumentError, TypeError
       primary
@@ -135,17 +140,18 @@ module DiscourseRsc
       base = forex_base(instrument)
       pair = "USD/#{base}"
       requested = false
-      quote = Discourse.cache.fetch("rsc:fx-fallback:v1:#{base}", expires_in: 45.seconds) do
+      quote = Discourse.cache.fetch("rsc:fx-fallback:v1:#{base}", expires_in: 60.seconds) do
         raise Error.new('provider_cooldown', status: 503) if Discourse.redis.exists?("rsc:fx-fallback:retry:#{base}")
         used = ProviderHttp.evaluate(FALLBACK_RESERVE,
           keys: ['rsc:fx-fallback:slot', "rsc:fx-fallback:requests:#{Time.current.utc.to_date}"], argv: [])
-        raise Error.new('provider_busy', status: 503) if used.negative?
+        raise Error.new('provider_daily_limit', status: 503) if used == -2
+        raise Error.new('provider_busy', status: 503) if used == -1
         requested = true
         data = ProviderHttp.get('api.twelvedata.com', '/exchange_rate', symbol: pair,
           apikey: SiteSetting.rsc_twelve_data_api_key, dp: 11)
         raise Error.new('provider_invalid_data', status: 503) unless data['symbol'] == pair
         at = Time.at(Integer(data.fetch('timestamp'))).utc
-        raise Error.new('quote_stale', status: 409) unless at >= 120.seconds.ago && at <= 5.seconds.from_now
+        raise Error.new('quote_stale', status: 409) unless at >= 180.seconds.ago && at <= 5.seconds.from_now
         price = reciprocal(data.fetch('rate'))
         day = Time.current.utc.beginning_of_day
         { 'price'=>price, 'local_price'=>price, 'local_currency'=>'USD', 'fx_rate'=>'1',
@@ -155,7 +161,7 @@ module DiscourseRsc
           'session_start'=>day.iso8601, 'session_end'=>(day+1.day).iso8601, 'fallback'=>true }
       end
       source = Time.iso8601(quote.fetch('source_time'))
-      unless source >= 120.seconds.ago && source <= 5.seconds.from_now
+      unless source >= 180.seconds.ago && source <= 5.seconds.from_now
         Discourse.cache.delete("rsc:fx-fallback:v1:#{base}")
         return forex_fallback(instrument) unless requested
         raise Error.new('quote_stale', status: 409)
@@ -165,12 +171,12 @@ module DiscourseRsc
       # An unsupported pair or old backup feed must not spend credits every tick.
       if requested && !(error.is_a?(Error) && %w[provider_busy provider_cooldown].include?(error.code))
         code = error.is_a?(Error) ? error.code : 'provider_invalid_data'
-        Discourse.redis.setex("rsc:fx-fallback:retry:#{base}", 60, code)
+        Discourse.redis.setex("rsc:fx-fallback:retry:#{base}", 90, code)
       end
       raise
     end
 
-    def self.fetch_primary_quote(instrument)
+    def self.fetch_primary_quote(instrument, chart: nil)
       code = instrument.provider_symbol.presence || instrument.symbol
       case instrument.provider
       when "coinbase"
@@ -218,7 +224,7 @@ module DiscourseRsc
           "source_time" => Time.at(BigDecimal(ticker.fetch("ts")) / 1000).utc.iso8601(6), "delay_seconds" => 0, "source" => "okx", "local_currency" => "USDT", "local_price" => decimal(ticker.fetch("last")) }
       when "yahoo", "twelve_data"
         # Yahoo supplies the authoritative exchange session boundaries for both adapters.
-        chart = yahoo_chart(yahoo_symbol(instrument))
+        chart ||= yahoo_chart(yahoo_symbol(instrument))
         meta = chart.fetch("meta")
         session = meta.dig("currentTradingPeriod", "regular") || {}
         currency = meta.fetch("currency", instrument.currency)
@@ -274,10 +280,14 @@ module DiscourseRsc
     def self.record_quote(instrument, quote, stream: false)
       instrument.with_lock do
         old_time = Time.iso8601(instrument.quote["source_time"]) rescue Time.at(0)
-        if Time.iso8601(quote.fetch("source_time")) >= old_time
+        if instrument.category == 'forex' || Time.iso8601(quote.fetch("source_time")) >= old_time
           if instrument.category == 'forex'
             quote = ForexQuoteGuard.apply(instrument.quote, quote)
             return false unless quote
+            if quote == instrument.quote
+              instrument.update!(synced_at: Time.current)
+              return false
+            end
             if ForexQuoteGuard.pending?(quote)
               instrument.update!(quote: quote, provider_error: 'quote_verifying', synced_at: Time.current)
               return false
@@ -289,7 +299,7 @@ module DiscourseRsc
           if !stream || Time.iso8601(quote['source_time']) >= last_point + 60
             history = instrument.history.reject { |point| point['at'] == quote['source_time'] }
             history << {'at' => quote['source_time'], 'price' => quote['price']}
-            attributes[:history] = history.last(1440)
+            attributes[:history] = history.sort_by { |point| point['at'] }.last(1440)
           end
           instrument.update!(attributes)
         end
@@ -352,7 +362,8 @@ module DiscourseRsc
       DistributedMutex.synchronize("rsc-quote:#{instrument.id}", validity: 90) do
         instrument.reload
         sync_one(instrument) if refresh_due?(instrument, purpose: purpose)
-        verify_forex_quote(instrument) if instrument.category == 'forex' && ForexQuoteGuard.pending?(instrument.quote)
+        verify_forex_quote(instrument) if instrument.category == 'forex' && (ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data')
+        spotcheck_forex(instrument, purpose: purpose)
         if %i[trade exit execution].include?(purpose) && !MarketSessions.closed?(instrument) && !ForexQuoteGuard.pending?(instrument.quote)
           primary = instrument.quote
           quote = execution_quote(instrument, primary)
@@ -363,36 +374,77 @@ module DiscourseRsc
       instrument.reload
     end
 
-    # Re-fetch only quarantined observations, at most once per symbol per 20s.
+    # Re-fetch only quarantined observations, at most once per symbol per 60s.
     # ProviderHttp and forex_fallback still enforce their shared quotas/backoff.
     # No database lock is held during the network calls.
     def self.verify_forex_quote(instrument)
       return if MarketSessions.closed?(instrument)
-      return unless Discourse.redis.set("rsc:fx-review:#{instrument.id}", '1', nx: true, ex: 20)
+      return unless Discourse.redis.set("rsc:fx-review:#{instrument.id}", '1', nx: true, ex: 60)
       begin
         record_quote(instrument, fetch_primary_quote(instrument))
       rescue Error, KeyError, ArgumentError, TypeError
         # Keep the accepted quote and quarantine; failed HTTP is not evidence.
       end
-      return unless ForexQuoteGuard.pending?(instrument.quote)
+      return unless ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data'
       return unless forex_base(instrument) && SiteSetting.rsc_twelve_data_api_key.present?
       begin
         record_quote(instrument, forex_fallback(instrument))
-      rescue Error, KeyError, ArgumentError, TypeError
-        # Quota exhaustion leaves orders waiting, never bypasses verification.
+      rescue Error, KeyError, ArgumentError, TypeError => error
+        # Keep the actual quote timestamps and expose why the backup is waiting.
+        code = error.is_a?(Error) ? error.code : 'provider_invalid_data'
+        instrument.with_lock do
+          state = instrument.quote.fetch('verification', {}).merge('backup_error'=>code, 'backup_checked_at'=>Time.current.iso8601(6))
+          instrument.update!(quote: instrument.quote.merge('verification'=>state))
+        end
       end
+    end
+
+    # Low-rate checks can discover a persistently wrong primary, without a
+    # clock-time burst: at most one globally / 5min, one per symbol / 30min.
+    # Stop routine checks at 300 credits, preserving 450 for trades/reviews.
+    def self.spotcheck_forex(instrument, purpose:)
+      return unless %i[forex_fast trade exit execution].include?(purpose) && forex_base(instrument)
+      return if MarketSessions.closed?(instrument) || SiteSetting.rsc_twelve_data_api_key.blank? || ForexQuoteGuard.pending?(instrument.quote)
+      return if Discourse.redis.get("rsc:fx-fallback:requests:#{Time.current.utc.to_date}").to_i >= 300
+      return if Discourse.redis.exists?("rsc:fx-spot:#{instrument.id}")
+      return unless Discourse.redis.set('rsc:fx-spot:global', '1', nx: true, ex: 300)
+      Discourse.redis.setex("rsc:fx-spot:#{instrument.id}", 1800, '1')
+      record_quote(instrument, forex_fallback(instrument))
+    rescue Error, KeyError, ArgumentError, TypeError
+      nil
+    end
+
+    def self.closing_refresh_due?(instrument, fetched_at: nil)
+      return false if %w[crypto forex].include?(instrument.category)
+      q = instrument.quote
+      finish = Time.iso8601(q.fetch('session_end'))
+      return false if Time.current < finish
+      fetched = fetched_at || (Time.iso8601(q['received_at']) rescue Time.at(0))
+      # Spread final-price polling across existing queues, then stop after a
+      # post-delay observation. A late first visit can still fetch the close.
+      last_attempt = fetched_at || instrument.synced_at
+      fetched < finish + 20.minutes && (!last_attempt || last_attempt <= 5.minutes.ago)
+    rescue ArgumentError, KeyError, TypeError
+      false
     end
 
     def self.refresh_due?(instrument, purpose: :read, schedules: nil)
       q = instrument.quote
       correction = forex_base(instrument) && q['pricing_method'] != FX_PRICING
-      return false if !correction && MarketSessions.closed?(instrument, schedules: schedules) && q['price'].present?
+      if !correction && MarketSessions.closed?(instrument, schedules: schedules) && q['price'].present?
+        return closing_refresh_due?(instrument)
+      end
       received = Time.iso8601(q['received_at']) rescue nil
       # Failures do not manufacture a fresh quote. Provider-wide cooldown is an
       # additional guard and is shared even when different symbols are requested.
       retry_age = %w[provider_busy quote_verifying].include?(instrument.provider_error) ? 15 : 120
       return false if instrument.provider_error.present? && instrument.synced_at && instrument.synced_at > retry_age.seconds.ago
       return true if correction
+      source = Time.iso8601(q['source_time']) rescue nil
+      delay = q.fetch('delay_seconds', 0).to_i
+      if purpose != :idle && source && source < Time.current - delay - ForexQuoteGuard.max_age(q)
+        return !(instrument.synced_at && instrument.synced_at > 20.seconds.ago)
+      end
       age = case purpose
       when :trade, :protection then q['source'] == 'coinbase_ws' ? 3 : 20
       when :exit then instrument.category == "forex" ? 5 : (q['source'] == 'coinbase_ws' ? 3 : 20)
@@ -529,9 +581,16 @@ module DiscourseRsc
 
     def self.history_uncached(instrument, range)
       raise Error.new("invalid_range") unless RANGES.key?(range)
+      if instrument.category == 'forex' && range == '1d'
+        instrument = refresh_if_needed(instrument.id)
+        last_source = Time.iso8601(instrument.quote['source_time']) rescue Time.current
+        points = instrument.history.select { |point| Time.iso8601(point['at']).between?(1.day.ago, last_source) }
+        return {candles: points.map { |point| {at: point['at'], close: point['price']} }, currency: 'RSC',
+          updated_at: instrument.quote['received_at'], accepted_quotes: true, instrument: MarketListing.rows([instrument], execution: false).first}
+      end
       cache = HistoryCache.find_by(instrument_id: instrument.id, range: range)
       correction = forex_base(instrument) && cache&.source == "provider"
-      if cache && !correction && (cache.updated_at > (range == "1d" ? 2.minutes.ago : 10.minutes.ago) || MarketSessions.closed?(instrument) || (!SiteSetting.rsc_market_data_enabled && cache.source == "legacy"))
+      if cache && !correction && (cache.updated_at > (range == "1d" ? 2.minutes.ago : 10.minutes.ago) || (MarketSessions.closed?(instrument) && !closing_refresh_due?(instrument, fetched_at: cache.updated_at)) || (!SiteSetting.rsc_market_data_enabled && cache.source == "legacy"))
         return { candles: cache.candles, currency: cache.currency || instrument.currency, updated_at: cache.updated_at, archived: cache.source == "legacy" }
       end
       if instrument.provider == "manual"
@@ -566,6 +625,14 @@ module DiscourseRsc
         candles = data.fetch("data").map { |at, open, high, low, close, volume, *rest| { at: Time.at(BigDecimal(at) / 1000).utc.iso8601, open: decimal(open), high: decimal(high), low: decimal(low), close: decimal(close), volume: volume.to_s } }.reverse
       else
         chart = yahoo_chart(yahoo_symbol(instrument), range)
+        # Use the same snapshot for the intraday graph and the trade quote.
+        if range == '1d' && instrument.provider == 'yahoo'
+          begin
+            record_quote(instrument, fetch_primary_quote(instrument, chart: chart))
+          rescue Error => error
+            quote_refresh_error = error.code
+          end
+        end
         inverted = forex_base(instrument)
         chart_currency = inverted ? "USD" : (chart.dig("meta", "currency").presence || instrument.currency)
         quote = chart.dig("indicators", "quote", 0) || {}
@@ -580,7 +647,8 @@ module DiscourseRsc
       end
       cache ||= HistoryCache.new(instrument_id: instrument.id, range: range)
       cache.update!(candles: candles, currency: chart_currency, source: forex_base(instrument) ? FX_PRICING : "provider", updated_at: Time.current)
-      { candles: candles, currency: chart_currency, updated_at: cache.updated_at }
+      { candles: candles, currency: chart_currency, updated_at: cache.updated_at, quote_refresh_error: quote_refresh_error,
+        instrument: MarketListing.rows([instrument.reload], execution: false).first }
     rescue Error => error
       raise unless cache && cache.candles.present?
       { candles: cache.candles, currency: cache.currency || instrument.currency, updated_at: cache.updated_at,

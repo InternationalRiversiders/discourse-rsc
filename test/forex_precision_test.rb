@@ -80,15 +80,15 @@ class ForexPrecisionTest < MigrationFeaturesTest
       item.update!(provider_error:'provider_busy')
       refute R::MarketData.refresh_due?(item)
       item.update!(provider_error:nil)
-      old=R::HistoryCache.create!(instrument_id:item.id,range:'1d',source:'provider',currency:'USD',candles:[{at:Time.current.iso8601,close:'0.0063'}],updated_at:Time.current)
+      old=R::HistoryCache.create!(instrument_id:item.id,range:'5d',source:'provider',currency:'USD',candles:[{at:Time.current.iso8601,close:'0.0063'}],updated_at:Time.current)
       calls=0
       with_provider(->(*) { calls+=1;chart }) do
-        history=R::MarketData.history(item,'1d')
+        history=R::MarketData.history(item,'5d')
         assert_equal '0.00625',history[:candles].last[:close]
         assert_equal '0.006289308176100628',history[:candles].last[:high]
         assert_equal '0.006211180124223602',history[:candles].last[:low]
         assert_equal 'USD',history[:currency]
-        R::MarketData.history(item,'1d')
+        R::MarketData.history(item,'5d')
         assert_equal 1,calls
         R::MarketData.refresh_if_needed(item.id)
       end
@@ -100,9 +100,9 @@ class ForexPrecisionTest < MigrationFeaturesTest
 
   def test_forex_failed_refresh_retains_old_chart_with_stale_warning
     item=forex;SiteSetting.rsc_market_data_enabled=true
-    cache=R::HistoryCache.create!(instrument_id:item.id,range:'1d',source:'provider',currency:'USD',candles:[{at:Time.current.iso8601,close:'0.0063'}])
+    cache=R::HistoryCache.create!(instrument_id:item.id,range:'5d',source:'provider',currency:'USD',candles:[{at:Time.current.iso8601,close:'0.0063'}])
     with_provider(->(*) { raise R::Error.new('provider_busy') }) do
-      result=R::MarketData.history(item,'1d')
+      result=R::MarketData.history(item,'5d')
       assert result[:stale]
       assert_equal 'provider_busy',result[:refresh_error]
       assert_equal '0.0063',result[:candles].first['close']
@@ -137,12 +137,17 @@ class ForexPrecisionTest < MigrationFeaturesTest
       end
       before=R::Position.order(:id).pluck(:id,:average_units,:quantity_units,:margin_units)
       ledger=[R::Journal.count,R::Entry.count]
+      travel 16.seconds
+      Discourse.cache.delete('rsc:yahoo-chart:v2:JPY=X:1d')
       with_provider(chart('159')) { assert R::MarketData.sync_one(item) }
       assert R::ForexQuoteGuard.pending?(item.reload.quote)
       2.times do
         travel 30.seconds
         with_provider(chart('159')) { assert R::MarketData.sync_one(item) }
       end
+      assert R::ForexQuoteGuard.pending?(item.reload.quote)
+      backup=item.quote.dig('verification','candidate').merge('source'=>'twelve_data')
+      R::MarketData.record_quote(item,backup)
       refute R::ForexQuoteGuard.pending?(item.reload.quote)
       assert_equal before,R::Position.order(:id).pluck(:id,:average_units,:quantity_units,:margin_units)
       assert_equal ledger,[R::Journal.count,R::Entry.count]

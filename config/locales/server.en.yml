@@ -164,6 +164,7 @@ en:
       invalid_search: Invalid search.
       provider_disabled: Provider disabled.
       provider_cooldown: The provider is cooling down. Please try again later.
+      provider_daily_limit: 今日备用行情额度已用完，暂时无法完成交叉核验，请等待额度恢复或主源与已核验报价重新一致。
       provider_busy: Quote requests are busy. Please try again later.
       provider_unavailable: Provider unavailable.
       provider_no_data: Provider no data.

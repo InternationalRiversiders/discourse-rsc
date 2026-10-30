@@ -43,6 +43,7 @@ export default class extends Component {
       );
       if (!this.isDestroying && generation === this.generation) {
         this.data = data;
+        this.args.onQuote?.(data.instrument);
       }
     } catch (error) {
       if (!this.isDestroying && generation === this.generation) {
@@ -54,6 +55,11 @@ export default class extends Component {
         this.loading = false;
       }
     }
+  }
+  get sourceHint() {
+    if (this.data?.accepted_quotes) { return "已核验报价 · 单位 RSC · 复核期间不记录新点"; }
+    if (this.data?.quote_refresh_error) { return `历史参考行情 · 单位 ${this.data.currency} · 成交报价暂未更新，请留意上方报价时间`; }
+    return `历史参考行情 · 单位 ${this.data?.currency || this.args.instrument.currency} · 成交以当前核验报价为准`;
   }
   @action toggle() {
     this.mode = this.mode === "line" ? "candles" : "line";
@@ -170,6 +176,7 @@ export default class extends Component {
   get readout() { return this.hover || this.chart?.candles.at(-1); }
   <template>
     <div class="rsc-history" aria-busy={{this.loading}}>
+      <p class="rsc-muted rsc-chart-source">{{this.sourceHint}}</p>
       <div class="rsc-chart-controls">{{#each ranges as |range|}}<button
             type="button"
             class="btn btn-small {{if (eq this.range range) 'btn-primary'}}"

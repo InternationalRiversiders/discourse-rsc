@@ -12,7 +12,7 @@ export function marketView(item, now = Date.now()) {
     received >= now - 120000 &&
     received <= now + 5000 &&
     source <= now + 5000 &&
-    source >= now - (delay + 120) * 1000;
+    source >= now - (delay + (quote.source === "twelve_data" ? 180 : 120)) * 1000;
   const open =
     item.category === "crypto" ||
     (!item.market_closed && now >= Date.parse(quote.session_start) &&

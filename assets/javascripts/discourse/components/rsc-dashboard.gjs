@@ -148,6 +148,21 @@ export default class RscDashboard extends Component {
       (this.side !== "close" && this.selected?.close_only)
     );
   }
+  @action chartQuoteUpdated(item) {
+    if (!item || this.isDestroying || this.isDestroyed) { return; }
+    const current = this.data.instruments.find((row) => row.id === item.id);
+    const revision = (row) => Date.parse(row?.quote?.verification?.checked_at || row?.quote?.received_at) || 0;
+    if (!current || revision(item) < revision(current)) { return; }
+    this.snapshot = { ...this.data, instruments: this.data.instruments.map((row) => row.id === item.id ? { ...row, ...item } : row) };
+  }
+  get quoteSourceHint() {
+    const q = this.selected?.quote || {};
+    const source = q.source === "twelve_data" ? "Twelve Data 备用源 · 分钟采样" : q.source === "yahoo" ? "Yahoo" : q.source;
+    const delay = Number(q.delay_seconds) || 0;
+    const backupError = q.verification?.backup_error;
+    const backupHint = backupError === "provider_daily_limit" ? " · 今日备用行情额度已用完" : backupError === "quote_stale" ? " · 备用源时间戳较旧，等待更新" : backupError ? " · 备用源暂不可用，等待重试" : "";
+    return `${source || "行情源"}${delay > 120 ? ` · 约延迟 ${Math.ceil(delay / 60)} 分钟` : ""}${q.verification?.status === "pending" ? " · 两源或前后报价存在差异，复核通过后恢复成交" : q.verification?.preferred_source === "twelve_data" ? " · 已切换至连续核验通过的备用报价" : ""}${backupHint}`;
+  }
   @action selectMarket(id) {
     this.selectedId = String(id);
     this.marketDetailOpen = true;
@@ -741,13 +756,13 @@ export default class RscDashboard extends Component {
                     <small>RSC</small></strong><span
                     class="rsc-change-pill {{this.selectedMarket.tone}}"
                   >{{this.selectedMarket.changeText}}</span></div>
-                <p class="rsc-muted rsc-change-basis">{{this.changeLabel}} · 价格单位 RSC</p>
+                <p class="rsc-muted rsc-change-basis">{{this.changeLabel}} · 交易价格单位 RSC</p><p class="rsc-muted">{{this.quoteSourceHint}}</p>{{#unless (eq this.selected.category "forex")}}<p class="rsc-muted">原币报价 {{this.selectedMarket.localPrice}} · 历史图使用原币单位</p>{{/unless}}
                 {{#if this.selected.quote.inverse_rate}}<p class="rsc-muted">1 RSC ≈ <span title={{this.selected.quote.inverse_rate}}>{{formatPrice this.selected.quote.inverse_rate}}</span> {{this.selected.quote.base_currency}}</p>{{/if}}
                 <dl class="rsc-quote-stats">{{#each this.quoteStats key="label" as |stat|}}<div><dt>{{stat.label}}</dt><dd title={{stat.value}}>{{formatPrice stat.value}}</dd></div>{{/each}}</dl>
                 {{#each
                   (array this.selected) key="id"
                   as |instrument|
-                }}<RscHistory @instrument={{instrument}} />{{/each}}<p
+                }}<RscHistory @instrument={{instrument}} @onQuote={{this.chartQuoteUpdated}} />{{/each}}<p
                   class="rsc-muted"
                 >{{uiText "quote_time"}}
                   {{when this.selected.quote.source_time}}

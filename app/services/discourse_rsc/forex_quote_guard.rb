@@ -3,7 +3,7 @@ module DiscourseRsc
   # Quarantine observations before they reach marks, executions or liquidations.
   # A cache hit is not a second observation. No prices are averaged or invented.
   module ForexQuoteGuard
-    VERSION = 1
+    VERSION = 2
     MATCH_BPS = 5 # 0.05%: cross-feed agreement / candidate cluster tolerance.
     FIELDS = %w[price source source_time received_at inverse_rate base_currency pricing_method delay_seconds].freeze
 
@@ -14,7 +14,7 @@ module DiscourseRsc
     def self.fresh?(quote, now = Time.current)
       at = Time.iso8601(quote.fetch('source_time'))
       received = Time.iso8601(quote.fetch('received_at'))
-      at.between?(now - 120, now + 5) && received.between?(now - 120, now + 5) &&
+      at.between?(now - max_age(quote), now + 5) && received.between?(now - 120, now + 5) &&
         Amount.positive(quote.fetch('price')).positive? && quote['source'].present?
     rescue Error, KeyError, ArgumentError, TypeError
       false
@@ -25,11 +25,14 @@ module DiscourseRsc
       (x - y).abs * 10_000 < [x, y].min * bps
     end
 
+    # Minute-sampled backup quotes retain their real timestamp. Permit one
+    # sampling interval beyond the usual 120s, never an unlimited stale price.
+    def self.max_age(quote)
+      quote['source'] == 'twelve_data' ? 180 : 120
+    end
+
     def self.review_bps(previous, incoming)
-      seconds = (Time.iso8601(incoming.fetch('source_time')) - Time.iso8601(previous.fetch('source_time'))).abs
-      # 0.1% within a minute. Gaps widen the review band, up to 0.5%;
-      # they never make a source switch exempt from the agreement check.
-      [10 * Math.sqrt([seconds, 60].max / 60.0), 50].min.floor
+      10
     end
 
     def self.apply(previous, incoming, now: Time.current)
@@ -38,6 +41,7 @@ module DiscourseRsc
         previous['pricing_method'] == incoming['pricing_method']
       return accepted(incoming, 'initial') unless baseline
       state = previous['verification'] || {}
+      return previous if previous['source'] == incoming['source'] && Time.iso8601(incoming['source_time']) < Time.iso8601(previous['source_time'])
       observations = (state['observations'] || {}).deep_dup
       if observations.empty? && fresh?(previous, now)
         observations[previous['source']] = [previous.slice(*FIELDS)]
@@ -63,28 +67,42 @@ module DiscourseRsc
       agreement = others.any? { |q| near?(q, incoming) }
       switched = previous['source'] != source
       jump = !near?(previous, incoming, review_bps(previous, incoming))
-      needs_review = pending?(previous) || jump || (switched && !near?(previous, incoming)) || conflict
-      reason = if !needs_review
-        switched ? 'source_continuity' : 'continuous'
-      elsif !conflict && agreement
-        'cross_source'
-      elsif !conflict && !switched && near?(previous, incoming)
-        'recovered'
-      elsif !conflict && samples.size >= 3 &&
-          (Time.iso8601(samples.last['source_time']) - Time.iso8601(samples.first['source_time'])) >= 60 &&
-          samples.all? { |sample| near?(sample, incoming) }
-        'successive_observations'
+      disputed = state['disputed'] || conflict || state['reason'] == 'source_disagreement'
+      preferred = state['preferred_source']
+      # A recovering primary must agree with the backup before taking over.
+      if preferred == 'twelve_data' && source != preferred && !agreement
+        return previous.merge('verification' => state.merge('observations'=>observations))
       end
-      return accepted(incoming, reason) if reason
+      needs_review = pending?(previous) || jump || (switched && !near?(previous, incoming)) || conflict || disputed
+      backup_consensus = source == 'twelve_data' && samples.size >= 3 &&
+        (Time.iso8601(samples.last['source_time']) - Time.iso8601(samples.first['source_time'])) >= 120 &&
+        samples.all? { |sample| near?(sample, incoming) }
+      reason = if !conflict && agreement
+        'cross_source'
+      elsif preferred == source && !jump && !pending?(previous)
+        'backup_continuity'
+      elsif backup_consensus
+        'backup_consensus'
+      elsif !needs_review
+        switched ? 'source_continuity' : 'continuous'
+      elsif !disputed && !switched && near?(previous, incoming)
+        'recovered'
+      end
+      if reason
+        preferred = reason == 'cross_source' ? nil : (reason == 'backup_consensus' ? 'twelve_data' : preferred)
+        return accepted(incoming, reason, observations: observations, preferred: preferred)
+      end
       previous.merge('verification' => {
         'version' => VERSION, 'status' => 'pending', 'reason' => conflict || switched ? 'source_disagreement' : 'price_jump',
         'since' => state['since'] || now.iso8601(6), 'checked_at' => now.iso8601(6),
+        'disputed' => !!disputed, 'preferred_source' => preferred,
         'observations' => observations, 'candidate' => incoming.slice(*FIELDS)
       })
     end
 
-    def self.accepted(quote, reason)
+    def self.accepted(quote, reason, observations: {}, preferred: nil)
       quote.merge('verification' => { 'version' => VERSION, 'status' => 'verified',
+        'observations' => observations, 'preferred_source' => preferred,
         'method' => reason, 'checked_at' => Time.current.iso8601(6) })
     end
 

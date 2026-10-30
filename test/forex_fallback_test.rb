@@ -18,6 +18,7 @@ class ForexFallbackTest < ForexActivityTest
   def setup
     super
     SiteSetting.rsc_twelve_data_api_key='isolated-test-key'
+    Discourse.redis.setex('rsc:fx-spot:global',3600,'test')
     Discourse.cache.delete('rsc:fx-fallback:v1:CNY');Discourse.redis.del('rsc:fx-fallback:slot', 'rsc:fx-fallback:retry:CNY', "rsc:fx-fallback:requests:#{Time.current.utc.to_date}")
   end
   def teardown
@@ -105,7 +106,7 @@ class ForexFallbackTest < ForexActivityTest
 
   def test_cached_quote_expiry_refreshes_instead_of_waiting_for_cache_ttl
     item=fx;primary=quote('0.15').merge('source_time'=>10.minutes.ago.iso8601)
-    data={'symbol'=>'USD/CNY','rate'=>'6.67','timestamp'=>110.seconds.ago.to_i}
+    data={'symbol'=>'USD/CNY','rate'=>'6.67','timestamp'=>170.seconds.ago.to_i}
     feeds(primary,data) do |calls|
       assert_equal 'twelve_data',R::MarketData.execution_quote(item,primary)['source']
       travel 20.seconds
