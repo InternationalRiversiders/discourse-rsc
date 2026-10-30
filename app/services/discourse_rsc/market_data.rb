@@ -356,6 +356,15 @@ module DiscourseRsc
       instrument = Instrument.find(instrument_id)
       return instrument if Safety.read_only? || !SiteSetting.rsc_market_data_enabled ||
         !instrument.active || !%w[yahoo coinbase twelve_data kraken okx].include?(instrument.provider)
+      # User submissions may reuse the already reviewed, fresh FX snapshot.
+      # Background execution polling continues to refresh on its normal schedule;
+      # Exchange rechecks freshness under the transaction lock before any fill.
+      if %i[trade exit].include?(purpose) && Exchange.immediate_forex?(instrument) &&
+          instrument.quote['pricing_method'] == FX_PRICING && !instrument.quote['legacy_snapshot'] &&
+          instrument.quote.dig('verification', 'version') == ForexQuoteGuard::VERSION &&
+          instrument.quote.dig('verification', 'status') == 'verified' && ForexQuoteGuard.fresh?(instrument.quote)
+        return instrument
+      end
       # The same lock/cache covers page reads, orders and scheduled refreshes.
       # No money transaction or instrument row lock is held during HTTP.
       DistributedMutex.synchronize("rsc-quote:#{instrument.id}", validity: 90) do

@@ -132,7 +132,7 @@ class ForexQuoteGuardTest < ForexActivityTest
     travel_to(Time.utc(2026,10,28,17,25,26)) do
       fund(@alice,'5000');activity;item=forex
       item.update!(quote:observation('0.150276508776148112',at:Time.utc(2026,10,28,17,24,17)))
-      order=submit(item,side:'short',quantity:'400000')
+      order=legacy_pending(item,side:'short',quantity:'400000')
       travel_to(Time.utc(2026,10,28,17,29,32))
       accept(item,'0.150010500735051453',source:'twelve_data',at:Time.utc(2026,10,28,17,28))
       assert G.pending?(item.quote)

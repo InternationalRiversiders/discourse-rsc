@@ -61,7 +61,7 @@ class ForexPrimaryPolicyTest < ForexQuoteGuardTest
       incoming=observation('0.183884373505939465',at:Time.utc(2026,10,30,17,30,45))
       item=live_fx(backup)
       fund;activity
-      # Keep the production post-submission quote rule; only the feed veto changes.
+      # Replay a legacy queued opening after normal primary service resumes.
       order=R::Order.create!(user_id:@alice.id,instrument_id:item.id,side:'short',leverage:100,
         quantity_units:R::Amount.parse('100'),reserved_units:0,status:'pending',
         created_at:Time.utc(2026,10,30,17,30,30),execute_at:Time.utc(2026,10,30,17,30,30),
@@ -145,4 +145,68 @@ class ForexPrimaryPolicyTest < ForexQuoteGuardTest
       end
     end
   end
+  def test_current_verified_forex_opens_and_closes_without_provider_requests
+    travel_to(Time.utc(2026,10,30,12)) do
+      fund;activity
+      %w[yahoo twelve_data].each do |source|
+        snapshot=G.accepted(observation('1',source:source,at:60.seconds.ago),'continuous')
+        item=live_fx(snapshot)
+        with_feeds(R::Error.new('provider_busy'),R::Error.new('provider_daily_limit')) do |calls|
+          opening=submit(item,quantity:'90000')
+          assert_equal 'filled',opening.status
+          assert_equal '1',opening.details['price']
+          assert_equal source,opening.details.dig('execution_quote','source')
+          assert_equal '900',opening.details['margin']
+          assert_equal '9',opening.details['fee']
+          assert_equal 0,opening.reserved_units.to_i
+          assert_equal '91',R::Account.wallet(@alice.id).balance
+          assert_equal 'immediate',R::MarketListing.rows([item]).first[:execution_mode]
+          closing=submit(item,side:'close',quantity:'90000')
+          assert_equal 'filled',closing.status
+          assert_equal({primary:0,backup:0},calls)
+          assert_equal 0,R::Entry.sum(:units)
+        end
+        # The next source gets its own clean balance and symbol.
+        break if source=='twelve_data'
+        fund(@alice,'18')
+        item.update!(symbol:'FX:OLD-BRL')
+      end
+    end
+  end
+
+  def test_submission_rechecks_expiry_under_the_transaction_lock
+    travel_to(Time.utc(2026,10,30,12)) do
+      fund;activity
+      item=live_fx(G.accepted(observation('1',at:119.seconds.ago),'continuous'))
+      original=R::MarketData.method(:refresh_if_needed)
+      clock=self
+      R::MarketData.define_singleton_method(:refresh_if_needed) do |id,**options|
+        result=original.call(id,**options)
+        clock.travel 2.seconds
+        result
+      end
+      with_feeds(R::Error.new('provider_busy'),R::Error.new('provider_daily_limit')) do |calls|
+        assert_equal 'quote_stale',assert_raises(R::Error){submit(item)}.code
+        assert_equal({primary:0,backup:0},calls)
+        assert_equal 0,R::Order.count
+        assert_equal '1000',R::Account.wallet(@alice.id).balance
+      end
+    ensure
+      R::MarketData.define_singleton_method(:refresh_if_needed,original) if original
+    end
+  end
+
+  def test_background_polling_still_updates_valid_forex_quotes
+    travel_to(Time.utc(2026,10,30,12)) do
+      prior=G.accepted(observation('1',at:60.seconds.ago).merge('received_at'=>60.seconds.ago.iso8601),'continuous')
+      item=live_fx(prior)
+      with_feeds(observation('1.0001'),R::Error.new('provider_daily_limit')) do |calls|
+        R::MarketData.refresh_if_needed(item.id,purpose: :execution)
+        assert_operator calls[:primary],:>=,1
+        assert_equal 0,calls[:backup]
+        assert_equal '1.0001',item.reload.quote['price']
+      end
+    end
+  end
+
 end

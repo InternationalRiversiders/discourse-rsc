@@ -27,6 +27,17 @@ class ForexActivityTest < NativeBusinessTest
       quantity: quantity, leverage: leverage, high_risk: leverage > 10, request_id: request_id)
     R::Order.find(result['order_id'])
   end
+  # Build the old release's queued FX opening with a real reservation, without
+  # making new submissions depend on the removed next-tick confirmation policy.
+  def legacy_pending(item, **options)
+    original = R::TradingRules.method(:delayed?)
+    R::TradingRules.define_singleton_method(:delayed?) { |candidate| candidate.id == item.id || original.call(candidate) }
+    order = submit(item, **options)
+    order.update!(execute_at: Time.current, details: order.details.merge('delayed'=>false, 'fx_confirmation'=>true))
+    order
+  ensure
+    R::TradingRules.define_singleton_method(:delayed?, original)
+  end
   def tick_quote(item, price='1')
     travel 1.second
     at = Time.current.iso8601(6)
@@ -40,7 +51,7 @@ class ForexActivityTest < NativeBusinessTest
       assert R::ForexActivity.active_for?(item)
       other=instrument; refute R::ForexActivity.active_for?(other)
       assert_equal 100,R::MarketListing.rows([item]).first[:max_leverage]
-      assert_equal 'forex_confirmation',R::MarketListing.rows([item]).first[:execution_mode]
+      assert_equal 'immediate',R::MarketListing.rows([item]).first[:execution_mode]
       travel_to R::ForexActivity.ends_at
       refute R::ForexActivity.active?
       assert_equal 10,R::MarketListing.rows([item]).first[:max_leverage]
@@ -48,16 +59,17 @@ class ForexActivityTest < NativeBusinessTest
       assert_equal false,R::MarketListing.rows([item]).first[:margin_budget_exempt]
     end
   end
-  def test_new_quote_confirmation_fee_and_idempotence
+  def test_current_quote_execution_fee_and_idempotence
     travel_to(Time.utc(2026,10,22,12)) do
       fund; activity; item=forex
+      travel 30.seconds
       order=submit(item,request_id:'fx-same-request')
-      assert_equal 'pending',order.status
+      assert_equal 'filled',order.status
+      assert_equal Time.current,order.execute_at
+      assert_operator Time.iso8601(item.quote['source_time']), :<, order.created_at
       assert_equal 1,order.details['fee_bps']
       R::Exchange.process(item.id)
-      assert_equal 'pending',order.reload.status
-      assert_equal 0,R::ForexActivityEntry.count
-      tick_quote(item)
+      assert_equal 1,R::ForexActivityEntry.count
       assert_equal 'filled',order.reload.status
       assert_equal '0.01',order.details['fee']
       assert_equal -R::Amount.parse('0.01'),entry.realized_units.to_i
@@ -124,7 +136,7 @@ class ForexActivityTest < NativeBusinessTest
     travel_to(Time.utc(2026,10,22,12)) do
       fund; activity; item=forex
       submit(item);tick_quote(item)
-      position=R::Position.first!; pending=submit(item)
+      position=R::Position.first!; pending=legacy_pending(item)
       ending=5.seconds.from_now
       SiteSetting.rsc_forex_activity_ends_at=ending.iso8601
       before=entry.realized_units.to_i+entry.mark_units.to_i
@@ -163,7 +175,7 @@ class ForexActivityTest < NativeBusinessTest
   def test_cancellation_never_counts_and_is_available_after_ten_seconds
     travel_to(Time.utc(2026,10,22,12)) do
       fund;activity;item=forex
-      pending=submit(item);travel 20.seconds
+      pending=legacy_pending(item);travel 20.seconds
       R::Exchange.cancel(actor:@alice,order_id:pending.id,request_id:SecureRandom.uuid)
       assert_equal 'canceled',pending.reload.status
       assert_equal '1000',R::Account.wallet(@alice.id).balance
@@ -265,7 +277,7 @@ class ForexActivityTest < NativeBusinessTest
   def test_deadline_releases_reservations_without_fresh_quote_or_execute_time
     travel_to(Time.utc(2026,10,22,12)) do
       fund;activity;item=forex
-      order=submit(item);order.update!(execute_at:10.minutes.from_now)
+      order=legacy_pending(item);order.update!(execute_at:10.minutes.from_now)
       SiteSetting.rsc_forex_activity_ends_at=1.second.ago.iso8601
       item.update!(quote:{})
       R::Exchange.process(item.id)

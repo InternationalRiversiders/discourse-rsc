@@ -283,8 +283,7 @@ export default class RscDashboard extends Component {
   }
   get forexFee() { return Number(this.selected?.fee_bps || 0) / 100; }
   get executionHint() {
-    if (this.selected?.execution_mode === "forex_confirmation") { return "开仓等待新外汇报价确认，成交前可撤单；平仓使用最新有效报价直接成交，不再额外等待下一笔报价。"; }
-    if (this.selected?.execution_mode === "immediate") { return "按当前可用行情成交。"; }
+    if (this.selected?.execution_mode === "immediate") { return this.selected?.category === "forex" ? "开仓、平仓均使用当前新鲜且核验通过的报价直接成交，无需等待下一笔报价。" : "按当前可用行情成交。"; }
     if (this.selected?.execution_mode !== "crypto_confirmation") { return "等待提交之后的新报价确认；提交后 10 秒内可撤单。普通仓位成交后没有额外持仓锁定。"; }
     const delay = this.siteSettings.rsc_crypto_confirmation_delay_seconds;
     const hold = this.siteSettings.rsc_high_risk_hold_seconds;

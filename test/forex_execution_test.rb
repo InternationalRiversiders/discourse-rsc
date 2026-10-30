@@ -8,7 +8,7 @@ class ForexExecutionTest < ForexActivityTest
     travel_to(Time.utc(2026,10,22,12)) do
       fund;activity;item=forex
       opening=submit(item);R::Exchange.process(item.id)
-      assert_equal 'pending',opening.reload.status
+      assert_equal 'filled',opening.reload.status
       tick_quote(item)
       travel 30.seconds
       before=R::Journal.count
@@ -76,7 +76,7 @@ class ForexExecutionTest < ForexActivityTest
       fund;activity;item=forex;opening=submit(item);tick_quote(item)
       before=R::Journal.order(:id).pluck(:id,:metadata)
       old_fee=opening.reload.details['fee']
-      pending=submit(item)
+      pending=legacy_pending(item)
       SiteSetting.rsc_forex_activity_fee_bps=0
       assert_equal 0,R::ForexActivity.fee_bps(item,position:R::Position.first)
       tick_quote(item)
@@ -118,7 +118,7 @@ class ForexExecutionTest < ForexActivityTest
       calls=[];processed=[];original=R::MarketData.method(:refresh_if_needed)
       R::MarketData.define_singleton_method(:refresh_if_needed) { |id,**options| calls << [id,options[:purpose]];R::Instrument.find(id) }
       R::MarketData.sync_forex { |id| processed << id }
-      assert_equal [[item.id,:execution]],calls
+      assert_equal [[item.id,:forex_fast]],calls
       assert_equal [item.id],processed
       item.update!(quote:quote('1').merge('received_at'=>10.seconds.ago.iso8601))
       refute R::MarketData.refresh_due?(item,purpose: :forex_fast)
@@ -130,4 +130,33 @@ class ForexExecutionTest < ForexActivityTest
       R::MarketData.define_singleton_method(:refresh_if_needed,original) if original
     end
   end
+  def test_legacy_pending_open_uses_pre_submission_quote_and_returns_reserve_surplus
+    travel_to(Time.utc(2026,10,22,12)) do
+      fund;activity;item=forex
+      travel 30.seconds
+      order=legacy_pending(item)
+      assert_operator Time.iso8601(item.quote['source_time']),:<,order.created_at
+      R::Exchange.process(item.id)
+      assert_equal 'filled',order.reload.status
+      assert_equal '1',order.details['price']
+      assert_equal '998.99',R::Account.wallet(@alice.id).balance
+      assert_equal 0,R::Account.internal("order:#{order.id}").balance_units.to_i
+      journals=R::Journal.count
+      R::Exchange.process(item.id)
+      assert_equal journals,R::Journal.count
+      assert_equal 0,R::Entry.sum(:units)
+    end
+  end
+
+  def test_stale_opening_is_rejected_without_a_reservation
+    travel_to(Time.utc(2026,10,22,12)) do
+      fund;activity;item=forex
+      travel 121.seconds
+      assert_equal 'quote_stale',assert_raises(R::Error){submit(item)}.code
+      assert_equal 0,R::Order.count
+      assert_equal 0,R::Position.count
+      assert_equal '1000',R::Account.wallet(@alice.id).balance
+    end
+  end
+
 end

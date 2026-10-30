@@ -43,14 +43,10 @@ module DiscourseRsc
     def self.entry_fee_bps(row)
       active? ? [row.fee_bps, SiteSetting.rsc_forex_activity_fee_bps].min : row.fee_bps
     end
-    def self.confirmation?(instrument, leverage = 1)
-      instrument.category == 'forex' && (active_for?(instrument) || leverage > 10)
-    end
     def self.order_details(instrument, position, side)
       return {} unless instrument.category == 'forex'
       counted = side != 'close' && active_for?(instrument) && (!position || entry(position))
-      { 'fee_bps'=>fee_bps(instrument, position: position), 'forex_campaign'=>counted ? KEY : nil,
-        'fx_confirmation'=>confirmation?(instrument, position&.leverage || 1) }
+      { 'fee_bps'=>fee_bps(instrument, position: position), 'forex_campaign'=>counted ? KEY : nil }
     end
     def self.record_open(position, order, fee, fresh:)
       return unless order.details['forex_campaign'] == KEY && active?

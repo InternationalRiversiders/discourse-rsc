@@ -86,13 +86,20 @@ for (const quarters of [1,2,3,4]) {
 assert.equal(quantityForFraction({quote:{price:'100'},step:'0.01'},'100','1000',4,'long','0'),'0');
 console.log('PASS high-risk allocation respects combined margin budget and 5% execution headroom');
 
-// Activity FX uses the discounted fee and the shared high-risk margin budget.
-const activityFx={...fx, fee_bps:1, execution_mode:'forex_confirmation'};
+// Activity FX executes immediately: no 5% pending-order reservation headroom.
+const activityFx={...fx, fee_bps:1, execution_mode:'immediate'};
 for (const quarter of [1,2,3,4]) {
   const qty=quantityForFraction(activityFx,'100','1000',quarter,'long','25');
   const result=estimate(activityFx,qty,'100','1000','long','25');
-  assert.ok(atomic(result.margin)*105n/100n<=atomic('25')*BigInt(quarter)/4n);
+  assert.ok(atomic(result.margin)<=atomic('25')*BigInt(quarter)/4n);
   assert.ok(atomic(result.reserve)<=atomic('1000')*BigInt(quarter)/4n);
   assert.equal(atomic(result.fee),atomic(result.gross)/10000n);
 }
 console.log('PASS activity forex fees, high leverage and allocation budget');
+
+const fullFxQty=quantityForFraction(activityFx,'100','1000',4,'long');
+const fullFx=estimate(activityFx,fullFxQty,'100','1000','long');
+assert.ok(atomic(fullFx.reserve)<=atomic('1000'));
+assert.ok(atomic(fullFx.reserve)>atomic('999.99'));
+assert.equal(atomic(fullFx.reserve),atomic(fullFx.margin)+atomic(fullFx.fee));
+console.log('PASS immediate FX full balance has no pending-order buffer');
