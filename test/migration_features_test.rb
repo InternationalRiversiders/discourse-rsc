@@ -285,7 +285,7 @@ class MigrationFeaturesTest < NativeBusinessTest
     stock.update!(quote: quote("100").merge("source_time" => 2.days.ago.iso8601, "received_at" => 2.days.ago.iso8601))
     coin = R::Instrument.create!(symbol: "WEEKEND-COIN", name: "Weekend coin", category: "crypto", quote: quote("100"))
     result = R::Exchange.submit(actor: @alice, instrument_id: coin.id, side: "long", quantity: "1", leverage: 5, request_id: "weekend-crypto")
-    assert_equal "pending", result["status"]
+    assert_equal "filled", result["status"]
     assert_equal 2, R::Order.count
     assert_equal 0, R::Entry.sum(:units)
   end

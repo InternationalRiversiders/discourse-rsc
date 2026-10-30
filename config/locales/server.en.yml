@@ -39,7 +39,6 @@ en:
     rsc_high_risk_hold_seconds: "Minimum high-risk manual close wait, default 0 (disabled). Automated exits remain available."
     rsc_crypto_daily_open_limit: "Crypto opening/increase orders per member per UTC+8 day; 0 is unlimited. Closes never count or block; canceled opening orders count."
     rsc_crypto_symbol_daily_open_limit: "Crypto opening/increase orders per member and instrument per UTC+8 day; 0 is unlimited. Closes are exempt."
-    rsc_crypto_confirmation_delay_seconds: "Extra seconds before confirming crypto openings, default 0. Execution always requires a fresh source quote newer than submission. No extra delay for closes."
     rsc_crypto_extra_slippage_enabled: "Add 0.02%–0.05% random adverse slippage even with a valid bid/ask book; default off. Missing/invalid books retain conservative slippage."
     rsc_market_sync_batch: Maximum instruments per background sync batch
     rsc_twelve_data_delay_seconds: Quote delay in seconds for your Twelve Data subscription

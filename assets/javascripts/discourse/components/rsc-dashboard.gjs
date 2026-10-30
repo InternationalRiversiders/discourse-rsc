@@ -283,11 +283,8 @@ export default class RscDashboard extends Component {
   }
   get forexFee() { return Number(this.selected?.fee_bps || 0) / 100; }
   get executionHint() {
-    if (this.selected?.execution_mode === "immediate") { return this.selected?.category === "forex" ? "开仓、平仓均使用当前新鲜且核验通过的报价直接成交，无需等待下一笔报价。" : "按当前可用行情成交。"; }
-    if (this.selected?.execution_mode !== "crypto_confirmation") { return "等待提交之后的新报价确认；提交后 10 秒内可撤单。普通仓位成交后没有额外持仓锁定。"; }
-    const delay = this.siteSettings.rsc_crypto_confirmation_delay_seconds;
-    const hold = this.siteSettings.rsc_high_risk_hold_seconds;
-    return `${delay > 0 ? `至少等待 ${delay} 秒，并等到` : "等待"}提交之后的新报价确认；成交前可撤单。${Number(this.leverage) > 10 && hold > 0 ? `高杠杆仓位从开仓提交起锁定 ${hold} 秒。` : "没有额外持仓锁定。"}`;
+    if (this.selected?.execution_mode === "immediate") { return this.selected?.category === "forex" ? "开仓、平仓均使用当前新鲜且核验通过的报价直接成交，无需等待下一笔报价。" : "按当前新鲜有效的买入价／卖出价直接成交，无需等待下一笔报价。"; }
+    return "等待提交之后的新报价确认；提交后 10 秒内可撤单。普通仓位成交后没有额外持仓锁定。";
   }
   get positionLimitHint() {
     return Number(this.leverage) > 10
@@ -445,8 +442,17 @@ export default class RscDashboard extends Component {
         data: { ...data, request_id: requestId },
       });
       this.requestIds.delete(key);
-      this.notice = result.waiting_quote ? "平仓委托已提交：等待有效报价后自动执行，可在委托记录中撤单。有效期 30 分钟，期间价格和盈亏仍会变化。" : uiText("saved");
-      await this.refresh().catch(() => {});
+      this.notice = result.status === "filled" ? "已成交。" : result.status === "rejected" ? "委托未成交，请查看委托记录中的原因。" : result.waiting_quote ? "平仓委托已提交：等待有效报价后自动执行，可在委托记录中撤单。有效期 30 分钟，期间价格和盈亏仍会变化。" : uiText("saved");
+      // Fetch account state without another provider refresh. Advance the state
+      // generation now so an older in-flight read cannot overwrite this result.
+      const successNotice = this.notice;
+      const reload = this.loadState(false);
+      const generation = this.stateGeneration;
+      void reload.catch(() => {
+        if (!this.isDestroying && !this.isDestroyed && this.notice === successNotice && generation === this.stateGeneration) {
+          this.notice = `${successNotice} 页面数据暂未更新，请刷新查看；无需重复提交。`;
+        }
+      });
       return result;
     } catch (error) {
       this.error = extractError(error);

@@ -20,19 +20,19 @@ class TradingUxTest < TradingPolicyTest
       first=coin('FIRST');second=coin('SECOND')
       opened=submit(first,leverage:100);travel 1.second;advance_quote(first)
       assert_equal 'filled',opened.reload.status
-      assert_equal 'pending',submit(second,leverage:100).status
+      assert_equal 'filled',submit(second,leverage:100).status
       assert_nil R::Risk.hold_until(R::Position.first)
       closed=submit(first,side:'close');travel 1.second;advance_quote(first)
       assert_equal 'filled',closed.reload.status
       assert_nil R::Risk.high_risk_cooldown_until(@alice.id)
-      assert_equal 'pending',submit(first,leverage:100).status
+      assert_equal 'filled',submit(first,leverage:100).status
       assert_equal 0,R::Entry.sum(:units)
     end
   end
 
   def test_ux_pending_high_risk_orders_share_budget_without_double_counting
     fund;SiteSetting.rsc_high_risk_enabled=true;first=coin('FIRST');second=coin('SECOND')
-    order=submit(first,quantity:'200',leverage:100)
+    order=legacy_pending_order(first,quantity:'200',leverage:100,high_risk:true)
     budget=R::Risk.high_risk_status(@alice.id)[:budget]
     assert_equal '1000',budget[:equity]
     assert_equal '200',budget[:used_margin]
@@ -47,7 +47,7 @@ class TradingUxTest < TradingPolicyTest
   def test_ux_actual_ask_price_is_checked_against_budget_before_filling
     travel_to(Time.utc(2026,10,7,15)) do
       fund;SiteSetting.rsc_high_risk_enabled=true;item=coin
-      order=submit(item,quantity:'250',leverage:100)
+      order=legacy_pending_order(item,quantity:'250',leverage:100,high_risk:true)
       travel 1.second
       item.update!(quote:quote('100').merge('bid'=>'100','ask'=>'100.01'))
       R::Exchange.process(item.id)

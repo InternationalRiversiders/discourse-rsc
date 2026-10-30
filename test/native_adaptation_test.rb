@@ -13,21 +13,21 @@ class NativeAdaptationTest < NativeBusinessTest
   end
 
   def test_crypto_cancellation_window_and_provider_error
-    fund;stock=instrument;stock.update!(category:"crypto");pending=order(stock)
+    fund;stock=instrument;stock.update!(category:"crypto");pending=legacy_pending_order(stock)
     assert R::Views.order(pending)[:can_cancel]
     R::Exchange.cancel(actor:@alice,order_id:pending.id,request_id:SecureRandom.uuid)
     assert_equal "canceled",pending.reload.status
-    pending=order(stock);stock.update!(provider_error:"provider_http_429")
+    pending=legacy_pending_order(stock);stock.update!(provider_error:"provider_http_429")
     R::Exchange.cancel(actor:@alice,order_id:pending.id,request_id:SecureRandom.uuid)
     assert_equal "1000",R::Account.wallet(@alice.id).balance
   end
 
   def test_crypto_standard_hold_is_removed
-    fund;stock=instrument;stock.update!(category:"crypto");pending=order(stock)
+    fund;stock=instrument;stock.update!(category:"crypto");pending=legacy_pending_order(stock)
     pending.update!(created_at:2.minutes.ago,execute_at:1.second.ago);stock.update!(quote:quote("100"));R::Exchange.process(stock.id)
     position=R::Position.first;assert_nil position.hold_until
     result=R::Exchange.submit(actor:@alice,instrument_id:stock.id,side:"close",quantity:"1",leverage:1,request_id:SecureRandom.uuid)
-    assert_equal "pending",result["status"]
+    assert_equal "filled",result["status"]
   end
 
   def test_protection_must_be_profitable_and_precede_liquidation
@@ -44,7 +44,7 @@ class NativeAdaptationTest < NativeBusinessTest
     stock.update!(quote:stock.quote.merge("received_at"=>1.hour.ago.iso8601))
     R::Exchange.add_margin(actor:@alice,position_id:position.id,amount:"500",request_id:SecureRandom.uuid)
     stock.update!(quote:quote("100"))
-    assert_equal "pending",order(stock,quantity:"5").status
+    assert_equal "filled",order(stock,quantity:"5").status
     assert_equal 0,R::Entry.sum(:units)
   end
 
@@ -197,7 +197,7 @@ class NativeAdaptationTest < NativeBusinessTest
     assert_equal R::Amount.parse('120'),R::Position.first.take_profit_units
     assert_equal '100',item.details['gross']
     R::Exchange.submit(actor:@alice,instrument_id:stock.id,side:'close',quantity:'1',leverage:1,request_id:SecureRandom.uuid)
-    stock.update!(category:'crypto');pending=order(stock)
+    stock.update!(category:'crypto');pending=legacy_pending_order(stock)
     pending.update!(created_at:6.minutes.ago,execute_at:1.second.ago);stock.update!(quote:quote('110'));R::Exchange.process(stock.id)
     assert_equal 'rejected',pending.reload.status;assert_equal 'price_moved',pending.details['error']
     assert_equal 0,R::Entry.sum(:units)

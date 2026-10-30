@@ -23,6 +23,16 @@ class NativeBusinessTest < DiscourseSmokeTest
       "session_start" => 1.hour.ago.iso8601, "session_end" => 8.hours.from_now.iso8601 }
   end
 
+  # Create a real reserved order in the pre-immediate-execution shape.
+  def legacy_pending_order(item, **options)
+    original=R::TradingRules.method(:delayed?)
+    R::TradingRules.define_singleton_method(:delayed?) { |candidate| candidate.id == item.id || original.call(candidate) }
+    result=R::Exchange.submit(**{actor:@alice,instrument_id:item.id,side:'long',quantity:'1',leverage:5,request_id:SecureRandom.uuid}.merge(options))
+    R::Order.find(result['order_id'])
+  ensure
+    R::TradingRules.define_singleton_method(:delayed?,original)
+  end
+
   def fill(instrument, order)
     order.update!(created_at: 6.minutes.ago, execute_at: 1.second.ago)
     instrument.update!(quote: quote("100"))

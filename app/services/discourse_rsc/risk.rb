@@ -44,7 +44,9 @@ module DiscourseRsc
     # including after the activity ends; all positions still inform equity.
     def self.portfolio(user_id, excluding_order: nil)
       positions = Position.where(user_id: user_id).includes(:instrument).to_a
-      pending = Order.where(user_id: user_id, status: "pending").where.not(side: "close").includes(:instrument).to_a
+      # A synchronous opening is reserved while still executing in this same
+      # transaction. Count that cash as equity before excluding its margin.
+      pending = Order.where(user_id: user_id, status: %w[pending executing]).where.not(side: "close").includes(:instrument).to_a
       equity = Account.wallet_snapshot(user_id).balance_units.to_i + pending.sum { |o| o.reserved_units.to_i }
       positions.each do |position|
         begin

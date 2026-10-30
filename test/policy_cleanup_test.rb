@@ -16,7 +16,7 @@ class PolicyCleanupTest < TradingPolicyTest
       R::Order.create!(user_id: @alice.id, instrument_id: other.id, side: 'long', leverage: 1,
         status: 'pending', quantity_units: R::Amount::UNIT, execute_at: Time.current, expires_at: 1.hour.from_now, details: {})
     end
-    assert_equal 'pending', submit(item, side: 'close').status
+    assert_equal 'filled', submit(item, side: 'close').status
     assert_equal 0, R::Entry.sum(:units)
   end
 
@@ -26,7 +26,7 @@ class PolicyCleanupTest < TradingPolicyTest
     opened = submit(item)
     opened.update!(created_at: 1.second.ago)
     advance_quote(item)
-    pending = submit(item)
+    pending = legacy_pending_order(item,leverage:10)
     before = R::Account.wallet(@alice.id).balance
     assert_equal 'order_pending', assert_raises(R::Error) { submit(item, side: 'close') }.code
     assert_equal 'position_unavailable', assert_raises(R::Error) {

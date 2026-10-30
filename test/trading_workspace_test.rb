@@ -12,7 +12,8 @@ class TradingWorkspaceTest < MigrationFeaturesTest
     assert_empty empty[:pending]
     assert_nil empty[:cooldown_until]
     assert_equal before,[R::Account.count,R::Journal.count,R::Entry.count]
-    result=R::Exchange.submit(actor:@alice,instrument_id:stock.id,side:'long',quantity:'1',leverage:100,high_risk:true,request_id:SecureRandom.uuid)
+    legacy=legacy_pending_order(stock,quantity:'1',leverage:100,high_risk:true)
+    result={'order_id'=>legacy.id}
     pending=R::Risk.high_risk_status(@alice.id)
     assert_equal [stock.id],pending[:pending].map { |p| p[:instrument_id] }
     assert_empty R::Risk.high_risk_status(@bob.id)[:pending]

@@ -57,24 +57,25 @@ class TradingPolicyTest < MigrationFeaturesTest
       assert_equal 0,R::Position.count
       # Existing close records do not consume a new day's optional opening cap.
       R::Order.where(side:'long').update_all(created_at:1.day.ago)
-      assert_equal 'pending',submit(item).status
+      assert_equal 'filled',submit(item).status
     end
   end
 
-  def test_policy_crypto_confirms_only_with_new_source_quote_and_can_cancel
+  def test_policy_crypto_fills_current_quote_and_legacy_orders_can_still_cancel
     travel_to(Time.utc(2026,10,7,15)) do
-      fund; item=coin; opened=submit(item)
+      fund;item=coin
+      travel 30.seconds
+      opened=submit(item)
+      assert_equal 'filled',opened.status
       assert_equal opened.created_at,opened.execute_at
-      R::Exchange.process(item.id)
-      assert_equal 'pending',opened.reload.status
-      assert R::Views.order(opened)[:can_cancel]
-      R::Exchange.cancel(actor:@alice,order_id:opened.id,request_id:SecureRandom.uuid)
-      assert_equal '1000',R::Account.wallet(@alice.id).balance
-      another=submit(item)
-      travel 1.second; advance_quote(item)
-      assert_equal 'filled',another.reload.status
+      assert_operator Time.iso8601(item.quote['source_time']),:<,opened.created_at
+      refute R::Views.order(opened)[:can_cancel]
       assert_nil R::Position.first.hold_until
-      assert_nil R::Views.position(R::Position.first)[:hold_until]
+      pending=legacy_pending_order(item,leverage:10)
+      assert R::Views.order(pending)[:can_cancel]
+      R::Exchange.cancel(actor:@alice,order_id:pending.id,request_id:SecureRandom.uuid)
+      assert_equal 'canceled',pending.reload.status
+      assert_equal 1,R::Position.count
     end
   end
 
@@ -89,7 +90,7 @@ class TradingPolicyTest < MigrationFeaturesTest
       assert_nil R::Views.position(position)[:hold_until]
       assert_equal before,position.reload.attributes.slice('quantity_units','average_units','margin_units')
       assert_equal ledger,R::Journal.count
-      assert_equal 'pending',submit(item,side:'close').status
+      assert_equal 'filled',submit(item,side:'close').status
     end
   end
 
@@ -109,7 +110,7 @@ class TradingPolicyTest < MigrationFeaturesTest
       assert_equal 'high_risk_cooldown',assert_raises(R::Error) { submit(item,leverage:100) }.code
       travel 301.seconds; advance_quote(item)
       assert_nil R::Risk.high_risk_cooldown_until(@alice.id)
-      assert_equal 'pending',submit(item,leverage:100).status
+      assert_equal 'filled',submit(item,leverage:100).status
       SiteSetting.rsc_high_risk_hold_seconds=0
       SiteSetting.rsc_high_risk_cooldown_seconds=0
       assert_nil R::Risk.high_risk_cooldown_until(@alice.id)
@@ -122,12 +123,12 @@ class TradingPolicyTest < MigrationFeaturesTest
     SiteSetting.rsc_high_risk_margin_percent=30
     R::Risk.check!(@alice.id,first,100,R::Amount.parse('251'))
     submit(first,leverage:100)
-    assert_equal 'pending',submit(second,leverage:100).status
+    assert_equal 'filled',submit(second,leverage:100).status
     budget=R::Risk.high_risk_status(@alice.id)[:budget]
     assert_equal '2',budget[:used_margin]
-    assert_equal '298',budget[:available_margin]
+    assert_equal '297.97',budget[:available_margin] # Two opening fees have now been paid.
     # Ordinary positions remain available even with a high-risk position pending.
-    assert_equal 'pending',submit(coin('THIRD'),quantity:'60').status
+    assert_equal 'filled',submit(coin('THIRD'),quantity:'60').status
   end
 
   def test_policy_delayed_markets_still_wait_for_source_timestamp_after_order
@@ -172,14 +173,13 @@ class TradingPolicyTest < MigrationFeaturesTest
     end
   end
 
-  def test_policy_optional_confirmation_delay_does_not_replace_freshness_check
+  def test_policy_current_crypto_quote_expires_without_spending
     travel_to(Time.utc(2026,10,7,15)) do
-      fund;item=coin;SiteSetting.rsc_crypto_confirmation_delay_seconds=30
-      opened=submit(item)
-      travel 1.second;advance_quote(item)
-      assert_equal 'pending',opened.reload.status
-      travel 30.seconds;advance_quote(item)
-      assert_equal 'filled',opened.reload.status
+      fund;item=coin
+      travel 121.seconds
+      assert_equal 'quote_stale',assert_raises(R::Error){submit(item)}.code
+      assert_equal 0,R::Order.count
+      assert_equal '1000',R::Account.wallet(@alice.id).balance
     end
   end
 
@@ -188,7 +188,7 @@ class TradingPolicyTest < MigrationFeaturesTest
       fund;item=coin
       assert_equal 'insufficient_balance',assert_raises(R::Error) { submit(item,quantity:'1000') }.code
       assert_equal 0,R::Order.count
-      opened=submit(item)
+      opened=legacy_pending_order(item,leverage:10)
       travel 1.second;advance_quote(item,'106')
       assert_equal 'rejected',opened.reload.status
       assert_equal 'price_moved',opened.details['error']
@@ -200,7 +200,7 @@ class TradingPolicyTest < MigrationFeaturesTest
       assert_equal balance,R::Account.wallet(@alice.id).balance
       travel 121.seconds
       R::Exchange.process(item.id)
-      assert_equal 'pending',R::Order.find(first['order_id']).status
+      assert_equal 'filled',R::Order.find(first['order_id']).status
       assert_equal 0,R::Entry.sum(:units)
     end
   end

@@ -56,7 +56,7 @@ class ForexPrecisionTest < MigrationFeaturesTest
       item.update!(quote:item.quote.merge('delay_seconds'=>900))
       assert_nil R::MarketListing.execution_prices(item)
       item.update!(category:'crypto')
-      assert_nil R::MarketListing.execution_prices(item)
+      assert_equal({'long'=>'0.00634','short'=>'0.00626'},R::MarketListing.execution_prices(item))
     end
   end
 

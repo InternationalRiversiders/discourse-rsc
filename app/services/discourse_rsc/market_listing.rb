@@ -4,9 +4,9 @@ module DiscourseRsc
     # Share the exchange's deterministic bid/ask (or tick-spread) calculation.
     # Delayed trades reserve against the reference price with their own buffer.
     def self.execution_prices(item)
-      return if item.category == "crypto" || TradingRules.delayed?(item)
+      return if TradingRules.delayed?(item)
       price = Exchange.price!(item)
-      %w[long short].to_h { |side| [side, Amount.format(Exchange.execution_price(item, side, price))] }
+      %w[long short].to_h { |side| [side, Amount.format(Exchange.execution_price(item, side, price, preview: true))] }
     rescue Error
       nil
     end
@@ -74,7 +74,7 @@ module DiscourseRsc
           minimum_notional: nil,
           execution_prices: execution ? execution_prices(item) : nil,
           popularity: counts.fetch(item.id, 0), last_order_at: last[item.id], catalog_rank: metadata["catalog_rank"]&.to_i, catalog_id: metadata["catalog_id"]&.to_i || item.id,
-          fee_bps: ForexActivity.fee_bps(item, position: positions[item.id]), fx_activity: ForexActivity.active_for?(item), margin_budget_exempt: ForexActivity.active_for?(item), close_execution_mode: Exchange.forex_exit?(item, "close") ? "immediate" : nil, max_leverage: (item.category == "crypto" || ForexActivity.active_for?(item)) && SiteSetting.rsc_high_risk_enabled ? 100 : 10, currency_name: item.category == "forex" ? ForexActivity.currency_name(item) : nil, close_only: TradingRules.close_only?(item), execution_mode: item.category == "crypto" ? "crypto_confirmation" : (TradingRules.delayed?(item) ? "delayed_confirmation" : "immediate"), history: item.history.last(16), minimum: Amount.format(item.minimum_units), step: Amount.format(item.step_units) }
+          fee_bps: ForexActivity.fee_bps(item, position: positions[item.id]), fx_activity: ForexActivity.active_for?(item), margin_budget_exempt: ForexActivity.active_for?(item), close_execution_mode: item.category == "crypto" || Exchange.forex_exit?(item, "close") ? "immediate" : nil, max_leverage: (item.category == "crypto" || ForexActivity.active_for?(item)) && SiteSetting.rsc_high_risk_enabled ? 100 : 10, currency_name: item.category == "forex" ? ForexActivity.currency_name(item) : nil, close_only: TradingRules.close_only?(item), execution_mode: TradingRules.delayed?(item) ? "delayed_confirmation" : "immediate", history: item.history.last(16), minimum: Amount.format(item.minimum_units), step: Amount.format(item.step_units) }
       end.sort_by do |row|
         [-row[:popularity], -(row[:last_order_at]&.to_f || 0), row[:quote]["price"].nil? ? 1 : 0, row[:catalog_rank] || 2147483647, row[:catalog_id]]
       end

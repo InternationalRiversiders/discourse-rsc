@@ -356,6 +356,14 @@ module DiscourseRsc
       instrument = Instrument.find(instrument_id)
       return instrument if Safety.read_only? || !SiteSetting.rsc_market_data_enabled ||
         !instrument.active || !%w[yahoo coinbase twelve_data kraken okx].include?(instrument.provider)
+      if %i[trade exit].include?(purpose) && instrument.category == 'crypto'
+        begin
+          Exchange.price!(instrument, trading: true)
+          return instrument
+        rescue Error
+          # Missing/expired snapshots still take the normal bounded refresh path.
+        end
+      end
       # User submissions may reuse the already reviewed, fresh FX snapshot.
       # Background execution polling continues to refresh on its normal schedule;
       # Exchange rechecks freshness under the transaction lock before any fill.

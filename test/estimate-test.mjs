@@ -103,3 +103,14 @@ assert.ok(atomic(fullFx.reserve)<=atomic('1000'));
 assert.ok(atomic(fullFx.reserve)>atomic('999.99'));
 assert.equal(atomic(fullFx.reserve),atomic(fullFx.margin)+atomic(fullFx.fee));
 console.log('PASS immediate FX full balance has no pending-order buffer');
+
+// Immediate crypto uses the actual ask/bid, without the old 5% reservation.
+for (const side of ['long','short']) {
+  const coin={...spread,category:'crypto',execution_mode:'immediate'};
+  const qty=quantityForFraction(coin,'100','1000',4,side,'25');
+  const result=estimate(coin,qty,'100','1000',side,'25');
+  assert.ok(atomic(result.margin)<=atomic('25'));
+  assert.equal(atomic(result.reserve),atomic(result.margin)+atomic(result.fee));
+  assert.equal(atomic(result.gross),atomic(qty)*atomic(coin.execution_prices[side])/atomic('1'));
+}
+console.log('PASS immediate crypto bid/ask sizing and high-risk budget');

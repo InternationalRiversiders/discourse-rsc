@@ -52,9 +52,9 @@ module DiscourseRsc
         wallet = Account.wallet(actor.id)
         raise Error.new("wallet_frozen", status: 403) unless wallet.status == "active"
         delay = instrument.quote.fetch("delay_seconds", 0).to_i
-        delayed = instrument.category == "crypto" || TradingRules.delayed?(instrument) || waiting_quote
+        delayed = TradingRules.delayed?(instrument) || waiting_quote
         fee_bps = ForexActivity.fee_bps(instrument, position: position)
-        wait = instrument.category == "crypto" ? (side == "close" ? 0 : SiteSetting.rsc_crypto_confirmation_delay_seconds) : [[delay - 30, 30].max, 1800].min
+        wait = [[delay - 30, 30].max, 1800].min
         wait = 0 if !delayed || waiting_quote
         order = Order.create!(user_id: actor.id, instrument_id: instrument.id, side: side, leverage: leverage,
                               status: delayed ? "pending" : "executing", quantity_units: units,
@@ -70,7 +70,8 @@ module DiscourseRsc
           # Reserve at the upper edge of the 5% execution band, including fees.
           reserve = ceil_div(gross * 105, 100 * leverage) + ceil_div(gross * 105 * fee_bps, 1_000_000)
           unless delayed
-            immediate_gross = units * execution_price(instrument, side, price) / U
+            fill_price = execution_price(instrument, side, price)
+            immediate_gross = units * fill_price / U
             reserve = ceil_div(immediate_gross, leverage) + immediate_gross * fee_bps / 10_000
           end
           Risk.check!(actor.id, instrument, leverage, ceil_div(gross, leverage), excluding_order: order.id)
@@ -79,7 +80,7 @@ module DiscourseRsc
           order.update!(reserved_units: reserve)
         end
         unless delayed
-          side == "close" ? close_locked(instrument, order, position, price, "stock_closed") : open_locked(instrument, order, position, price)
+          side == "close" ? close_locked(instrument, order, position, price, "stock_closed") : open_locked(instrument, order, position, price, fill_price: fill_price)
         end
         { order_id: order.id, status: order.status, waiting_quote: waiting_quote }
       end
@@ -164,11 +165,13 @@ module DiscourseRsc
                                 status: "executing", quantity_units: position.quantity_units, details: { "automatic" => true })
           close_locked(instrument, order, position, price, kind)
         end
-        Order.where(instrument_id: instrument.id, status: "pending").where("execute_at <= ?", Time.current).order(:id).each do |order|
+        pending_orders = Order.where(instrument_id: instrument.id, status: "pending")
+        pending_orders = pending_orders.where("execute_at <= ?", Time.current) unless instrument.category == "crypto"
+        pending_orders.order(:id).each do |order|
           Risk.lock(order.user_id)
-          # Non-delayed FX uses the validated current quote for either direction,
-          # including pending openings created before immediate execution.
-          next unless immediate_forex?(instrument) || Time.iso8601(instrument.quote.fetch("source_time")) > order.created_at
+          # Crypto and non-delayed FX use the validated current quote, including
+          # pending orders created before immediate execution.
+          next unless instrument.category == "crypto" || immediate_forex?(instrument) || Time.iso8601(instrument.quote.fetch("source_time")) > order.created_at
           reference = order.details["reference_price"] && Amount.parse(order.details["reference_price"])
           if !order.details["waiting_quote"] && reference && (price - reference).abs * 100 > reference * 5
             refund_locked(order, "rejected", "price_moved")
@@ -243,8 +246,8 @@ module DiscourseRsc
       (value + divisor - 1) / divisor
     end
 
-    def self.open_locked(instrument, order, position, price)
-      price = execution_price(instrument, order.side, price)
+    def self.open_locked(instrument, order, position, price, fill_price: nil)
+      price = fill_price || execution_price(instrument, order.side, price)
       quantity = order.quantity_units.to_i
       gross = quantity * price / U
       margin = ceil_div(gross, order.leverage)
@@ -304,12 +307,12 @@ module DiscourseRsc
       order.update!(status: "filled", details: order.details.merge("price" => Amount.format(price), "payout" => Amount.format(payout), "pnl" => Amount.format(profit), "fee" => Amount.format(fee), "fee_bps" => fee_bps, "margin" => Amount.format(margin), "reason" => kind, "gross" => Amount.format(quantity * price / U)))
     end
 
-    def self.execution_price(instrument, side, price)
+    def self.execution_price(instrument, side, price, preview: false)
       buy = side == "long"
       market = instrument.quote[buy ? "ask" : "bid"]
       execution = market.present? ? Amount.positive(market) : price
       if instrument.category == "crypto" && (SiteSetting.rsc_crypto_extra_slippage_enabled || !reliable_book?(instrument.quote))
-        bps = 2 + SecureRandom.random_number(4)
+        bps = preview ? 5 : 2 + SecureRandom.random_number(4)
         execution = execution * (buy ? 10_000 + bps : 10_000 - bps) / 10_000
       elsif market.blank? && instrument.category != "forex"
         # Match the legacy guard against alternating rounded stock ticks.
