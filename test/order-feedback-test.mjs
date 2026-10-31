@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { webcrypto } from 'node:crypto';
 const source=fs.readFileSync(new URL('../assets/javascripts/discourse/components/rsc-dashboard.gjs',import.meta.url),'utf8');
 // Exercise the real component's asynchronous methods with controllable requests.
-const methods=source.slice(source.indexOf('  async loadState('),source.indexOf('  @action transfer('));
+const methods=source.slice(source.indexOf('  async loadState('),source.indexOf('  @action trade(')).replace(/@action /g, '');
 function fixture(){
   const requests=[];
   const ajax=(url,options)=>new Promise((resolve,reject)=>requests.push({url,options,resolve,reject}));

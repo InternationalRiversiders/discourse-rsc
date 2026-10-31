@@ -1,5 +1,7 @@
 import { formatDateTime } from "../lib/campus-time";
 import RscNavigation from "./rsc-navigation";
+import RscSportsPanel from "./rsc-sports-panel";
+import RscWalletPanel from "./rsc-wallet-panel";
 import ForumUser from "./rsc-user";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import Component from "@glimmer/component";
@@ -12,10 +14,7 @@ import { LinkTo } from "@ember/routing";
 import { eq, not } from "discourse/truth-helpers";
 import { ajax } from "discourse/lib/ajax";
 import { extractError } from "discourse/lib/ajax-error";
-import RscPackets from "./rsc-packets";
-import RscLedger from "./rsc-ledger";
 import RscOrders from "./rsc-orders";
-import RscTeam from "./rsc-team";
 import RscHistory from "./rsc-history";
 import RscDiscovery from "./rsc-discovery";
 import RscMarketList from "./rsc-market-list";
@@ -27,7 +26,7 @@ import {
   formatPrice,
   signedAmount,
 } from "../lib/rsc-format";
-import { estimate, payout, quantityForFraction, quantityForNotional, notionalForQuantity, openingQuantity, atomic } from "../lib/rsc-estimate";
+import { estimate, quantityForFraction, quantityForNotional, notionalForQuantity, openingQuantity, atomic } from "../lib/rsc-estimate";
 import { marketView, canRefreshForTrade } from "../lib/rsc-market";
 import { i18n } from "discourse-i18n";
 
@@ -56,7 +55,6 @@ const points = (history) => {
 };
 
 export default class RscDashboard extends Component {
-  @service router;
   @service siteSettings;
   @tracked snapshot;
   @tracked busy = false;
@@ -66,30 +64,16 @@ export default class RscDashboard extends Component {
   @tracked marketDetailOpen = false;
   @tracked orderTicketOpen = false;
   @tracked quoteClock = Date.now();
-  @tracked recipient = "";
-  @tracked amount = "";
   @tracked quantity = "1";
   @tracked notional = "";
   @tracked leverage = "1";
   @tracked side = "long";
   @tracked highRisk = false;
   @tracked margins = {};
-  @tracked stake = "10";
-  @tracked packetAmount = "1";
-  @tracked packetCount = "5";
-  @tracked packetMode = "fixed";
-  @tracked packetMessage = "";
-  @tracked packetDays = "1";
-  @tracked packetMinimum = "0.01";
-  @tracked packetMaximum = "100";
-  @tracked league = "all";
-  @tracked predictionDrafts = {};
   @tracked protections = {};
   @tracked closeQuantities = {};
   @tracked takeProfit = "";
   @tracked stopLoss = "";
-  @tracked sport = "all";
-  @tracked matchFilter = "open";
   @tracked marketQuery = {};
   @tracked marketFilterRevision = 0;
   stateGeneration = 0;
@@ -103,7 +87,6 @@ export default class RscDashboard extends Component {
     if (page) { this.marketQuery = { market_category: page.category, market_search: page.search, market_sort: page.sort, market_page: page.pagination.page }; }
     const requested = this.args.model.focus?.instrument_id;
     if (requested && this.args.model.instruments.some((item) => String(item.id) === requested)) { this.selectMarket(requested); }
-    if (this.args.model.focus?.match_id) { this.matchFilter = "all"; }
     this.clockTimer = setInterval(() => {
       if (this.args.section === "market" && !document.hidden) { this.quoteClock = Date.now(); }
     }, 1000);
@@ -115,6 +98,7 @@ export default class RscDashboard extends Component {
     }, this.args.section === "market" ? 15000 : 60000);
   }
   willDestroy() {
+    this.stateGeneration++;
     super.willDestroy(...arguments);
     clearInterval(this.timer);
     clearInterval(this.clockTimer);
@@ -123,9 +107,6 @@ export default class RscDashboard extends Component {
     return this.snapshot || this.args.model;
   }
   get compactHeader() { return ["packet", "market"].includes(this.args.section); }
-  get ledgerRevision() {
-    return this.data.entries[0]?.id;
-  }
   get selected() {
     return (
       this.data.instruments.find(
@@ -313,42 +294,6 @@ export default class RscDashboard extends Component {
     this.selectedId = "";
     requestAnimationFrame(() => document.querySelector("#rsc-positions")?.scrollIntoView({ block: "start" }));
   }
-  get leagues() {
-    return [...new Map(this.data.matches.map((match) => [match.league, { id: match.league, label: match.league_name || match.league }])).values()];
-  }
-  get matches() {
-    return this.data.matches
-      .filter((match) => (this.league === "all" || match.league === this.league) && (this.sport === "all" || match.sport === this.sport))
-      .filter((match) => this.matchFilter === "all" || (this.matchFilter === "mine" && !!match.prediction) || (this.matchFilter === "open" && !match.locked_reason) || (this.matchFilter === "closed" && !!match.locked_reason && ["live","finished","canceled"].includes(match.status)) || (this.matchFilter === "unavailable" && !!match.locked_reason && ["scheduled","postponed"].includes(match.status)) || (this.matchFilter === "popular" && match.participants > 0))
-      .sort((a,b) => this.matchFilter === "popular" ? b.participants-a.participants : 0)
-      .map((match) => {
-        const prediction = match.prediction;
-        const draft = this.predictionDrafts[match.id] || {};
-        const fresh =
-          match.odds_at &&
-          Date.now() - Date.parse(match.odds_at) <=
-            this.data.odds_max_age_hours * 3600000;
-        return {
-          ...match,
-          prediction,
-          draftStake: draft.stake ?? prediction?.stake ?? this.stake,
-          draftPick: draft.pick ?? prediction?.pick ?? "home",
-          potentialPayout: payout(draft.stake ?? prediction?.stake ?? this.stake, match.odds[draft.pick ?? prediction?.pick ?? "home"]),
-          locked:
-            this.data.read_only || this.data.wallet.status !== "active" ||
-            match.status !== "scheduled" ||
-            Date.parse(match.starts_at) <= Date.now() ||
-            !fresh,
-          choices: ["home", ...(match.allow_draw ? ["draw"] : []), "away"]
-            .filter((pick) => match.odds[pick])
-            .map((pick) => ({
-              pick,
-              title: uiText(pick),
-              odds: match.odds[pick],
-            })),
-        };
-      });
-  }
   get positions() {
     return this.data.positions.map((position) => ({
       ...position,
@@ -363,15 +308,6 @@ export default class RscDashboard extends Component {
   @action set(field, event) {
     this[field] = event.target.value;
   }
-  @action draft(matchId, field, event) {
-    this.predictionDrafts = {
-      ...this.predictionDrafts,
-      [matchId]: {
-        ...this.predictionDrafts[matchId],
-        [field]: event.target.value,
-      },
-    };
-  }
   @action protection(positionId, field, event) {
     this.protections = {
       ...this.protections,
@@ -382,6 +318,7 @@ export default class RscDashboard extends Component {
     };
   }
   @action async refresh() {
+    if (this.isDestroying || this.isDestroyed) { return; }
     if (this.refreshing) {
       return this.refreshing;
     }
@@ -409,10 +346,12 @@ export default class RscDashboard extends Component {
         this.selected && this.data.market_data_enabled && !this.data.read_only) {
       await ajax(`/rsc/instruments/${this.selected.id}/refresh.json`, { type: "POST" }).catch(() => {});
     }
+    if (this.isDestroying || this.isDestroyed || generation !== this.stateGeneration) { return; }
     const state = await ajax("/rsc/state.json", { data: {
       ...(this.args.model.focus || {}), section: this.args.section === "market" ? "market" : this.args.section === "sports" ? "sports" : this.args.section === "packet" ? "packet" : "wallet",
       ...this.marketQuery, ...(this.selectedId ? { instrument_id: this.selectedId } : {}),
     } });
+    if (this.isDestroying || this.isDestroyed || generation !== this.stateGeneration) { return; }
     if (this.args.model.packet) {
       state.packet = await ajax(
         `/rsc/packet/${this.args.model.packet.token}.json`
@@ -422,7 +361,7 @@ export default class RscDashboard extends Component {
       this.snapshot = state;
     }
   }
-  async send(path, data) {
+  @action async send(path, data) {
     if (this.data.read_only) {
       this.error = uiText("read_only");
       return;
@@ -442,6 +381,7 @@ export default class RscDashboard extends Component {
         data: { ...data, request_id: requestId },
       });
       this.requestIds.delete(key);
+      if (this.isDestroying || this.isDestroyed) { return result; }
       this.notice = result.status === "filled" ? "已成交。" : result.status === "rejected" ? "委托未成交，请查看委托记录中的原因。" : result.waiting_quote ? "平仓委托已提交：等待有效报价后自动执行，可在委托记录中撤单。有效期 30 分钟，期间价格和盈亏仍会变化。" : uiText("saved");
       // Fetch account state without another provider refresh. Advance the state
       // generation now so an older in-flight read cannot overwrite this result.
@@ -455,17 +395,10 @@ export default class RscDashboard extends Component {
       });
       return result;
     } catch (error) {
-      this.error = extractError(error);
+      if (!this.isDestroying && !this.isDestroyed) { this.error = extractError(error); }
     } finally {
-      this.busy = false;
+      if (!this.isDestroying && !this.isDestroyed) { this.busy = false; }
     }
-  }
-  @action transfer(event) {
-    event.preventDefault();
-    return this.send("transfers", {
-      recipient_username: this.recipient,
-      amount: this.amount,
-    });
   }
   @action trade(event) {
     event.preventDefault();
@@ -498,33 +431,6 @@ export default class RscDashboard extends Component {
       take_profit: position.tp,
       stop_loss: position.sl,
     });
-  }
-  @action predict(match, event) {
-    event.preventDefault();
-    return this.send("predictions", {
-      match_id: match.id,
-      prediction_id: match.prediction?.id || "",
-      pick: match.draftPick,
-      stake: match.draftStake,
-    });
-  }
-  @action cancelPrediction(match) {
-    return this.send(`predictions/${match.prediction.id}/cancel`, {});
-  }
-  @action async createPacket(event) {
-    event.preventDefault();
-    const result = await this.send("packets", {
-      mode: this.packetMode,
-      count: this.packetCount,
-      amount: this.packetAmount,
-      message: this.packetMessage,
-      days: this.packetDays,
-      minimum: this.packetMinimum,
-      maximum: this.packetMode === "random" ? this.packetMaximum : undefined,
-    });
-    if (result) {
-      this.router.transitionTo("rsc.packet", result.token);
-    }
   }
   @action async copyPacket() {
     try { await navigator.clipboard.writeText(`${window.location.origin}/rsc/packets/${this.data.packet.token}`); this.notice = "红包链接已复制"; }
@@ -562,106 +468,7 @@ export default class RscDashboard extends Component {
           role="status"
         >{{this.notice}}</div>{{/if}}
       {{#if (eq @section "wallet")}}
-        <section class="rsc-card rsc-reward-summary"><h2>{{uiText
-              "today_reward"
-            }}
-            ·
-            {{this.data.reward.date}}</h2><div class="rsc-market-summary"><div
-            ><span>{{uiText "reward_login"}}</span><strong
-              >{{this.data.reward.login}} / 1</strong></div><div><span>{{uiText
-                  "reward_topics"
-                }}</span><strong>{{this.data.reward.topics}}</strong></div><div><span>{{uiText "reward_replies"}}</span><strong>{{this.data.reward.replies}}</strong></div><div
-            ><span>{{uiText "estimated_reward"}}</span><strong>{{formatAmount
-                  this.data.reward.estimated
-                }}
-                RSC</strong></div></div>{{#unless this.data.reward.enabled}}<p
-              class="rsc-muted"
-            >{{uiText "rewards_disabled"}}</p>{{/unless}}</section>
-        <div class="rsc-grid">
-          <section class="rsc-card rsc-transfer-card"><div
-              class="rsc-section-label"
-            ><span aria-hidden="true">↗</span>TRANSFER</div><h2>{{uiText
-                "transfer"
-              }}</h2><form {{on "submit" this.transfer}}>
-              <label>{{uiText "recipient"}}<input
-                  required
-                  value={{this.recipient}}
-                  {{on "input" (fn this.set "recipient")}}
-                  autocomplete="off"
-                /></label>
-              <label>{{uiText "amount"}}<input
-                  required
-                  inputmode="decimal"
-                  value={{this.amount}}
-                  {{on "input" (fn this.set "amount")}}
-                  placeholder="0.00"
-                /></label>
-              <button
-                class="btn btn-primary"
-                type="submit"
-                disabled={{this.writeDisabled}}
-              >{{uiText "transfer"}}</button>
-            </form></section>
-          <section class="rsc-card rsc-create-packet-card"><div
-              class="rsc-section-label"
-            ><span aria-hidden="true">✉</span>RED PACKET</div><h2>{{uiText
-                "create_packet"
-              }}</h2><form {{on "submit" this.createPacket}}>
-              <label>{{uiText "packet_mode"}}<select
-                  {{on "change" (fn this.set "packetMode")}}
-                ><option value="fixed">{{uiText "fixed"}}</option><option
-                    value="random"
-                  >{{uiText "random"}}</option></select></label>
-              <div class="rsc-fields"><label>{{#if
-                    (eq this.packetMode "fixed")
-                  }}{{uiText "per_share"}}{{else}}{{uiText
-                      "total"
-                    }}{{/if}}<input
-                    required
-                    inputmode="decimal"
-                    value={{this.packetAmount}}
-                    {{on "input" (fn this.set "packetAmount")}}
-                  /></label><label>{{uiText "count"}}<input
-                    required
-                    inputmode="numeric"
-                    value={{this.packetCount}}
-                    {{on "input" (fn this.set "packetCount")}}
-                  /></label></div>
-              <div class="rsc-fields"><label>{{uiText "packet_days"}}<select
-                    {{on "change" (fn this.set "packetDays")}}
-                  ><option value="1">1</option><option
-                      value="3"
-                    >3</option><option value="5">5</option><option
-                      value="7"
-                    >7</option><option
-                      value="30"
-                    >30</option></select></label></div>
-              {{#if (eq this.packetMode "random")}}<div
-                  class="rsc-fields"
-                ><label>{{uiText "packet_minimum"}}<input
-                      required
-                      inputmode="decimal"
-                      value={{this.packetMinimum}}
-                      {{on "input" (fn this.set "packetMinimum")}}
-                    /></label><label>{{uiText "packet_maximum"}}<input
-                      required
-                      inputmode="decimal"
-                      value={{this.packetMaximum}}
-                      {{on "input" (fn this.set "packetMaximum")}}
-                    /></label></div>{{/if}}
-              <label>{{uiText "message"}}<input
-                  maxlength="80"
-                  value={{this.packetMessage}}
-                  {{on "input" (fn this.set "packetMessage")}}
-                /></label><button
-                class="btn btn-primary"
-                type="submit"
-                disabled={{this.writeDisabled}}
-              >{{uiText "create_packet"}}</button>
-            </form></section>
-        </div>
-        <RscPackets />
-        <RscLedger @journalId={{this.args.model.focus.journal_id}} @revision={{this.ledgerRevision}} />
+        <RscWalletPanel @data={{this.data}} @busy={{this.busy}} @focus={{@model.focus}} @send={{this.send}} />
       {{else if (eq @section "market")}}
         <RscForexActivity @activity={{this.data.forex_activity}} @admin={{this.data.admin}} @readOnly={{this.data.read_only}} @browse={{this.showForexActivity}} @refresh={{this.refresh}} />
         <div
@@ -807,96 +614,7 @@ export default class RscDashboard extends Component {
         <p class="rsc-muted">持仓名义金额 {{formatAmount this.data.portfolio.notional}} RSC · 委托占用 {{formatAmount this.data.portfolio.reserved}} RSC</p>
         <RscOrders @orders={{this.data.orders}} @busy={{this.busy}} @cancel={{this.cancel}} />
       {{else if (eq @section "sports")}}
-        <div class="rsc-filter-bar rsc-sports-filters"><label>项目<select {{on "change" (fn this.set "sport")}}><option value="all">全部项目</option><option value="soccer">足球</option><option value="basketball">篮球</option></select></label><label>赛事筛选<select {{on "change" (fn this.set "matchFilter")}}><option value="open">可预测</option><option value="popular">热门</option><option value="closed">已截止</option><option value="unavailable">未开放</option><option value="mine">我的预测</option><option value="all">全部</option></select></label>
-        <label>{{uiText "league"}}<select
-            {{on "change" (fn this.set "league")}}
-          ><option value="all">{{uiText "category_all"}}</option>{{#each
-              this.leagues
-              as |league|
-            }}<option
-                value={{league.id}}
-              >{{league.label}}</option>{{/each}}</select></label></div>
-        <div class="rsc-grid">{{#each this.matches key="id" as |match|}}<article
-              class="rsc-card rsc-match" id="rsc-match-{{match.id}}"
-            ><div class="rsc-match-meta"><span
-                  class="rsc-eyebrow"
-                >{{match.league_name}}</span><span
-                  class="rsc-state-pill"
-                  data-status={{match.status}}
-                >{{uiText match.status}}</span></div>
-              {{#if match.stage}}<p class="rsc-muted">{{match.stage}}</p>{{/if}}
-              <h2 class="rsc-teams"><RscTeam @name={{match.home_name}} @original={{match.home}} @logo={{match.home_logo}} /><span
-                  class="rsc-versus"
-                >VS</span><RscTeam @name={{match.away_name}} @original={{match.away}} @logo={{match.away_logo}} @away={{true}} /></h2>
-              <p class="rsc-match-time">{{when match.starts_at}} · {{match.participants}} 人参与</p>
-              {{#if match.venue}}<p class="rsc-muted">{{match.venue}}</p>{{/if}}
-              {{#if match.status_detail}}<p class="rsc-muted">{{match.status_detail}}</p>{{/if}}
-              <p>比分 {{match.score.home}} : {{match.score.away}}</p><p class="rsc-muted">赔率更新 {{when match.odds_at}}{{#if match.locked_reason}} · {{#if (eq match.locked_reason "odds_unavailable")}}赔率暂不可用{{else}}赛事已封盘{{/if}}{{/if}}</p><form
-                {{on "submit" (fn this.predict match)}}
-              ><div class="rsc-odds">{{#each match.choices as |choice|}}<label
-                      class={{if
-                        (eq choice.pick match.draftPick)
-                        "selected"
-                        ""
-                      }}
-                    ><input
-                        type="radio"
-                        name={{match.id}}
-                        value={{choice.pick}}
-                        checked={{eq choice.pick match.draftPick}}
-                        disabled={{match.locked}}
-                        {{on "change" (fn this.draft match.id "pick")}}
-                      /><span>{{choice.title}}</span><strong
-                      >{{choice.odds}}</strong></label>{{/each}}</div><label
-                >{{uiText "stake"}}<input
-                    required
-                    inputmode="decimal"
-                    value={{match.draftStake}}
-                    disabled={{match.locked}}
-                    {{on "input" (fn this.draft match.id "stake")}}
-                  /></label><button
-                  class="btn btn-primary"
-                  type="submit"
-                  disabled={{if this.busy true match.locked}}
-                >{{#if match.locked}}{{uiText "locked"}}{{else if
-                    (eq match.prediction.status "pending")
-                  }}{{uiText "update_prediction"}}{{else}}{{uiText
-                      "predict"
-                    }}{{/if}}</button><p class="rsc-muted">预计返还 {{formatAmount match.potentialPayout}} RSC（含本金）</p></form>{{#if match.prediction}}<p
-                  class="rsc-prediction"
-                >{{uiText "your_prediction"}}:
-                  {{uiText match.prediction.pick}}
-                  ·
-                  {{formatAmount match.prediction.stake}}
-                  RSC @
-                  {{match.prediction.odds}}
-                  ·
-                  {{uiText
-                    match.prediction.status
-                  }} · 预计返还 {{formatAmount match.prediction.potential_payout}} RSC · 实际返还 {{formatAmount match.prediction.payout}} RSC</p>{{#if match.prediction.can_cancel}}<button type="button" class="btn btn-flat" disabled={{this.busy}} {{on "click" (fn this.cancelPrediction match)}}>{{uiText "cancel_prediction"}}</button>{{/if}}{{/if}}</article>{{else}}<p class="rsc-empty">{{uiText
-                "no_matches"
-              }}</p>{{/each}}</div>
-        <section class="rsc-card"><h2>{{uiText "predictions"}}</h2><div
-            class="rsc-scroll"
-          ><table><thead><tr><th>{{uiText "match"}}</th><th>{{uiText
-                      "pick"
-                    }}</th><th>{{uiText "stake"}}</th><th>{{uiText
-                      "odds"
-                    }}</th><th>{{uiText "status"}}</th><th>{{uiText
-                      "payout"
-                    }}</th></tr></thead><tbody>{{#each
-                  this.data.predictions
-                  as |prediction|
-                }}<tr><td>{{prediction.match_name}}</td><td>{{uiText
-                        prediction.pick
-                      }}</td><td>{{formatAmount prediction.stake}}</td><td
-                    >{{prediction.odds}}</td><td>{{uiText
-                        prediction.status
-                      }}</td><td>{{formatAmount
-                        prediction.payout
-                      }}</td></tr>{{else}}<tr><td colspan="6">{{uiText
-                        "empty"
-                      }}</td></tr>{{/each}}</tbody></table></div></section>
+        <RscSportsPanel @data={{this.data}} @busy={{this.busy}} @focus={{@model.focus}} @send={{this.send}} />
       {{else if (eq @section "packet")}}
         <section class="rsc-card rsc-packet"><p><ForumUser @user={{this.data.packet.sender_user}} @name={{this.data.packet.sender}} />
             ·
