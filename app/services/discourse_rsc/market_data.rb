@@ -332,6 +332,54 @@ module DiscourseRsc
 
     # Only exposed FX symbols need a faster queue. Reuse per-symbol locks,
     # freshness, session checks and the provider-wide pacing/backoff.
+    # One paced pass from 08:00 Beijing time, independent of US daylight saving.
+    # Redis progress survives worker restarts; normal polling owns later retries.
+    def self.forex_morning_key
+      "rsc:fx-morning:#{Time.current.in_time_zone('Asia/Shanghai').to_date}"
+    end
+
+    def self.forex_morning_due?
+      return false unless SiteSetting.rsc_enabled && SiteSetting.rsc_native_trial_enabled && SiteSetting.rsc_market_data_enabled
+      return false if Safety.read_only?
+      local = Time.current.in_time_zone('Asia/Shanghai')
+      local.hour == 8 && (1..5).cover?(local.wday) && !Discourse.redis.exists?("#{forex_morning_key}:complete")
+    end
+
+    def self.sync_forex_morning
+      return [] unless forex_morning_due?
+      key = forex_morning_key
+      return [] unless Discourse.redis.set("#{key}:batch", '1', nx: true, ex: 60)
+      completed = Discourse.redis.smembers("#{key}:attempted").map(&:to_i)
+      pending_ids = Order.where(status: 'pending').distinct.pluck(:instrument_id)
+      held_ids = Position.distinct.pluck(:instrument_id)
+      # The daily pass does not turn the limited backup into a catalogue feed.
+      items = Instrument.where(active: true, category: 'forex', provider: 'yahoo').where.not(id: completed).to_a
+      items.reject! { |item| MarketSessions.closed?(item) }
+      items.sort_by! { |item| [pending_ids.include?(item.id) ? 0 : held_ids.include?(item.id) ? 1 : 2, item.synced_at || Time.at(0), item.id] }
+      if items.empty?
+        Discourse.redis.set("#{key}:complete", Time.current.iso8601, ex: 2.days.to_i)
+        return []
+      end
+      done = []
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 12
+      items.first(3).each do |item|
+        break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline || !forex_morning_due?
+        begin
+          # Reuse the normal quote lock, freshness cache, provider backoff and
+          # spike review. No forced refresh or execution-only backup lookup.
+          refreshed = refresh_if_needed(item.id, purpose: :background)
+          done << refreshed.id
+          yield refreshed.id if block_given?
+        rescue Error => error
+          Rails.logger.warn("RSC morning FX #{item.id}: #{error.code}")
+        ensure
+          Discourse.redis.sadd("#{key}:attempted", item.id.to_s)
+          Discourse.redis.expire("#{key}:attempted", 2.days.to_i)
+        end
+      end
+      done
+    end
+
     def self.sync_forex
       return [] if Safety.read_only? || !SiteSetting.rsc_market_data_enabled
       pending = Order.where(status: "pending")

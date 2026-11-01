@@ -3,7 +3,7 @@ module Jobs
   # External I/O runs on the regular queue, leaving the scheduler free to check
   # orders and positions every 15 seconds even during slow provider responses.
   class DiscourseRscProviderPoll < ::Jobs::Base
-    MODES = %w[full crypto forex].freeze
+    MODES = %w[full crypto forex forex_morning].freeze
     RECOVERY_GRACE = 30
     REAP = <<~LUA
       if redis.call('GET', KEYS[1]) == ARGV[1] and redis.call('GET', KEYS[2]) == ARGV[2] then
@@ -58,6 +58,7 @@ module Jobs
     def self.enqueue_once(mode)
       return unless MODES.include?(mode) && SiteSetting.rsc_enabled && SiteSetting.rsc_native_trial_enabled
       return if DiscourseRsc::Safety.read_only?
+      return if mode == 'forex_morning' && !DiscourseRsc::MarketData.forex_morning_due?
       recover_interrupted(mode)
       return if mode == 'full' && Discourse.redis.exists?('rsc-data-sync')
       token = SecureRandom.uuid
@@ -101,6 +102,8 @@ module Jobs
         DiscourseRsc::MarketData.sync_crypto(ids).each { |id| Jobs::DiscourseRscTradingTick.new.process(id) }
       elsif mode == 'forex'
         DiscourseRsc::MarketData.sync_forex { |id| Jobs::DiscourseRscTradingTick.new.process(id) }
+      elsif mode == 'forex_morning'
+        DiscourseRsc::MarketData.sync_forex_morning { |id| Jobs::DiscourseRscTradingTick.new.process(id) }
       else
         # Do not occupy a worker waiting for a possibly abandoned full-sync
         # mutex; a later scheduled scan can recover it when no owner remains.
