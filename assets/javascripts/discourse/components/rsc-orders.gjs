@@ -35,7 +35,7 @@ export default class RscOrders extends Component {
                 {{#if order.details.gross}}<p>名义金额 {{formatAmount order.details.gross}} RSC</p>{{/if}}
                 {{#if order.details.payout}}<p>返还 {{formatAmount order.details.payout}} RSC</p>{{/if}}
                 {{#if order.details.error}}<p role="status">{{order.error_message}}</p>{{/if}}
-                {{#if (eq order.status "pending")}}{{#if order.details.waiting_quote}}<p>恢复有效报价后按当时价格自动平仓，期间可随时撤单；到期未成交自动失效。仅经核验的有效报价会触发止损或强平。</p>{{/if}}<p>预占 {{formatAmount order.reserved}} RSC</p><p>最早处理 {{when order.execute_at}}</p><p>{{#if order.cancel_at}}可撤单时间 {{when order.cancel_at}}{{else}}撤单截止 {{when order.cancel_until}}{{/if}}</p><p>到期 {{when order.expires_at}}</p>{{/if}}
+                {{#if (eq order.status "pending")}}{{#if order.details.waiting_quote}}<p>恢复有效报价后按当时价格自动平仓，期间可随时撤单；到期未成交自动失效。仅经核验的有效报价会触发止损或强平。</p>{{/if}}<p>预占 {{formatAmount order.reserved}} RSC</p><p>最早处理 {{when order.execute_at}}</p><p>未成交前可随时撤单，预占资金全额退回，不收撤单手续费。</p><p>到期 {{when order.expires_at}}</p>{{/if}}
                 <p>金额单位 RSC；平仓盈亏未扣手续费。</p>
               </div></details>
               {{#if (eq order.status "pending")}}<button class="btn btn-small" type="button" disabled={{if @busy true (not order.can_cancel)}} {{on "click" (fn @cancel order)}}>{{uiText "cancel"}}</button>{{/if}}

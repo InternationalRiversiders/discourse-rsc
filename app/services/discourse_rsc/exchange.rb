@@ -95,10 +95,8 @@ module DiscourseRsc
         Risk.lock(actor.id)
         order = Order.lock.find(candidate.id)
         raise Error.new("order_not_pending", status: 409) unless order.status == "pending"
-        window_open = instrument.category == "crypto" || forex_exit?(instrument, order.side) || order.details["fx_confirmation"] || Time.current <= order.created_at + 10.seconds
-        unless window_open || order.expires_at <= Time.current || instrument.provider_error.present? || order.details["error"].present?
-          raise Error.new("cancellation_locked", status: 409)
-        end
+        # Cancellation and execution share the exchange/row locks. The winner
+        # changes the status atomically; waiting for delayed data is cancellable.
         refund_locked(order, "canceled")
         { order_id: order.id, status: order.status }
       end
