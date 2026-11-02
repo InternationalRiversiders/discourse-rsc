@@ -152,6 +152,9 @@ def main():
             raise RuntimeError('Inactive slot is still running; inspect drain state before replacing it')
         api('POST', f'/containers/{new_name}/rename?name={new_name}-retired-{stamp}')
     cfg = old['Config'].copy()
+    # Container Config may retain a legacy explicit MAC. Reusing it while both
+    # slots run causes bridge forwarding to flap and database replies to vanish.
+    cfg.pop('MacAddress', None)
     cfg.update(Image=args.image, Hostname=new_name)
     cfg['Env'] = [v for v in cfg.get('Env', []) if not v.startswith('MIGRATE_ON_BOOT=')] + ['MIGRATE_ON_BOOT=0']
     host = old['HostConfig'].copy()
@@ -162,6 +165,11 @@ def main():
     api('POST', f'/containers/{new_name}/start')
     switched = False
     try:
+        candidate = api('GET', f'/containers/{new_name}/json')
+        old_macs = {net.get('MacAddress') for net in old['NetworkSettings']['Networks'].values()} - {None, ''}
+        new_macs = {net.get('MacAddress') for net in candidate['NetworkSettings']['Networks'].values()} - {None, ''}
+        if old_macs & new_macs:
+            raise RuntimeError('Candidate shares a MAC address with the live slot')
         wait_ready(new_port)
         actual = run('docker', 'exec', new_name, 'git', '-c',
                      'safe.directory=/var/www/discourse/plugins/discourse-rsc', '-C',
