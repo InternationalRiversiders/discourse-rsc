@@ -142,8 +142,13 @@ module DiscourseRsc
         end
         begin
           price = price!(instrument, trading: true)
-        rescue Error
-          next
+        rescue Error => error
+          next unless error.code == 'market_closed' && MarketSessions.delayed_settlement?(instrument)
+          begin
+            price = price!(instrument)
+          rescue Error
+            next
+          end
         end
         Position.where(instrument_id: instrument.id).order(:id).each do |position|
           Risk.lock(position.user_id)
@@ -164,9 +169,9 @@ module DiscourseRsc
           close_locked(instrument, order, position, price, kind)
         end
         pending_orders = Order.where(instrument_id: instrument.id, status: "pending")
-        pending_orders = pending_orders.where("execute_at <= ?", Time.current) unless instrument.category == "crypto"
         pending_orders.order(:id).each do |order|
           Risk.lock(order.user_id)
+          next if instrument.category != 'crypto' && !order.details['delayed'] && order.execute_at > Time.current
           # Crypto and non-delayed FX use the validated current quote, including
           # pending orders created before immediate execution.
           next unless instrument.category == "crypto" || immediate_forex?(instrument) || Time.iso8601(instrument.quote.fetch("source_time")) > order.created_at

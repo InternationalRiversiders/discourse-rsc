@@ -31,6 +31,7 @@ zh_CN:
     rsc_market_data_enabled: 启用外部行情同步（Yahoo、Coinbase、Kraken、OKX、Twelve Data）
     rsc_sports_data_enabled: 启用 ESPN 赛事与赔率同步
     rsc_twelve_data_api_key: Twelve Data 服务端 API 密钥
+    rsc_us_stock_fallback_enabled: 美股主源失效时按需使用 Twelve Data（与外汇共用额度，须确认对外数据授权）
     rsc_sports_leagues: 同步的联赛，格式 sport:league
     rsc_high_risk_enabled: 允许虚拟币高风险模式及活动期外汇最高 100 倍杠杆
     rsc_standard_position_limits_enabled: "对虚拟币和延迟行情的普通杠杆（1–10 倍）启用原有单仓比例与组合额度限制；默认关闭。余额、保证金和强平检查始终保留。"

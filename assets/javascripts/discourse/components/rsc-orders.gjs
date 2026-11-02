@@ -31,11 +31,12 @@ export default class RscOrders extends Component {
                 <p>提交时间 {{when order.created_at}}</p>
                 {{#if order.details.executed_at}}<p>成交时间 {{when order.details.executed_at}}</p>{{/if}}
                 {{#if order.details.reference_price}}<p>提交参考价 {{formatPrice order.details.reference_price}}</p>{{/if}}
+                {{#if (eq order.status "pending")}}{{#if order.details.delayed}}<p>上游提供延迟行情，正在等待下单之后的有效报价。预计时间仅供参考，期间可随时撤单。</p>{{/if}}{{/if}}
                 {{#if order.details.execution_quote}}<p>成交报价来源 {{order.details.execution_quote.source}} · 报价时间 {{when order.details.execution_quote.source_time}}</p>{{/if}}
                 {{#if order.details.gross}}<p>名义金额 {{formatAmount order.details.gross}} RSC</p>{{/if}}
                 {{#if order.details.payout}}<p>返还 {{formatAmount order.details.payout}} RSC</p>{{/if}}
                 {{#if order.details.error}}<p role="status">{{order.error_message}}</p>{{/if}}
-                {{#if (eq order.status "pending")}}{{#if order.details.waiting_quote}}<p>恢复有效报价后按当时价格自动平仓，期间可随时撤单；到期未成交自动失效。仅经核验的有效报价会触发止损或强平。</p>{{/if}}<p>预占 {{formatAmount order.reserved}} RSC</p><p>最早处理 {{when order.execute_at}}</p><p>未成交前可随时撤单，预占资金全额退回，不收撤单手续费。</p><p>到期 {{when order.expires_at}}</p>{{/if}}
+                {{#if (eq order.status "pending")}}{{#if order.details.waiting_quote}}<p>恢复有效报价后按当时价格自动平仓，期间可随时撤单；到期未成交自动失效。仅经核验的有效报价会触发止损或强平。</p>{{/if}}<p>预占 {{formatAmount order.reserved}} RSC</p><p>预计处理 {{when order.execute_at}}</p><p>未成交前可随时撤单，预占资金全额退回，不收撤单手续费。</p><p>到期 {{when order.expires_at}}</p>{{/if}}
                 <p>金额单位 RSC；平仓盈亏未扣手续费。</p>
               </div></details>
               {{#if (eq order.status "pending")}}<button class="btn btn-small" type="button" disabled={{if @busy true (not order.can_cancel)}} {{on "click" (fn @cancel order)}}>{{uiText "cancel"}}</button>{{/if}}

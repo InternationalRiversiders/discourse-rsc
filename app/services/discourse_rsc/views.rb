@@ -13,7 +13,7 @@ module DiscourseRsc
       cancel_at=order.created_at
       cancel_until=nil
       allowed=order.status=='pending'
-      {id:order.id,instrument_id:instrument.id,symbol:instrument.symbol,side:order.side,status:order.status,quantity:Amount.format(order.quantity_units),leverage:order.leverage,reserved:Amount.format(order.reserved_units),created_at:order.created_at,execute_at:order.execute_at,expires_at:order.expires_at,cancel_at:cancel_at,cancel_until:cancel_until,can_cancel:allowed,error_message:order.details['error'].present? && Error.user_message(order.details['error']),details:order.details.slice('price','fee','pnl','payout','margin','gross','reason','error','reference_price','legacy_status','waiting_quote','executed_at','execution_quote')}
+      {id:order.id,instrument_id:instrument.id,symbol:instrument.symbol,side:order.side,status:order.status,quantity:Amount.format(order.quantity_units),leverage:order.leverage,reserved:Amount.format(order.reserved_units),created_at:order.created_at,execute_at:order.execute_at,expires_at:order.expires_at,cancel_at:cancel_at,cancel_until:cancel_until,can_cancel:allowed,error_message:order.details['error'].present? && Error.user_message(order.details['error']),details:order.details.slice('price','fee','pnl','payout','margin','gross','reason','error','reference_price','legacy_status','waiting_quote','executed_at','execution_quote','delayed')}
     end
 
     def self.prediction(item, names: nil)

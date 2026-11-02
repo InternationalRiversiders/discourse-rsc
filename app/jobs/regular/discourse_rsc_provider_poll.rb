@@ -108,7 +108,9 @@ module Jobs
         # Do not occupy a worker waiting for a possibly abandoned full-sync
         # mutex; a later scheduled scan can recover it when no owner remains.
         with_data_sync do
-          DiscourseRsc::MarketData.sync if SiteSetting.rsc_market_data_enabled
+          if SiteSetting.rsc_market_data_enabled
+            DiscourseRsc::MarketData.sync { |id| Jobs::DiscourseRscTradingTick.new.process(id) }
+          end
           if SiteSetting.rsc_sports_data_enabled && Discourse.redis.set('rsc:sports-poll', '1', nx: true, ex: 300)
             DiscourseRsc::SportsData.sync
           end

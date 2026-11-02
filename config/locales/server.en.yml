@@ -31,6 +31,7 @@ en:
     rsc_market_data_enabled: Enable external market data synchronization
     rsc_sports_data_enabled: Enable ESPN fixtures and odds synchronization
     rsc_twelve_data_api_key: Server-side Twelve Data API key
+    rsc_us_stock_fallback_enabled: Use Twelve Data on demand for unavailable US quotes (shared FX quota; external data permission required)
     rsc_sports_leagues: Leagues to synchronize as sport:league
     rsc_high_risk_enabled: Allow crypto high risk mode and activity forex leverage up to 100×
     rsc_standard_position_limits_enabled: "Enable legacy position and portfolio percentage caps for 1–10× crypto/delayed-market orders. Balance, margin and liquidation checks always remain."

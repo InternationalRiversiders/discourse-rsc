@@ -1,6 +1,21 @@
 # frozen_string_literal: true
 module DiscourseRsc
   module MarketSessions
+    # A delayed quote may still describe a valid trading-session print even
+    # though the wall clock has entered lunch/after-hours. Only existing orders
+    # and existing position protections may settle against it;
+    # submit/price!(trading: true) remain unchanged.
+    def self.delayed_settlement?(instrument)
+      return false if %w[crypto forex].include?(instrument.category) || !TradingRules.delayed?(instrument)
+      q = instrument.quote
+      source = Time.iso8601(q.fetch('source_time'))
+      start = Time.iso8601(q.fetch('session_start'))
+      finish = Time.iso8601(q.fetch('session_end'))
+      source >= start && source <= finish && !closed?(instrument, source == finish ? source - 1.second : source)
+    rescue ArgumentError, KeyError, TypeError
+      false
+    end
+
     def self.hours
       Discourse.cache.fetch('rsc:trading-hours', expires_in: 5.minutes) do
         Instrument.pluck(:symbol, Arel.sql("metadata->>'trading_hours'")).to_h

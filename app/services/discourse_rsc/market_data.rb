@@ -118,6 +118,7 @@ module DiscourseRsc
     # Execution may spend a backup credit, even when primary retry backoff is
     # active. A failed backup never relabels an old quote as fresh.
     def self.execution_quote(instrument, primary)
+      return UsStockFallback.quote(instrument, primary) if instrument.category == 'us'
       return primary unless forex_base(instrument) && SiteSetting.rsc_twelve_data_api_key.present?
       return primary if ForexQuoteGuard.fresh?(primary)
       forex_fallback(instrument)
@@ -404,6 +405,14 @@ module DiscourseRsc
       instrument = Instrument.find(instrument_id)
       return instrument if Safety.read_only? || !SiteSetting.rsc_market_data_enabled ||
         !instrument.active || !%w[yahoo coinbase twelve_data kraken okx].include?(instrument.provider)
+      if %i[trade exit].include?(purpose) && !%w[crypto forex].include?(instrument.category)
+        begin
+          Exchange.price!(instrument, trading: true)
+          return instrument
+        rescue Error
+          # Refresh only missing, expired or otherwise unusable snapshots.
+        end
+      end
       if %i[trade exit].include?(purpose) && instrument.category == 'crypto'
         begin
           Exchange.price!(instrument, trading: true)
@@ -483,7 +492,11 @@ module DiscourseRsc
       q = instrument.quote
       correction = forex_base(instrument) && q['pricing_method'] != FX_PRICING
       if !correction && MarketSessions.closed?(instrument, schedules: schedules) && q['price'].present?
-        return closing_refresh_due?(instrument)
+        # Delayed prints can arrive during lunch/after the close. Keep fetching
+        # for existing orders until their deadline; never permit new orders.
+        pending_tail = purpose == :execution && TradingRules.delayed?(instrument) &&
+          Order.where(instrument_id: instrument.id, status: 'pending').where('expires_at > ?', Time.current).exists?
+        return closing_refresh_due?(instrument) unless pending_tail
       end
       received = Time.iso8601(q['received_at']) rescue nil
       # Failures do not manufacture a fresh quote. Provider-wide cooldown is an
@@ -513,6 +526,14 @@ module DiscourseRsc
       source=Time.iso8601(quote.fetch('source_time'));received=Time.iso8601(quote.fetch('received_at'))
       starts=quote['session_start'] && Time.iso8601(quote['session_start'])
       ends=quote['session_end'] && Time.iso8601(quote['session_end'])
+      # Keep an already measured delay for the same session's late closing
+      # prints. Do not turn yesterday's close into a fresh quote or infer a new
+      # delay while the market is closed.
+      if previous['delay_inferred'] && previous['session_start'] == quote['session_start'] && starts && ends &&
+          source.between?(starts, ends) && received >= ends &&
+          (received - source).between?(0, previous['delay_seconds'].to_i + ForexQuoteGuard.max_age(quote))
+        return quote.merge('delay_seconds' => previous['delay_seconds'], 'delay_inferred' => true)
+      end
       # Never turn a closed session, yesterday's price, or a frozen feed into a
       # delayed live quote. Learn only from recent, advancing source timestamps.
       return quote unless starts && ends && received>=starts && received<ends && source>=starts
@@ -539,16 +560,19 @@ module DiscourseRsc
       quote.merge('delay_observations'=>samples)
     end
 
-    def self.sync
+    def self.sync(&on_refresh)
       return {} if Safety.read_only? || !SiteSetting.rsc_market_data_enabled
       # Fetch instruments with open exposure first. Idle catalog instruments use
       # the remaining provider budget and rotate by last attempt, including errors.
-      active_ids = Position.distinct.pluck(:instrument_id) | Order.where(status: "pending").distinct.pluck(:instrument_id)
+      pending_ids = Order.where(status: 'pending').distinct.pluck(:instrument_id)
+      active_ids = Position.distinct.pluck(:instrument_id) | pending_ids
       scope = Instrument.where(active: true, provider: %w[yahoo coinbase twelve_data kraken okx])
       schedules = MarketSessions.hours
       activity_ids = ForexActivity.active? ? scope.where(symbol: ForexActivity::FEATURED, category: "forex").pluck(:id) : []
       active_ids |= activity_ids
-      priority = scope.where(id: active_ids).order(Arel.sql("synced_at ASC NULLS FIRST")).select { |item| refresh_due?(item, purpose: :background, schedules: schedules) }.first(SiteSetting.rsc_market_sync_batch)
+      pending = scope.where(id: pending_ids).order(Arel.sql('synced_at ASC NULLS FIRST')).select { |item| refresh_due?(item, purpose: :execution, schedules: schedules) }
+      held = scope.where(id: active_ids - pending_ids).order(Arel.sql('synced_at ASC NULLS FIRST')).select { |item| refresh_due?(item, purpose: :background, schedules: schedules) }
+      priority = (pending + held).first(SiteSetting.rsc_market_sync_batch)
       remaining = SiteSetting.rsc_market_sync_batch - priority.size
       # At most five unheld catalog symbols per minute; cold browsing remains
       # on demand. Never scan the entire cold catalog in every cycle.
@@ -570,9 +594,11 @@ module DiscourseRsc
               break unless id
               ActiveRecord::Base.connection_pool.with_connection do
                 item = Instrument.find(id)
-                refreshed = refresh_if_needed(item.id, purpose: active_ids.include?(id) ? :background : :idle)
+                purpose = pending_ids.include?(id) ? :execution : (active_ids.include?(id) ? :background : :idle)
+                refreshed = refresh_if_needed(item.id, purpose: purpose)
                 ok = refreshed.provider_error.blank?
                 result_lock.synchronize { results[item.symbol] = ok }
+                on_refresh.call(id) if ok && on_refresh && active_ids.include?(id)
               end
             end
           end

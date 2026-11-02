@@ -88,6 +88,8 @@ plugins:
   rsc_twelve_data_api_key:
     default: ""
     secret: true
+  rsc_us_stock_fallback_enabled:
+    default: false
   rsc_sports_leagues:
     default: "soccer:fifa.world|soccer:uefa.champions|soccer:eng.1|soccer:esp.1|soccer:ger.1|soccer:ita.1|soccer:fra.1|soccer:uefa.europa|soccer:chn.1|soccer:uefa.euro|soccer:conmebol.america|soccer:afc.asian.cup|soccer:fifa.worldq.afc|soccer:fifa.cwc|soccer:eng.fa|soccer:esp.copa_del_rey|basketball:nba|basketball:fiba|basketball:mens-olympics-basketball"
     type: list
