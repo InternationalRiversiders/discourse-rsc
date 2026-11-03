@@ -45,7 +45,18 @@ module DiscourseRsc
 
     def self.turn?(id)
       enqueue(id)
-      claim == id
+      active = claim
+      if active != id && active.positive?
+        item = Instrument.find_by(id: id)
+        current = Instrument.find_by(id: active)
+        priority = item && ExecutionDemand.priority(item, purpose: Thread.current[:rsc_fallback_purpose])
+        if %i[exit urgent].include?(priority) && (!current || ExecutionDemand.rank(current) > 0)
+          finish(active, retry_in: 60)
+          Discourse.redis.zadd(QUEUE, 0, id.to_s)
+          active = claim
+        end
+      end
+      active == id
     end
 
     def self.finish(id, retry_in: 0)
@@ -56,7 +67,10 @@ module DiscourseRsc
       # Recover live trading work only. Old page-view/failed-submission markers
       # cannot spend credits or hold the review lane after the trade disappears.
       Instrument.where(id: ExecutionDemand.instrument_ids, active: true, category: 'forex')
-        .where("quote->'verification'->>'status' = 'pending'").pluck(:id).each { |id| enqueue(id) }
+        .where("quote->'verification'->>'status' = 'pending'").to_a.sort_by { |item| ExecutionDemand.rank(item) }.each do |item|
+          enqueue(item.id)
+          FallbackBudget.with_context(:execution) { turn?(item.id) } if ExecutionDemand.rank(item).zero?
+        end
       10.times do
         id = claim
         return if id.zero?

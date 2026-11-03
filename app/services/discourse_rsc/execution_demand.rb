@@ -41,6 +41,45 @@ module DiscourseRsc
       end
     end
 
+    # Candidates may escalate a check, but are NEVER executable prices.
+    # This avoids waiting on the routine timer when a quarantined move threatens
+    # a stop or liquidation. The exchange still requires a verified fresh quote.
+    def self.priority(instrument, purpose:)
+      return :exit if purpose == :exit
+      return :opening if purpose == :trade
+      return :exit if orders.where(instrument_id: instrument.id, side: 'close').exists?
+      held = positions.where(instrument_id: instrument.id).to_a
+      prices = [instrument.quote['price'], instrument.quote.dig('verification', 'candidate', 'price')].filter_map do |value|
+        Amount.positive(value) if value.present?
+      rescue Error, ArgumentError, TypeError
+        nil
+      end
+      return :urgent if held.any? && (prices.empty? || held.any? { |p| prices.any? { |price| Exchange.automatic_close_reason(p, price) } })
+      return :protection if held.any? { |p| p.take_profit_units || p.stop_loss_units || prices.any? { |price| near_exit?(p, price) } }
+      return :opening if order?(instrument.id)
+      :routine
+    end
+
+    def self.rank(instrument)
+      {exit: 0, urgent: 0, protection: 1, opening: 2, routine: 3}.fetch(priority(instrument, purpose: :execution))
+    end
+
+    def self.sort_key(instrument)
+      last = Discourse.redis.get("rsc:fallback-routine-symbol:#{instrument.id}").to_s.split(':').first.to_f
+      [rank(instrument), last, instrument.synced_at || Time.at(0)]
+    end
+
+    def self.near_exit?(position, price)
+      # Half of the posted margin remains: liquidation is at one quarter.
+      return true if position.margin_units.to_i + Exchange.pnl(position, price) <= position.margin_units.to_i / 2
+      long = position.side == 'long'
+      tolerance = price * 20 / 10_000 # 0.2% proximity, not a changed trigger price.
+      sl = position.stop_loss_units
+      tp = position.take_profit_units
+      (sl && (long ? price <= sl + tolerance : price >= sl - tolerance)) ||
+        (tp && (long ? price >= tp - tolerance : price <= tp + tolerance))
+    end
+
     def self.operation(id, purpose:)
       case purpose
       when :trade then 'open_order'

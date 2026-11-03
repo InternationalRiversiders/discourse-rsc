@@ -394,7 +394,7 @@ module DiscourseRsc
       demand_ids = ExecutionDemand.instrument_ids
       ids = pending_ids | Position.distinct.pluck(:instrument_id)
       items = Instrument.where(id: ids, active: true, category: "forex").to_a
-      items.sort_by! { |item| [pending_ids.include?(item.id) ? 0 : demand_ids.include?(item.id) ? 1 : 2, item.synced_at || Time.at(0)] }
+      items.sort_by! { |item| ExecutionDemand.sort_key(item) }
       deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 12
       done = []
       # Review live positions/orders on one bounded turn per poll. Browsing
@@ -470,7 +470,10 @@ module DiscourseRsc
     def self.verify_forex_quote(instrument, primary_checked: false)
       return if MarketSessions.closed?(instrument)
       return unless FallbackBudget.allowed?(instrument)
-      if FallbackBudget.allowed?(instrument) && instrument.quote.dig('verification', 'backup_error') == 'provider_background_budget'
+      # Newly eligible higher-priority work may resume a routine deferral.
+      # Routine polls cannot continually erase their own backoff.
+      if %w[provider_background_budget provider_background_paced].include?(instrument.quote.dig('verification', 'backup_error')) &&
+          FallbackBudget.review_can_resume?(instrument)
         ForexReviewQueue.finish(instrument.id)
         Discourse.redis.del("rsc:fx-review:#{instrument.id}")
       end
@@ -499,6 +502,8 @@ module DiscourseRsc
         if code == 'provider_busy'
           # A contested eight-second slot is not a failed minute of evidence.
           Discourse.redis.expire("rsc:fx-review:#{instrument.id}", 10)
+        elsif code == 'provider_background_paced'
+          ForexReviewQueue.finish(instrument.id, retry_in: 60) if ForexQuoteGuard.pending?(instrument.quote)
         elsif ForexQuoteGuard.pending?(instrument.quote)
           wait = %w[provider_daily_limit provider_background_budget].include?(code) ? (Time.current.utc.tomorrow.beginning_of_day - Time.current).ceil : 300
           ForexReviewQueue.finish(instrument.id, retry_in: wait)
@@ -605,7 +610,7 @@ module DiscourseRsc
       active_ids |= activity_ids
       pending = scope.where(id: pending_ids).order(Arel.sql('synced_at ASC NULLS FIRST')).select { |item| refresh_due?(item, purpose: :execution, schedules: schedules) }
       held = scope.where(id: active_ids - pending_ids).order(Arel.sql('synced_at ASC NULLS FIRST')).select { |item| refresh_due?(item, purpose: :background, schedules: schedules) }
-      priority = (pending + held).first(SiteSetting.rsc_market_sync_batch)
+      priority = (pending + held).sort_by { |item| ExecutionDemand.sort_key(item) }.first(SiteSetting.rsc_market_sync_batch)
       remaining = SiteSetting.rsc_market_sync_batch - priority.size
       # At most five unheld catalog symbols per minute; cold browsing remains
       # on demand. Never scan the entire cold catalog in every cycle.

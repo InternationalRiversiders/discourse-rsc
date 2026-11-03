@@ -97,6 +97,10 @@ class AutomaticProtectionFallbackTest < ForexPrimaryPolicyTest
         Discourse.redis.del('rsc:fx-fallback:slot')
         item.update!(quote:stale,synced_at:5.minutes.ago)
         poll
+        assert_equal ['USD/BRL'],calls
+        travel 6.minutes
+        Discourse.redis.del('rsc:fx-fallback:slot')
+        poll
         assert_equal ['USD/BRL','USD/BRL'],calls
         B.with_context(:execution){assert B.allowed?(item)}
       end

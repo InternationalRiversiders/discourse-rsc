@@ -103,7 +103,7 @@ class FallbackBudgetTest < ForexFallbackTest
     item=fx;Discourse.redis.set("rsc:fx-fallback:requests:#{Time.current.utc.to_date}",749)
     B.with_context(:exit){assert_equal :ok,B.request(item,reason:'stale_execution'){:ok}}
     assert_equal 750,B.report[:total_reserved]
-    assert_equal 'trading_and_risk',B.report[:policy]
+    assert_equal 'priority_exits',B.report[:policy]
   end
 
   def test_valid_backup_reused_past_one_minute_but_review_gets_independent_samples

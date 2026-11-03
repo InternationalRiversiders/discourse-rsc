@@ -63,6 +63,7 @@ class ReliabilityTest < NativeAdaptationTest
   end
 
   def test_sports_cooldown_stops_fanout_and_later_run_resumes
+    Discourse.redis.del('rsc:sports-next-source') # Independent of previous suite runs.
     SiteSetting.rsc_sports_leagues='soccer:eng.1|basketball:nba'
     old=R::ProviderHttp.method(:get);calls=[]
     R::ProviderHttp.define_singleton_method(:get) { |*args,**kwargs| calls << [args,kwargs];raise R::Error.new('provider_cooldown') }

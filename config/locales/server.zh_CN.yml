@@ -169,7 +169,7 @@ zh_CN:
       provider_disabled: 行情同步尚未启用。
       provider_cooldown: 数据源正在冷却，请稍后重试。
       provider_execution_only: 备用行情仅用于下单和平仓等实际交易。
-      provider_background_budget: 后台备用行情额度已暂停，剩余额度优先供下单和平仓使用。
+      provider_background_budget: 普通备用行情额度已暂停，剩余额度优先用于平仓、止盈止损和强平。
       provider_daily_limit: 今日备用行情额度已用完，暂时无法完成交叉核验，请等待额度恢复或主源与已核验报价重新一致。
       provider_busy: 行情请求繁忙，请稍后重试。
       provider_unavailable: 行情服务暂时不可用，请稍后重试。
@@ -205,7 +205,7 @@ zh_CN:
       market_liquidity_limit: 委托超过近期成交量允许的模拟流动性上限。
       take_profit_not_profitable: 止盈价必须越过计入双边手续费后的保本价。
       stop_loss_beyond_liquidation: 止损价格必须在爆仓价之前触发。
-      provider_background_paced: 后台备用行情正在等待下一次刷新，下单和平仓会单独检查报价。
+      provider_background_paced: 备用行情正在按优先级等待刷新；接近止盈止损、强平或主动平仓时会优先检查。
     statuses:
       won: 预测命中
       lost: 未命中

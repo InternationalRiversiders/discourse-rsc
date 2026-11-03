@@ -28,12 +28,12 @@ module DiscourseRsc
       "rsc:provider:#{host}:#{kind}"
     end
 
-    def self.evaluate(script, keys:, argv:)
+    def self.evaluate(script, keys:, argv:, result_type: Integer)
       redis = Discourse.redis
       keys = keys.map { |value| redis.respond_to?(:namespace_key) ? redis.namespace_key(value) : value }
       result = redis.eval(script, keys: keys, argv: argv)
       # Discourse may return nil while Redis is read-only. Never bypass pacing.
-      raise Error.new("provider_unavailable", status: 503) unless result.is_a?(Integer)
+      raise Error.new("provider_unavailable", status: 503) unless result.is_a?(result_type)
       result
     end
 

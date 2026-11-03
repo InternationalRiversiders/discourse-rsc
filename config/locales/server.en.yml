@@ -165,7 +165,7 @@ en:
       provider_disabled: Provider disabled.
       provider_cooldown: The provider is cooling down. Please try again later.
       provider_execution_only: Backup quotes are reserved for order submission and execution.
-      provider_background_budget: Background backup budget reserved for trading.
+      provider_background_budget: 普通备用行情额度已暂停，剩余额度优先用于平仓、止盈止损和强平。
       provider_daily_limit: 今日备用行情额度已用完，暂时无法完成交叉核验，请等待额度恢复或主源与已核验报价重新一致。
       provider_busy: Quote requests are busy. Please try again later.
       provider_unavailable: Provider unavailable.
@@ -201,7 +201,7 @@ en:
       market_liquidity_limit: Order exceeds the recent simulated liquidity limit.
       take_profit_not_profitable: Take-profit must be beyond the break-even price including both fees.
       stop_loss_beyond_liquidation: Stop-loss must trigger before the liquidation price.
-      provider_background_paced: Background backup refresh is paced; orders check quotes separately.
+      provider_background_paced: 备用行情正在按优先级等待刷新；接近止盈止损、强平或主动平仓时会优先检查。
     statuses:
       won: Won
       lost: Lost
