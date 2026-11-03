@@ -156,7 +156,7 @@ class ForexQuoteGuardTest < ForexActivityTest
       R::MarketData.define_singleton_method(:fetch_primary_quote){|_|q}
       R::MarketData.define_singleton_method(:forex_fallback){|_|raise R::Error.new('provider_busy')}
       R::ForexReviewQueue.watch(item.id)
-      R::MarketData.verify_forex_quote(item)
+      R::FallbackBudget.with_context(:trade) { R::MarketData.verify_forex_quote(item) }
       assert G.pending?(item.reload.quote)
       assert_equal '0.15',item.quote['price']
       assert_equal 'provider_busy',item.quote.dig('verification','backup_error')

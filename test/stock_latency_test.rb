@@ -177,7 +177,7 @@ class StockLatencyTest < NativeBusinessTest
       item.update!(symbol: 'NASDAQ:AAPL', provider: 'yahoo', provider_symbol: 'AAPL')
       Discourse.cache.delete('rsc:us-fallback:v1:AAPL')
       Discourse.redis.del('rsc:us-fallback:retry:AAPL', 'rsc:fx-fallback:slot', "rsc:fx-fallback:requests:#{Time.current.utc.to_date}")
-      yield item
+      R::FallbackBudget.with_context(:trade) { yield item }
     ensure
       SiteSetting.rsc_twelve_data_api_key = ''
       SiteSetting.rsc_us_stock_fallback_enabled = false
@@ -245,4 +245,31 @@ class StockLatencyTest < NativeBusinessTest
       end
     end
   end
+  def test_legacy_twelve_data_adapter_also_respects_trade_only_policy
+    with_backup do |item|
+      item.update!(provider:'twelve_data')
+      chart={'meta'=>{'currency'=>'USD','regularMarketPrice'=>'100',
+        'regularMarketTime'=>Time.current.to_i,'exchangeDataDelayedBy'=>0}}
+      calls=[]
+      replace_method(R::ProviderHttp,:get,->(host,path,params){
+        calls << path
+        {'close'=>'101','timestamp'=>Time.current.to_i,'currency'=>'USD'}
+      }) do
+        [nil,:read,:background,:forex_fast,:idle,:forex_review].each do |purpose|
+          R::FallbackBudget.with_context(purpose) do
+            result=R::MarketData.fetch_primary_quote(item,chart:chart)
+            assert_equal 'yahoo',result['source']
+            assert_equal '100.0',result['price']
+          end
+        end
+        assert_empty calls
+        assert_equal 0,R::FallbackBudget.report[:total_reserved]
+        result=R::MarketData.fetch_primary_quote(item,chart:chart)
+        assert_equal 'twelve_data',result['source']
+        assert_equal ['/quote'],calls
+        assert_equal 1,R::FallbackBudget.report[:total_reserved]
+      end
+    end
+  end
+
 end

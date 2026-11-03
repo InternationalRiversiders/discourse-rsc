@@ -2,6 +2,12 @@
 require '/rsc/test/forex_activity_test'
 class ForexFallbackTest < ForexActivityTest
   ForexActivityTest.instance_methods.grep(/^test_/).each { |name| undef_method name }
+  def execution_quote(item, primary)
+    R::FallbackBudget.with_context(:trade) { R::MarketData.execution_quote(item, primary) }
+  end
+  def fallback_quote(item)
+    R::FallbackBudget.with_context(:trade) { R::MarketData.forex_fallback(item) }
+  end
   def feeds(primary, data)
     old=R::MarketData.method(:fetch_primary_quote);http=R::ProviderHttp.method(:get)
     R::MarketData.define_singleton_method(:fetch_primary_quote) { |_| raise primary if primary.is_a?(Exception); primary }
@@ -28,27 +34,27 @@ class ForexFallbackTest < ForexActivityTest
   def test_fallback_validates_pair_timestamp_reciprocal_and_caches
     item=fx;primary=quote('0.15').merge('source_time'=>10.minutes.ago.iso8601)
     feeds(primary,{'symbol'=>'USD/CNY','rate'=>'6.67','timestamp'=>Time.current.to_i}) do |calls|
-      result=R::MarketData.execution_quote(item,primary)
+      result=execution_quote(item,primary)
       assert_equal R::MarketData.reciprocal('6.67'),result['price']
       assert_equal 'CNY',result['base_currency'];assert result['fallback']
       assert_equal 'twelve_data',result['source'];assert_equal 0,result['delay_seconds']
-      assert_equal result,R::MarketData.execution_quote(item,primary);assert_equal 1,calls.size
+      assert_equal result,execution_quote(item,primary);assert_equal 1,calls.size
       assert_equal ['api.twelvedata.com','/exchange_rate','USD/CNY'],calls.first
     end
   end
   def test_no_credentials_or_fresh_primary_skips_fallback
     item=fx;primary=quote('0.15').merge('source'=>'yahoo')
     feeds(primary,{}) do |calls|
-      assert_equal primary,R::MarketData.execution_quote(item,primary);assert_empty calls
+      assert_equal primary,execution_quote(item,primary);assert_empty calls
       SiteSetting.rsc_twelve_data_api_key='';primary['source_time']=10.minutes.ago.iso8601
-      assert_equal primary,R::MarketData.execution_quote(item,primary);assert_empty calls
+      assert_equal primary,execution_quote(item,primary);assert_empty calls
     end
   end
   def test_source_age_does_not_hide_expired_receive_timestamp
     item=fx
     primary=quote('0.15').merge('source'=>'twelve_data','source_time'=>150.seconds.ago.iso8601,'received_at'=>130.seconds.ago.iso8601)
     feeds(primary,{'symbol'=>'USD/CNY','rate'=>'6.67','timestamp'=>Time.current.to_i}) do |calls|
-      result=R::MarketData.execution_quote(item,primary)
+      result=execution_quote(item,primary)
       assert_equal 1,calls.size
       assert R::ForexQuoteGuard.fresh?(result)
     end
@@ -60,7 +66,7 @@ class ForexFallbackTest < ForexActivityTest
       {'symbol'=>'USD/CNY','rate'=>'6.67','timestamp'=>1.minute.from_now.to_i},
       {'symbol'=>'USD/CNY','rate'=>'0','timestamp'=>Time.current.to_i}].each do |data|
       Discourse.redis.del('rsc:fx-fallback:slot','rsc:fx-fallback:retry:CNY')
-      feeds(primary,data) { assert_equal primary,R::MarketData.execution_quote(item,primary) }
+      feeds(primary,data) { assert_equal primary,execution_quote(item,primary) }
     end
     Discourse.redis.del('rsc:fx-fallback:slot','rsc:fx-fallback:retry:CNY')
     feeds(R::Error.new('provider_unavailable'),{}) do
@@ -102,11 +108,11 @@ class ForexFallbackTest < ForexActivityTest
     key="rsc:fx-fallback:requests:#{Time.current.utc.to_date}"
     Discourse.redis.set(key,750)
     feeds(primary,{}) do |calls|
-      assert_equal primary,R::MarketData.execution_quote(item,primary)
+      assert_equal primary,execution_quote(item,primary)
       assert_empty calls
       assert_equal '750',Discourse.redis.get(key)
       Discourse.redis.del(key)
-      2.times { assert_equal primary,R::MarketData.execution_quote(item,primary); Discourse.redis.del('rsc:fx-fallback:slot') }
+      2.times { assert_equal primary,execution_quote(item,primary); Discourse.redis.del('rsc:fx-fallback:slot') }
       assert_equal 1,calls.size
       assert_equal '1',Discourse.redis.get(key)
     end
@@ -116,11 +122,11 @@ class ForexFallbackTest < ForexActivityTest
     item=fx;primary=quote('0.15').merge('source_time'=>10.minutes.ago.iso8601)
     data={'symbol'=>'USD/CNY','rate'=>'6.67','timestamp'=>170.seconds.ago.to_i}
     feeds(primary,data) do |calls|
-      assert_equal 'twelve_data',R::MarketData.execution_quote(item,primary)['source']
+      assert_equal 'twelve_data',execution_quote(item,primary)['source']
       travel 20.seconds
       Discourse.redis.del('rsc:fx-fallback:slot')
       data['timestamp']=Time.current.to_i
-      assert_equal Time.current.to_i,Time.iso8601(R::MarketData.execution_quote(item,primary)['source_time']).to_i
+      assert_equal Time.current.to_i,Time.iso8601(execution_quote(item,primary)['source_time']).to_i
       assert_equal 2,calls.size
     end
   end

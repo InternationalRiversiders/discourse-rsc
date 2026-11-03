@@ -118,6 +118,7 @@ module DiscourseRsc
     # Execution may spend a backup credit, even when primary retry backoff is
     # active. A failed backup never relabels an old quote as fresh.
     def self.execution_quote(instrument, primary)
+      return primary unless FallbackBudget.allowed?(instrument)
       return UsStockFallback.quote(instrument, primary) if instrument.category == 'us'
       return primary unless forex_base(instrument) && SiteSetting.rsc_twelve_data_api_key.present?
       return primary if ForexQuoteGuard.fresh?(primary)
@@ -129,6 +130,7 @@ module DiscourseRsc
     # Free-tier backup: leave 50 of the 800 daily credits for manual checks or
     # other consumers. Cache hits do not consume credits. Shared across workers.
     def self.forex_fallback(instrument)
+      raise Error.new('provider_execution_only', status: 409) unless FallbackBudget.allowed?(instrument)
       base = forex_base(instrument)
       pair = "USD/#{base}"
       requested = false
@@ -231,10 +233,14 @@ module DiscourseRsc
         source = Time.at(meta.fetch("regularMarketTime")).utc
         delay = Integer(meta.fetch("exchangeDataDelayedBy", 0)) * 60
         stats = session_stats(chart, source)
-        if instrument.provider == "twelve_data"
+        quote_provider = "yahoo"
+        if instrument.provider == "twelve_data" && FallbackBudget.allowed?(instrument)
+          quote_provider = "twelve_data"
           key = SiteSetting.rsc_twelve_data_api_key
           raise Error.new("provider_key_required", status: 503) if key.blank?
-          td = ProviderHttp.get("api.twelvedata.com", "/quote", symbol: code, apikey: key)
+          td = FallbackBudget.request(instrument, reason: 'configured_execution') do
+            ProviderHttp.get("api.twelvedata.com", "/quote", symbol: code, apikey: key)
+          end
           raise Error.new("provider_no_data", status: 503) unless td["close"] && td["timestamp"]
           raw, previous, currency = td["close"], td["previous_close"], td.fetch("currency", currency)
           source = Time.at(Integer(td["timestamp"])).utc
@@ -258,9 +264,9 @@ module DiscourseRsc
           "local_price" => decimal(raw), "local_currency" => currency, "fx_rate" => decimal(rate),
           "open" => optional_price(stats["open"], rate), "high" => optional_price(stats["high"], rate), "low" => optional_price(stats["low"], rate), "change_basis" => "previous_close",
           "source_time" => source.iso8601, "delay_seconds" => delay,
-          "delay_reported" => instrument.provider != 'yahoo' || !meta['exchangeDataDelayedBy'].nil?,
+          "delay_reported" => quote_provider != 'yahoo' || !meta['exchangeDataDelayedBy'].nil?,
           "session_start" => session["start"] && Time.at(session["start"]).utc.iso8601,
-          "session_end" => session["end"] && Time.at(session["end"]).utc.iso8601, "source" => instrument.provider }.merge(fx_details)
+          "session_end" => session["end"] && Time.at(session["end"]).utc.iso8601, "source" => quote_provider }.merge(fx_details)
       else
         raise Error.new("provider_not_configured", status: 503)
       end.merge("received_at" => Time.current.iso8601(6))
@@ -447,8 +453,7 @@ module DiscourseRsc
           instrument.reload
           primary_checked = purpose != :forex_review && refresh_due?(instrument, purpose: purpose)
           sync_one(instrument) if primary_checked
-          held_stale = instrument.category == 'forex' && %i[forex_fast background].include?(purpose) && !ForexQuoteGuard.fresh?(instrument.quote) && FallbackBudget.exposed?(instrument.id)
-          verify_forex_quote(instrument, primary_checked: primary_checked, allow_stale: held_stale) if instrument.category == 'forex' && (held_stale || ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data')
+          verify_forex_quote(instrument, primary_checked: primary_checked) if instrument.category == 'forex' && (ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data')
           if %i[trade exit execution].include?(purpose) && !MarketSessions.closed?(instrument) && !ForexQuoteGuard.pending?(instrument.quote)
             primary = instrument.quote
             quote = execution_quote(instrument, primary)
@@ -463,11 +468,11 @@ module DiscourseRsc
     # Re-fetch only quarantined observations, at most once per symbol per 60s.
     # ProviderHttp and forex_fallback still enforce their shared quotas/backoff.
     # No database lock is held during the network calls.
-    def self.verify_forex_quote(instrument, primary_checked: false, allow_stale: false)
+    def self.verify_forex_quote(instrument, primary_checked: false)
       return if MarketSessions.closed?(instrument)
       direct = %i[trade exit execution].include?(Thread.current[:rsc_fallback_purpose])
       return unless direct || ForexReviewQueue.eligible?(instrument.id)
-      if (direct || ForexReviewQueue.requested?(instrument.id) || (FallbackBudget.exposed?(instrument.id) && FallbackBudget.background_available?)) && instrument.quote.dig('verification', 'backup_error') == 'provider_background_budget'
+      if FallbackBudget.allowed?(instrument) && instrument.quote.dig('verification', 'backup_error') == 'provider_background_budget'
         ForexReviewQueue.finish(instrument.id)
         Discourse.redis.del("rsc:fx-review:#{instrument.id}")
       end
@@ -478,10 +483,11 @@ module DiscourseRsc
       rescue Error, KeyError, ArgumentError, TypeError
         # Keep the accepted quote and quarantine; failed HTTP is not evidence.
       end
-      return unless ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data' || allow_stale
+      return unless ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data'
       # A failed/anomalous primary does not require another backup request while
       # the already verified backup is still usable. Preserve its real clocks.
       return if !ForexQuoteGuard.pending?(instrument.quote) && ForexQuoteGuard.fresh?(instrument.quote)
+      return unless FallbackBudget.allowed?(instrument)
       return unless forex_base(instrument) && SiteSetting.rsc_twelve_data_api_key.present?
       begin
         record_quote(instrument, forex_fallback(instrument))

@@ -4,6 +4,7 @@ module DiscourseRsc
   # Separate opt-in because external US-equity display needs provider permission.
   module UsStockFallback
     def self.quote(instrument, primary)
+      return primary unless FallbackBudget.allowed?(instrument)
       return primary unless SiteSetting.rsc_us_stock_fallback_enabled &&
         SiteSetting.rsc_twelve_data_api_key.present? && instrument.category == 'us' && instrument.provider == 'yahoo'
       return primary if ForexQuoteGuard.fresh?(primary) && !primary['legacy_snapshot']

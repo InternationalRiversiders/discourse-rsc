@@ -134,12 +134,12 @@ class ForexPrimaryPolicyTest < ForexQuoteGuardTest
       backup=G.accepted(observation('0.15',source:'twelve_data',at:100.seconds.ago),'backup_consensus',preferred:'twelve_data')
       item=live_fx(backup)
       with_feeds(R::Error.new('provider_unavailable'),observation('0.15001',source:'twelve_data')) do |calls|
-        R::MarketData.refresh_if_needed(item.id,purpose: :execution)
+        R::MarketData.refresh_if_needed(item.id,purpose: :exit)
         assert_equal 0,calls[:backup]
         assert_equal 'twelve_data',item.reload.quote['source']
         travel 81.seconds
         Discourse.redis.del("rsc:fx-review:#{item.id}")
-        R::MarketData.refresh_if_needed(item.id,purpose: :execution)
+        R::MarketData.refresh_if_needed(item.id,purpose: :exit)
         assert_equal 1,calls[:backup]
         assert G.fresh?(item.reload.quote)
       end
@@ -209,7 +209,7 @@ class ForexPrimaryPolicyTest < ForexQuoteGuardTest
     end
   end
 
-  def test_held_stale_primary_gets_bounded_backup_without_double_primary_fetch
+  def test_held_stale_primary_never_spends_backup_without_a_trade
     travel_to(Time.utc(2026,11,3,12)) do
       stale=observation('0.15',at:5.minutes.ago).merge('received_at'=>5.minutes.ago.iso8601)
       item=live_fx(stale)
@@ -217,8 +217,8 @@ class ForexPrimaryPolicyTest < ForexQuoteGuardTest
         quantity_units:R::Amount.parse('1'),average_units:R::Amount.parse('0.15'),margin_units:R::Amount.parse('0.15'))
       with_feeds(stale,observation('0.15001',source:'twelve_data')) do |calls|
         R::MarketData.refresh_if_needed(item.id,purpose: :forex_fast)
-        assert_equal({primary:1,backup:1},calls)
-        assert G.fresh?(item.reload.quote)
+        assert_equal({primary:1,backup:0},calls)
+        refute G.fresh?(item.reload.quote)
       end
     end
   end
@@ -231,6 +231,30 @@ class ForexPrimaryPolicyTest < ForexQuoteGuardTest
         assert_equal({primary:1,backup:1},calls)
         assert G.pending?(item.reload.quote)
       end
+    end
+  end
+
+  def test_non_trading_refresh_never_uses_backup_for_stale_preferred_or_suspect_quotes
+    travel_to(Time.utc(2026,11,3,12)) do
+      stale=observation('0.15',at:5.minutes.ago).merge('received_at'=>5.minutes.ago.iso8601)
+      backup=G.accepted(stale.merge('source'=>'twelve_data'),'backup_consensus',preferred:'twelve_data')
+      item=live_fx(stale)
+      R::Position.create!(user_id:@alice.id,instrument_id:item.id,side:'long',leverage:1,
+        quantity_units:R::Amount.parse('1'),average_units:R::Amount.parse('0.15'),margin_units:R::Amount.parse('0.15'))
+      R::ForexReviewQueue.watch(item.id,trading:true)
+      [stale,backup,observation('0.15')].each do |previous|
+        %i[read background idle forex_fast forex_review protection].each do |purpose|
+          item.update!(quote:previous,synced_at:5.minutes.ago,provider_error:nil)
+          Discourse.redis.del("rsc:fx-review:#{item.id}")
+          R::ForexReviewQueue.finish(item.id)
+          with_feeds(observation('0.1503'),R::Error.new('provider_daily_limit')) do |calls|
+            R::MarketData.refresh_if_needed(item.id,purpose:purpose)
+            assert_equal 0,calls[:backup], "Unexpected backup for #{purpose} / #{previous['source']}"
+          end
+        end
+      end
+      assert_equal 0,R::Order.count
+      assert_equal 0,R::Entry.sum(:units)
     end
   end
 

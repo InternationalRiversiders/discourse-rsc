@@ -30,11 +30,14 @@ class ForexReviewQueueTest < ForexPrimaryPolicyTest
     assert_equal 0,Discourse.redis.zcard(Q::QUEUE)
   end
 
-  def test_watched_unheld_quarantine_gets_three_independent_backup_samples_and_releases_turn
+  def test_due_order_quarantine_gets_independent_backup_samples_and_releases_turn
     travel_to(Time.utc(2026,11,3,12)) do
       SiteSetting.rsc_market_data_enabled=true
       SiteSetting.rsc_twelve_data_api_key='isolated-test-key'
       first=quarantined('BRL');second=quarantined('NOK')
+      R::Order.create!(user_id:@alice.id,instrument_id:first.id,side:'long',leverage:1,
+        quantity_units:R::Amount.parse('1'),reserved_units:0,status:'pending',
+        execute_at:1.second.ago,expires_at:10.minutes.from_now,details:{})
       # Recovery seeds pre-release rows even if the transient queue is absent.
       Discourse.redis.del(Q::QUEUE,Q::ACTIVE)
       3.times do |n|
@@ -53,7 +56,7 @@ class ForexReviewQueueTest < ForexPrimaryPolicyTest
       assert_equal 'backup_consensus',first.quote.dig('verification','method')
       assert_equal '1.001',first.quote['price']
       assert_equal second.id,Q.claim
-      assert_equal 0,R::Order.count
+      assert_equal 1,R::Order.where(status: 'pending').count
       assert_equal 0,R::Entry.sum(:units)
     end
   end
@@ -64,9 +67,9 @@ class ForexReviewQueueTest < ForexPrimaryPolicyTest
       first=quarantined('BRL');second=quarantined('NOK')
       assert Q.turn?(first.id)
       with_feeds(observation('1.002'),R::Error.new('provider_busy')) do |calls|
-        R::MarketData.verify_forex_quote(second)
+        R::FallbackBudget.with_context(:trade) { R::MarketData.verify_forex_quote(second) }
         assert_equal({primary:0,backup:0},calls)
-        R::MarketData.verify_forex_quote(first)
+        R::FallbackBudget.with_context(:trade) { R::MarketData.verify_forex_quote(first) }
         assert_equal({primary:1,backup:1},calls)
         assert_operator Discourse.redis.ttl("rsc:fx-review:#{first.id}"),:<=,10
         assert_equal first.id,Q.claim
@@ -80,12 +83,12 @@ class ForexReviewQueueTest < ForexPrimaryPolicyTest
       SiteSetting.rsc_twelve_data_api_key='isolated-test-key'
       item=quarantined('BRL')
       with_feeds(observation('1.002'),R::Error.new('provider_daily_limit')) do |calls|
-        R::MarketData.verify_forex_quote(item)
+        R::FallbackBudget.with_context(:trade) { R::MarketData.verify_forex_quote(item) }
         assert_equal({primary:1,backup:1},calls)
         assert G.pending?(item.reload.quote)
         assert_equal 'provider_daily_limit',item.quote.dig('verification','backup_error')
         assert_nil Q.next_instrument
-        R::MarketData.verify_forex_quote(item)
+        R::FallbackBudget.with_context(:trade) { R::MarketData.verify_forex_quote(item) }
         assert_equal 1,calls[:backup]
       end
     end
@@ -119,22 +122,19 @@ class ForexReviewQueueTest < ForexPrimaryPolicyTest
         assert G.pending?(first.reload.quote)
         assert_equal 0,Q.claim
         R::MarketData.refresh_if_needed(first.id,purpose: :read)
-        assert_equal 1,calls[:backup]
+        assert_equal 0,calls[:backup]
         assert Q.eligible?(first.id)
       end
     end
   end
 
-  def test_cold_budget_deferral_does_not_block_later_trade_review
+  def test_legacy_background_deferral_does_not_block_later_trade_review
     travel_to(Time.utc(2026,11,3,12)) do
       SiteSetting.rsc_market_data_enabled=true
       SiteSetting.rsc_twelve_data_api_key='isolated-test-key'
       item=quarantined('BRL')
-      with_feeds(observation('1.002'),R::Error.new('provider_background_budget')) do |calls|
-        R::MarketData.refresh_if_needed(item.id,purpose: :read)
-        assert_equal 1,calls[:backup]
-        assert_nil Q.next_instrument
-      end
+      item.update!(quote:item.quote.merge('verification'=>item.quote['verification'].merge('backup_error'=>'provider_background_budget')))
+      Q.finish(item.id,retry_in:3600)
       with_feeds(observation('1.002'),observation('1.001',source:'twelve_data')) do |calls|
         R::MarketData.refresh_if_needed(item.id,purpose: :trade)
         assert_equal 1,calls[:backup]
