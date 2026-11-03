@@ -128,37 +128,28 @@ module DiscourseRsc
 
     # Free-tier backup: leave 50 of the 800 daily credits for manual checks or
     # other consumers. Cache hits do not consume credits. Shared across workers.
-    FALLBACK_RESERVE = <<~LUA
-      if tonumber(redis.call('GET', KEYS[2]) or '0') >= 750 then return -2 end
-      if not redis.call('SET', KEYS[1], '1', 'NX', 'EX', 8) then return -1 end
-      local used = redis.call('INCR', KEYS[2])
-      redis.call('EXPIRE', KEYS[2], 172800)
-      return used
-    LUA
-
     def self.forex_fallback(instrument)
       base = forex_base(instrument)
       pair = "USD/#{base}"
       requested = false
       quote = Discourse.cache.fetch("rsc:fx-fallback:v1:#{base}", expires_in: 60.seconds) do
         raise Error.new('provider_cooldown', status: 503) if Discourse.redis.exists?("rsc:fx-fallback:retry:#{base}")
-        used = ProviderHttp.evaluate(FALLBACK_RESERVE,
-          keys: ['rsc:fx-fallback:slot', "rsc:fx-fallback:requests:#{Time.current.utc.to_date}"], argv: [])
-        raise Error.new('provider_daily_limit', status: 503) if used == -2
-        raise Error.new('provider_busy', status: 503) if used == -1
-        requested = true
-        data = ProviderHttp.get('api.twelvedata.com', '/exchange_rate', symbol: pair,
-          apikey: SiteSetting.rsc_twelve_data_api_key, dp: 11)
-        raise Error.new('provider_invalid_data', status: 503) unless data['symbol'] == pair
-        at = Time.at(Integer(data.fetch('timestamp'))).utc
-        raise Error.new('quote_stale', status: 409) unless at >= 180.seconds.ago && at <= 5.seconds.from_now
-        price = reciprocal(data.fetch('rate'))
-        day = Time.current.utc.beginning_of_day
-        { 'price'=>price, 'local_price'=>price, 'local_currency'=>'USD', 'fx_rate'=>'1',
-          'source'=>'twelve_data', 'source_time'=>at.iso8601, 'received_at'=>Time.current.iso8601(6),
-          'delay_seconds'=>0, 'delay_reported'=>true, 'pricing_method'=>FX_PRICING,
-          'base_currency'=>base, 'inverse_rate'=>decimal(data.fetch('rate')),
-          'session_start'=>day.iso8601, 'session_end'=>(day+1.day).iso8601, 'fallback'=>true }
+        reason = ForexQuoteGuard.pending?(instrument.quote) ? 'quote_verification' : instrument.quote.dig('verification', 'preferred_source') == 'twelve_data' ? 'backup_continuity' : 'stale_execution'
+        FallbackBudget.request(instrument, reason: reason) do
+          requested = true
+          data = ProviderHttp.get('api.twelvedata.com', '/exchange_rate', symbol: pair,
+            apikey: SiteSetting.rsc_twelve_data_api_key, dp: 11)
+          raise Error.new('provider_invalid_data', status: 503) unless data['symbol'] == pair
+          at = Time.at(Integer(data.fetch('timestamp'))).utc
+          raise Error.new('quote_stale', status: 409) unless at >= 180.seconds.ago && at <= 5.seconds.from_now
+          price = reciprocal(data.fetch('rate'))
+          day = Time.current.utc.beginning_of_day
+          { 'price'=>price, 'local_price'=>price, 'local_currency'=>'USD', 'fx_rate'=>'1',
+            'source'=>'twelve_data', 'source_time'=>at.iso8601, 'received_at'=>Time.current.iso8601(6),
+            'delay_seconds'=>0, 'delay_reported'=>true, 'pricing_method'=>FX_PRICING,
+            'base_currency'=>base, 'inverse_rate'=>decimal(data.fetch('rate')),
+            'session_start'=>day.iso8601, 'session_end'=>(day+1.day).iso8601, 'fallback'=>true }
+        end
       end
       source = Time.iso8601(quote.fetch('source_time'))
       unless source >= 180.seconds.ago && source <= 5.seconds.from_now
@@ -166,12 +157,17 @@ module DiscourseRsc
         return forex_fallback(instrument) unless requested
         raise Error.new('quote_stale', status: 409)
       end
+      Discourse.redis.del("rsc:fx-fallback:failures:#{base}")
       quote
     rescue Error, KeyError, ArgumentError, TypeError => error
       # An unsupported pair or old backup feed must not spend credits every tick.
       if requested && !(error.is_a?(Error) && %w[provider_busy provider_cooldown].include?(error.code))
         code = error.is_a?(Error) ? error.code : 'provider_invalid_data'
-        Discourse.redis.setex("rsc:fx-fallback:retry:#{base}", 90, code)
+        failure_key = "rsc:fx-fallback:failures:#{base}"
+        failures = Discourse.redis.incr(failure_key)
+        Discourse.redis.expire(failure_key, 3600)
+        delay = [90 * 2**[failures - 1, 2].min, 300].min
+        Discourse.redis.setex("rsc:fx-fallback:retry:#{base}", delay, code)
       end
       raise
     end
@@ -290,7 +286,7 @@ module DiscourseRsc
             end
             if ForexQuoteGuard.pending?(quote)
               instrument.update!(quote: quote, provider_error: 'quote_verifying', synced_at: Time.current)
-              ForexReviewQueue.enqueue(instrument.id)
+              ForexReviewQueue.enqueue(instrument.id) if ForexReviewQueue.eligible?(instrument.id)
               return false
             end
             ForexReviewQueue.finish(instrument.id)
@@ -443,15 +439,18 @@ module DiscourseRsc
       end
       # The same lock/cache covers page reads, orders and scheduled refreshes.
       # No money transaction or instrument row lock is held during HTTP.
-      DistributedMutex.synchronize("rsc-quote:#{instrument.id}", validity: 90) do
-        instrument.reload
-        sync_one(instrument) if purpose != :forex_review && refresh_due?(instrument, purpose: purpose)
-        verify_forex_quote(instrument) if instrument.category == 'forex' && (ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data')
-        if %i[trade exit execution].include?(purpose) && !MarketSessions.closed?(instrument) && !ForexQuoteGuard.pending?(instrument.quote)
-          primary = instrument.quote
-          quote = execution_quote(instrument, primary)
-          record_quote(instrument, quote) unless quote.equal?(primary)
-          verify_forex_quote(instrument) if ForexQuoteGuard.pending?(instrument.quote)
+      ForexReviewQueue.watch(instrument.id, trading: %i[trade exit].include?(purpose)) if instrument.category == 'forex' && %i[read trade exit].include?(purpose)
+      FallbackBudget.with_context(purpose) do
+        DistributedMutex.synchronize("rsc-quote:#{instrument.id}", validity: 90) do
+          instrument.reload
+          sync_one(instrument) if purpose != :forex_review && refresh_due?(instrument, purpose: purpose)
+          verify_forex_quote(instrument) if instrument.category == 'forex' && (ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data')
+          if %i[trade exit execution].include?(purpose) && !MarketSessions.closed?(instrument) && !ForexQuoteGuard.pending?(instrument.quote)
+            primary = instrument.quote
+            quote = execution_quote(instrument, primary)
+            record_quote(instrument, quote) unless quote.equal?(primary)
+            verify_forex_quote(instrument) if ForexQuoteGuard.pending?(instrument.quote)
+          end
         end
       end
       instrument.reload
@@ -462,6 +461,12 @@ module DiscourseRsc
     # No database lock is held during the network calls.
     def self.verify_forex_quote(instrument)
       return if MarketSessions.closed?(instrument)
+      direct = %i[trade exit execution].include?(Thread.current[:rsc_fallback_purpose])
+      return unless direct || ForexReviewQueue.eligible?(instrument.id)
+      if (direct || ForexReviewQueue.requested?(instrument.id) || FallbackBudget.exposed?(instrument.id)) && instrument.quote.dig('verification', 'backup_error') == 'provider_background_budget'
+        ForexReviewQueue.finish(instrument.id)
+        Discourse.redis.del("rsc:fx-review:#{instrument.id}")
+      end
       return if ForexQuoteGuard.pending?(instrument.quote) && !ForexReviewQueue.turn?(instrument.id)
       return unless Discourse.redis.set("rsc:fx-review:#{instrument.id}", '1', nx: true, ex: 60)
       begin
@@ -487,7 +492,7 @@ module DiscourseRsc
           # A contested eight-second slot is not a failed minute of evidence.
           Discourse.redis.expire("rsc:fx-review:#{instrument.id}", 10)
         elsif ForexQuoteGuard.pending?(instrument.quote)
-          wait = code == 'provider_daily_limit' ? (Time.current.utc.tomorrow.beginning_of_day - Time.current).ceil : 300
+          wait = %w[provider_daily_limit provider_background_budget].include?(code) ? (Time.current.utc.tomorrow.beginning_of_day - Time.current).ceil : 300
           ForexReviewQueue.finish(instrument.id, retry_in: wait)
         end
       end
@@ -642,7 +647,7 @@ module DiscourseRsc
       lower_bound = open_items.count { |item| %w[yahoo twelve_data].include?(item.provider) }
       { exposed: items.size, open_exposed: open_items.size, minimum_provider_seconds: lower_bound,
         batch: SiteSetting.rsc_market_sync_batch, capacity_ok: open_items.size <= SiteSetting.rsc_market_sync_batch && lower_bound <= 40,
-        stale: stale, fresh: items.size - stale.size }
+        stale: stale, fresh: items.size - stale.size, fallback_usage: FallbackBudget.report }
     end
 
     def self.search(query)

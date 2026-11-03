@@ -73,6 +73,7 @@ after_initialize do
     app/services/discourse_rsc/forecast_provider
     app/services/discourse_rsc/forecast_exchange
     app/services/discourse_rsc/forecast_settlement
+    app/services/discourse_rsc/fallback_budget
     app/services/discourse_rsc/forex_quote_guard
     app/services/discourse_rsc/forex_review_queue
     app/services/discourse_rsc/market_data

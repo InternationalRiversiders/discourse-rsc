@@ -7,6 +7,7 @@ class ForexReviewQueueTest < ForexPrimaryPolicyTest
   def quarantined(code)
     item=forex("FX:#{code}")
     item.update!(provider:'yahoo',provider_symbol:"#{code}=X",quote:observation('1'))
+    Q.watch(item.id)
     accept(item,'1.002')
     assert G.pending?(item.quote)
     item
@@ -29,7 +30,7 @@ class ForexReviewQueueTest < ForexPrimaryPolicyTest
     assert_equal 0,Discourse.redis.zcard(Q::QUEUE)
   end
 
-  def test_unheld_quarantine_gets_three_independent_backup_samples_and_releases_turn
+  def test_watched_unheld_quarantine_gets_three_independent_backup_samples_and_releases_turn
     travel_to(Time.utc(2026,11,3,12)) do
       SiteSetting.rsc_market_data_enabled=true
       SiteSetting.rsc_twelve_data_api_key='isolated-test-key'
@@ -105,4 +106,41 @@ class ForexReviewQueueTest < ForexPrimaryPolicyTest
       assert_equal 0,Q.claim
     end
   end
+  def test_unwatched_unheld_symbols_do_not_spend_credits_or_hold_review_turn
+    travel_to(Time.utc(2026,11,3,12)) do
+      SiteSetting.rsc_market_data_enabled=true
+      SiteSetting.rsc_twelve_data_api_key='isolated-test-key'
+      first=quarantined('BRL')
+      Discourse.redis.del("rsc:fx-review-watch:#{first.id}")
+      with_feeds(observation('1.002'),R::Error.new('provider_daily_limit')) do |calls|
+        assert_empty R::MarketData.sync_forex
+        R::MarketData.refresh_if_needed(first.id,purpose: :idle)
+        assert_equal 0,calls[:backup]
+        assert G.pending?(first.reload.quote)
+        assert_equal 0,Q.claim
+        R::MarketData.refresh_if_needed(first.id,purpose: :read)
+        assert_equal 1,calls[:backup]
+        assert Q.eligible?(first.id)
+      end
+    end
+  end
+
+  def test_cold_budget_deferral_does_not_block_later_trade_review
+    travel_to(Time.utc(2026,11,3,12)) do
+      SiteSetting.rsc_market_data_enabled=true
+      SiteSetting.rsc_twelve_data_api_key='isolated-test-key'
+      item=quarantined('BRL')
+      with_feeds(observation('1.002'),R::Error.new('provider_background_budget')) do |calls|
+        R::MarketData.refresh_if_needed(item.id,purpose: :read)
+        assert_equal 1,calls[:backup]
+        assert_nil Q.next_instrument
+      end
+      with_feeds(observation('1.002'),observation('1.001',source:'twelve_data')) do |calls|
+        R::MarketData.refresh_if_needed(item.id,purpose: :trade)
+        assert_equal 1,calls[:backup]
+        assert G.pending?(item.reload.quote) # One sample must not bypass guard.
+      end
+    end
+  end
+
 end

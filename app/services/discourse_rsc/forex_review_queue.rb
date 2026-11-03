@@ -31,6 +31,19 @@ module DiscourseRsc
       return 1
     LUA
 
+    def self.watch(id, trading: false)
+      Discourse.redis.setex("rsc:fx-review-watch:#{id}", 600, '1')
+      Discourse.redis.setex("rsc:fx-review-request:#{id}", 600, '1') if trading
+    end
+
+    def self.requested?(id)
+      Discourse.redis.exists?("rsc:fx-review-request:#{id}")
+    end
+
+    def self.eligible?(id)
+      Discourse.redis.exists?("rsc:fx-review-watch:#{id}") || FallbackBudget.exposed?(id)
+    end
+
     def self.enqueue(id)
       ProviderHttp.evaluate(ENQUEUE, keys: [QUEUE], argv: [id.to_s])
     end
@@ -50,13 +63,14 @@ module DiscourseRsc
 
     def self.next_instrument
       # Recover pending rows predating this queue, or lost Redis state. This is
-      # only a database scan of FX quarantine, never a catalog-wide HTTP refresh.
+      # only a database scan. Only held/ordered or recently viewed symbols qualify;
+      # unseen catalog quarantine must not continuously spend backup credits.
       Instrument.where(active: true, category: 'forex')
-        .where("quote->'verification'->>'status' = 'pending'").pluck(:id).each { |id| enqueue(id) }
+        .where("quote->'verification'->>'status' = 'pending'").pluck(:id).each { |id| enqueue(id) if eligible?(id) }
       id = claim
       return if id.zero?
       item = Instrument.find_by(id: id, active: true, category: 'forex')
-      unless item && ForexQuoteGuard.pending?(item.quote)
+      unless item && ForexQuoteGuard.pending?(item.quote) && eligible?(id)
         finish(id)
         return
       end

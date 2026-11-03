@@ -155,6 +155,7 @@ class ForexQuoteGuardTest < ForexActivityTest
       q=observation('0.1503')
       R::MarketData.define_singleton_method(:fetch_primary_quote){|_|q}
       R::MarketData.define_singleton_method(:forex_fallback){|_|raise R::Error.new('provider_busy')}
+      R::ForexReviewQueue.watch(item.id)
       R::MarketData.verify_forex_quote(item)
       assert G.pending?(item.reload.quote)
       assert_equal '0.15',item.quote['price']
