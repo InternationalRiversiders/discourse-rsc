@@ -48,7 +48,10 @@ module DiscourseRsc
 
     def self.protection!(position, instrument, current_price, take_profit, stop_loss, fee_bps: instrument.fee_bps)
       long = position.side == "long"
-      raise Error.new("invalid_protection") if (take_profit && (long ? take_profit <= current_price : take_profit >= current_price)) || (stop_loss && (long ? stop_loss >= current_price : stop_loss <= current_price))
+      if current_price
+        raise Error.new("invalid_protection") if (take_profit && (long ? take_profit <= current_price : take_profit >= current_price)) || (stop_loss && (long ? stop_loss >= current_price : stop_loss <= current_price))
+      end
+      raise Error.new("invalid_protection") if take_profit && stop_loss && (long ? take_profit <= stop_loss : take_profit >= stop_loss)
       boundary = break_even(position, fee_bps)
       raise Error.new("take_profit_not_profitable") if take_profit && (long ? take_profit <= boundary : take_profit >= boundary)
       liquidation = Amount.parse(Risk.liquidation(position))

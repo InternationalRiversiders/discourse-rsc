@@ -74,6 +74,7 @@ after_initialize do
     app/services/discourse_rsc/forecast_exchange
     app/services/discourse_rsc/forecast_settlement
     app/services/discourse_rsc/forex_quote_guard
+    app/services/discourse_rsc/forex_review_queue
     app/services/discourse_rsc/market_data
     app/services/discourse_rsc/us_stock_fallback
     app/services/discourse_rsc/crypto_stream

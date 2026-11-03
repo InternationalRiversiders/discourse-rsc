@@ -290,8 +290,10 @@ module DiscourseRsc
             end
             if ForexQuoteGuard.pending?(quote)
               instrument.update!(quote: quote, provider_error: 'quote_verifying', synced_at: Time.current)
+              ForexReviewQueue.enqueue(instrument.id)
               return false
             end
+            ForexReviewQueue.finish(instrument.id)
           end
           quote = observe_delay(instrument.quote, quote, category: instrument.category)
           attributes = {quote: quote, provider_error: nil, synced_at: Time.current}
@@ -391,8 +393,17 @@ module DiscourseRsc
       items.sort_by! { |item| [pending_ids.include?(item.id) ? 0 : 1, item.synced_at || Time.at(0)] }
       deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 12
       done = []
+      # Unheld quarantined symbols cannot wait for the 15-minute idle scan:
+      # confirmation samples expire after five minutes. Review one bounded turn
+      # per poll, preserving the shared provider limits and normal exposure work.
+      if (review = ForexReviewQueue.next_instrument)
+        refreshed = refresh_if_needed(review.id, purpose: :forex_review)
+        yield refreshed.id if block_given?
+        done << refreshed.id
+      end
       items.first(SiteSetting.rsc_market_sync_batch).each do |item|
         break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+        next if done.include?(item.id)
         refreshed = refresh_if_needed(item.id, purpose: executable_ids.include?(item.id) ? :execution : :forex_fast)
         # Evaluate stops and pending orders immediately after receiving a quote.
         yield refreshed.id if block_given?
@@ -434,7 +445,7 @@ module DiscourseRsc
       # No money transaction or instrument row lock is held during HTTP.
       DistributedMutex.synchronize("rsc-quote:#{instrument.id}", validity: 90) do
         instrument.reload
-        sync_one(instrument) if refresh_due?(instrument, purpose: purpose)
+        sync_one(instrument) if purpose != :forex_review && refresh_due?(instrument, purpose: purpose)
         verify_forex_quote(instrument) if instrument.category == 'forex' && (ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data')
         if %i[trade exit execution].include?(purpose) && !MarketSessions.closed?(instrument) && !ForexQuoteGuard.pending?(instrument.quote)
           primary = instrument.quote
@@ -451,6 +462,7 @@ module DiscourseRsc
     # No database lock is held during the network calls.
     def self.verify_forex_quote(instrument)
       return if MarketSessions.closed?(instrument)
+      return if ForexQuoteGuard.pending?(instrument.quote) && !ForexReviewQueue.turn?(instrument.id)
       return unless Discourse.redis.set("rsc:fx-review:#{instrument.id}", '1', nx: true, ex: 60)
       begin
         record_quote(instrument, fetch_primary_quote(instrument))
@@ -470,6 +482,13 @@ module DiscourseRsc
         instrument.with_lock do
           state = instrument.quote.fetch('verification', {}).merge('backup_error'=>code, 'backup_checked_at'=>Time.current.iso8601(6))
           instrument.update!(quote: instrument.quote.merge('verification'=>state))
+        end
+        if code == 'provider_busy'
+          # A contested eight-second slot is not a failed minute of evidence.
+          Discourse.redis.expire("rsc:fx-review:#{instrument.id}", 10)
+        elsif ForexQuoteGuard.pending?(instrument.quote)
+          wait = code == 'provider_daily_limit' ? (Time.current.utc.tomorrow.beginning_of_day - Time.current).ceil : 300
+          ForexReviewQueue.finish(instrument.id, retry_in: wait)
         end
       end
     end

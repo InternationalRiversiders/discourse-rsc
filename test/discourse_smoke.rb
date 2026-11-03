@@ -15,6 +15,7 @@ class DiscourseSmokeTest < Minitest::Test
     RateLimiter.clear_all_global!
     Discourse.redis.keys("#{RateLimiter.key_prefix}*").each { |key| Discourse.redis.del(key) }
     Discourse.cache.delete('rsc:trading-hours')
+    Discourse.redis.del('rsc:fx-review-queue:v1', 'rsc:fx-review-active:v1')
     Discourse.cache.keys('rsc:yahoo-chart:v2:*').each { |key| Discourse.redis.del(key) }
     %w[rsc:market:catalog:v1 rsc:market:metadata:v1 rsc:sports:team-dictionary:v1].each { |key| Rails.cache.delete(key) }
     SiteSetting.rsc_sports_team_translation_enabled = false

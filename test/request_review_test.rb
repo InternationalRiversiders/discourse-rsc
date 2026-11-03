@@ -186,7 +186,7 @@ class RequestReviewTest < FinalReviewTest
     assert_equal 'quote_stale', assert_raises(R::Error) { R::Exchange.price!(item.reload) }.code
   end
 
-  def test_protection_refreshes_price_outside_transaction_and_replay_does_not_fetch
+  def test_protection_and_replay_do_not_fetch_quotes
     fund
     item = instrument
     R::Exchange.submit(actor: @alice, instrument_id: item.id, side: 'long', quantity: '1', leverage: 1, request_id: 'position-to-protect')
@@ -195,9 +195,10 @@ class RequestReviewTest < FinalReviewTest
     SiteSetting.rsc_market_data_enabled = true
     with_quote_fetcher do |calls|
       args = {actor: @alice, position_id: position.id, take_profit: '110', stop_loss: nil, request_id: 'protect-fresh'}
-      R::Exchange.protect(**args)
+      assert R::Exchange.protect(**args)['waiting_quote']
       assert R::Exchange.protect(**args)['replayed']
-      assert_equal [item.id], calls
+      assert_empty calls
+      assert_equal R::Amount.parse('110'),position.reload.take_profit_units
     end
   end
 

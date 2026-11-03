@@ -107,10 +107,6 @@ module DiscourseRsc
       tp = take_profit.present? ? Amount.positive(take_profit) : nil
       sl = stop_loss.present? ? Amount.positive(stop_loss) : nil
       Safety.ensure_writable!
-      unless Command.exists?(key: "stock_protect:#{actor.id}:#{request_id}")
-        candidate = Position.find_by!(id: position_id, user_id: actor.id)
-        MarketData.refresh_if_needed(candidate.instrument_id, purpose: :protection)
-      end
       Commands.run(user_id: actor.id, action: "stock_protect", request_id: request_id, input: [position_id, tp&.to_s, sl&.to_s]) do
         candidate = Position.find_by!(id: position_id, user_id: actor.id)
         Commands.lock("rsc-exchange")
@@ -118,10 +114,17 @@ module DiscourseRsc
         position = Position.lock.find(candidate.id)
         Risk.lock(actor.id)
         raise Error.new("wallet_frozen", status: 403) unless Account.wallet(actor.id).status == "active"
-        price = price!(instrument)
+        # Saving protection is not a fill. Do not perform network I/O or require
+        # a live quote to amend/remove it; process still checks executable prices.
+        price = begin
+          price!(instrument)
+        rescue Error => error
+          raise unless %w[quote_stale quote_unavailable quote_verifying].include?(error.code)
+          nil
+        end
         TradingRules.protection!(position, instrument, price, tp, sl, fee_bps: ForexActivity.fee_bps(instrument, position: position))
         position.update!(take_profit_units: tp, stop_loss_units: sl)
-        { position_id: position.id }
+        { position_id: position.id, waiting_quote: price.nil? }
       end
     end
 
