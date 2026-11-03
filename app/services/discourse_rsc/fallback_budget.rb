@@ -35,12 +35,24 @@ module DiscourseRsc
         .where('execute_at <= ? AND expires_at > ?', Time.current, Time.current).exists?
     end
 
+    def self.protection_positions
+      Position.where('take_profit_units IS NOT NULL OR stop_loss_units IS NOT NULL')
+        .where(user_id: Account.where(kind: 'wallet', status: 'active').select(:user_id))
+    end
+
+    def self.protection_order?(instrument)
+      protection_positions.where(instrument_id: instrument.id).exists?
+    end
+
     # Fail closed: holdings, page views and a recent failed submission are not
-    # orders. Background review may spend credits only for a live due order.
+    # orders. A saved stop is a conditional close order: monitoring its trigger
+    # needs a valid price even before Exchange.process creates the closing row.
     def self.allowed?(instrument)
       case Thread.current[:rsc_fallback_purpose]
       when :trade, :exit then true
-      when :execution, :forex_review then executable_order?(instrument)
+      when :execution then executable_order?(instrument)
+      when :protection_execution then protection_order?(instrument)
+      when :forex_review then executable_order?(instrument) || protection_order?(instrument)
       else false
       end
     end
@@ -50,7 +62,8 @@ module DiscourseRsc
       when :trade then 'open_order'
       when :exit then 'close_order'
       when :execution then 'pending_order'
-      when :forex_review then 'pending_order_review'
+      when :protection_execution then 'protection_execution'
+      when :forex_review then executable_order?(instrument) ? 'pending_order_review' : 'protection_review'
       else 'non_trading'
       end
     end
