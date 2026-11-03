@@ -195,7 +195,7 @@ class RequestReviewTest < FinalReviewTest
     SiteSetting.rsc_market_data_enabled = true
     with_quote_fetcher do |calls|
       args = {actor: @alice, position_id: position.id, take_profit: '110', stop_loss: nil, request_id: 'protect-fresh'}
-      assert R::Exchange.protect(**args)['waiting_quote']
+      assert R::Exchange.protect(**args)['protection_waiting_quote']
       assert R::Exchange.protect(**args)['replayed']
       assert_empty calls
       assert_equal R::Amount.parse('110'),position.reload.take_profit_units

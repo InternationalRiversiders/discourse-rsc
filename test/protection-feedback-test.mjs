@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const {protectionError:e}=await import(`data:text/javascript;base64,${Buffer.from(fs.readFileSync(new URL('../assets/javascripts/discourse/lib/rsc-estimate.js',import.meta.url))).toString('base64')}`);
+assert.equal(e({side:'long',tp:'120',sl:'90',current:'100',breakEven:'101',liquidation:'85'}),'');
+assert.equal(e({side:'short',tp:'80',sl:'105',current:'100',breakEven:'99',liquidation:'110'}),'');
+assert.match(e({side:'long',tp:'90',current:'100'}),/止盈价须大于当前有效报价 100/);
+assert.match(e({side:'short',sl:'90',current:'100'}),/止损价须大于当前有效报价/);
+assert.equal(e({side:'long',tp:'120',sl:'90',current:null,breakEven:'101',liquidation:'85'}),'');
+assert.match(e({side:'long',tp:'100',current:null,breakEven:'101'}),/保本价/);
+assert.match(e({side:'short',sl:'120',liquidation:'110'}),/强平价/);
+assert.match(e({side:'long',tp:'1e-8'}),/最多支持/);
+assert.match(e({side:'long',tp:'0.000000000000000001',current:'0.000000000000000001'}),/大于/);
+assert.equal(e({side:'long',tp:'0.000000000000000002',current:'0.000000000000000001'}),'');
+assert.equal(e({side:'short',tp:'',sl:'',current:'1'}),'');
+console.log('PASS protection input precision, long/short boundaries and quote-free saves');

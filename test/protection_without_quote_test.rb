@@ -18,7 +18,9 @@ class ProtectionWithoutQuoteTest < NativeAdaptationTest
       item.update!(category: index==2 ? 'forex' : 'us', quote:snapshot)
       before=[R::Order.count,R::Journal.count,R::Account.wallet(@alice.id).balance]
       result=protect(position)
-      assert result['waiting_quote']
+      assert result['protection_saved']
+      assert result['protection_waiting_quote']
+      refute result.key?('waiting_quote')
       assert_equal R::Amount.parse('120'),position.reload.take_profit_units
       assert_equal R::Amount.parse('90'),position.stop_loss_units
       R::Exchange.process(item.id)

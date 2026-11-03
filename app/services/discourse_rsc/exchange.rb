@@ -124,7 +124,7 @@ module DiscourseRsc
         end
         TradingRules.protection!(position, instrument, price, tp, sl, fee_bps: ForexActivity.fee_bps(instrument, position: position))
         position.update!(take_profit_units: tp, stop_loss_units: sl)
-        { position_id: position.id, waiting_quote: price.nil? }
+        { position_id: position.id, protection_saved: true, protection_waiting_quote: price.nil? && (tp.present? || sl.present?) }
       end
     end
 

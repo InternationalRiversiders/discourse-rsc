@@ -4,8 +4,15 @@ module DiscourseRsc
   module FallbackBudget
     RETENTION = 14.days.to_i
     COLD_LIMIT = 60
+    # Background maintenance shares the daily pool but leaves 150 credits for
+    # explicit orders. Holding continuity is sampled at most every three minutes.
+    BACKGROUND_CEILING = 600
+    HOLDING_INTERVAL = 180
+    PRIORITY = %w[open_order close_order pending_order requested_review direct_execution].freeze
     RESERVE = <<~LUA
       if tonumber(redis.call('GET', KEYS[2]) or '0') >= 750 then return -2 end
+      if ARGV[3] == '1' and tonumber(redis.call('GET', KEYS[2]) or '0') >= 600 then return -3 end
+      if ARGV[4] == '1' and redis.call('EXISTS', KEYS[4]) == 1 then return -4 end
       if ARGV[1] == '1' and tonumber(redis.call('GET', KEYS[3]) or '0') >= 60 then return -3 end
       if not redis.call('SET', KEYS[1], '1', 'NX', 'EX', 8) then return -1 end
       local used = redis.call('INCR', KEYS[2])
@@ -53,15 +60,23 @@ module DiscourseRsc
       Discourse.redis.set("#{key}:started_at", Time.current.iso8601(6), nx: true, ex: RETENTION)
     end
 
+    def self.background_available?
+      Discourse.redis.get("rsc:fx-fallback:requests:#{Time.current.utc.to_date}").to_i < BACKGROUND_CEILING
+    end
+
     def self.request(instrument, reason:)
       day = Time.current.utc.to_date
       op = operation(instrument)
-      cold = !%w[open_order close_order pending_order requested_review direct_execution].include?(op) && !exposed?(instrument.id)
+      background = !PRIORITY.include?(op)
+      cold = background && !exposed?(instrument.id)
+      paced = background && reason != 'quote_verification'
+      pace_key = "rsc:fx-fallback:holding:#{instrument.id}"
+
       total_key = "rsc:fx-fallback:requests:#{day}"
       cold_key = "rsc:fx-fallback:cold:#{day}"
-      used = ProviderHttp.evaluate(RESERVE, keys: ['rsc:fx-fallback:slot', total_key, cold_key], argv: [cold ? '1' : '0', RETENTION])
+      used = ProviderHttp.evaluate(RESERVE, keys: ['rsc:fx-fallback:slot', total_key, cold_key, pace_key], argv: [cold ? '1' : '0', RETENTION, background ? '1' : '0', paced ? '1' : '0'])
       if used.negative?
-        code = {-1 => 'provider_busy', -2 => 'provider_daily_limit', -3 => 'provider_background_budget'}.fetch(used)
+        code = {-1 => 'provider_busy', -2 => 'provider_daily_limit', -3 => 'provider_background_budget', -4 => 'provider_background_paced'}.fetch(used)
         metric(day, instrument.symbol, op, reason, "blocked:#{code}")
         raise Error.new(code, status: 503)
       end
@@ -75,11 +90,13 @@ module DiscourseRsc
           ProviderHttp.evaluate(REFUND, keys: cold ? [total_key, cold_key] : [total_key], argv: [])
           metric(day, instrument.symbol, op, reason, "not_sent:#{code}")
         else
+          Discourse.redis.setex(pace_key, HOLDING_INTERVAL, '1') if paced
           metric(day, instrument.symbol, op, reason, 'requests')
           metric(day, instrument.symbol, op, reason, "failed:#{code}")
         end
         raise
       else
+        Discourse.redis.setex(pace_key, HOLDING_INTERVAL, '1') if paced
         metric(day, instrument.symbol, op, reason, 'requests')
         metric(day, instrument.symbol, op, reason, 'success')
         value
@@ -89,6 +106,7 @@ module DiscourseRsc
     def self.report(day = Time.current.utc.to_date)
       key = "rsc:fallback-usage:#{day}"
       { day: day, timezone: 'UTC', total_reserved: Discourse.redis.get("rsc:fx-fallback:requests:#{day}").to_i,
+        background_ceiling: BACKGROUND_CEILING, priority_reserve: 750 - BACKGROUND_CEILING, holding_interval_seconds: HOLDING_INTERVAL,
         cold_used: Discourse.redis.get("rsc:fx-fallback:cold:#{day}").to_i, cold_limit: COLD_LIMIT,
         tracked_since: Discourse.redis.get("#{key}:started_at"),
         rows: Discourse.redis.hgetall(key).map { |field, count| symbol, op, reason, outcome = field.split('|'); {symbol: symbol, operation: op, reason: reason, outcome: outcome, count: count.to_i} } }

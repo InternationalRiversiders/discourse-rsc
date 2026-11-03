@@ -87,4 +87,56 @@ class FallbackBudgetTest < ForexFallbackTest
       assert_equal 5,B.report[:total_reserved]
     end
   end
+  def test_background_ceiling_preserves_credits_for_explicit_orders
+    item=fx;Discourse.redis.set("rsc:fx-fallback:requests:#{Time.current.utc.to_date}",600)
+    error=assert_raises(R::Error){B.with_context(:forex_fast){B.request(item,reason:'backup_continuity'){flunk 'Background spent reserve'}}}
+    assert_equal 'provider_background_budget',error.code
+    B.with_context(:exit){assert_equal :ok,B.request(item,reason:'stale_execution'){:ok}}
+    assert_equal 601,B.report[:total_reserved]
+  end
+
+  def test_holding_continuity_is_paced_but_execution_and_verification_are_not
+    item=fx
+    B.with_context(:forex_fast){B.request(item,reason:'backup_continuity'){:ok}}
+    Discourse.redis.del('rsc:fx-fallback:slot')
+    error=assert_raises(R::Error){B.with_context(:forex_fast){B.request(item,reason:'backup_continuity'){flunk 'Repeated holding fetch'}}}
+    assert_equal 'provider_background_paced',error.code
+    assert_equal 1,B.report[:total_reserved]
+    B.with_context(:exit){B.request(item,reason:'stale_execution'){:ok}}
+    Discourse.redis.del('rsc:fx-fallback:slot')
+    B.with_context(:forex_fast){B.request(item,reason:'quote_verification'){:ok}}
+    assert_equal 3,B.report[:total_reserved]
+  end
+
+  def test_valid_backup_reused_past_one_minute_but_review_gets_independent_samples
+    travel_to(Time.utc(2026,11,3,12)) do
+      item=fx;data={'symbol'=>'USD/CNY','rate'=>'6.67','timestamp'=>Time.current.to_i}
+      feeds(quote('0.15'),data) do |calls|
+        first=R::MarketData.forex_fallback(item)
+        travel 90.seconds
+        assert_equal first,R::MarketData.forex_fallback(item)
+        assert_equal 1,calls.size
+        item.update!(quote:item.quote.merge('verification'=>{'status'=>'pending'}))
+        data['timestamp']=Time.current.to_i
+        Discourse.redis.del('rsc:fx-fallback:slot')
+        second=R::MarketData.forex_fallback(item)
+        assert_equal 2,calls.size
+        assert_operator Time.iso8601(second['source_time']),:>,Time.iso8601(first['source_time'])
+      end
+    end
+  end
+
+  def test_cached_backup_expires_by_source_clock_even_before_cache_ttl
+    travel_to(Time.utc(2026,11,3,12)) do
+      item=fx;data={'symbol'=>'USD/CNY','rate'=>'6.67','timestamp'=>150.seconds.ago.to_i}
+      feeds(quote('0.15'),data) do |calls|
+        R::MarketData.forex_fallback(item)
+        travel 31.seconds;data['timestamp']=Time.current.to_i
+        Discourse.redis.del('rsc:fx-fallback:slot')
+        result=R::MarketData.forex_fallback(item)
+        assert_equal 2,calls.size;assert R::ForexQuoteGuard.fresh?(result)
+      end
+    end
+  end
+
 end

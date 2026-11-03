@@ -26,7 +26,7 @@ import {
   formatPrice,
   signedAmount,
 } from "../lib/rsc-format";
-import { estimate, quantityForFraction, quantityForNotional, notionalForQuantity, openingQuantity, atomic } from "../lib/rsc-estimate";
+import { estimate, quantityForFraction, quantityForNotional, notionalForQuantity, openingQuantity, atomic, protectionError } from "../lib/rsc-estimate";
 import { marketView, canRefreshForTrade } from "../lib/rsc-market";
 import { i18n } from "discourse-i18n";
 
@@ -123,11 +123,22 @@ export default class RscDashboard extends Component {
   get tradingDisabled() {
     return (
       this.data.read_only ||
-      this.busy || Number(this.leverage) > this.maxLeverage || this.highRiskStatus.blocked || !!this.quantityError || !!this.budgetError || !!this.positionConflict ||
+      this.busy || Number(this.leverage) > this.maxLeverage || this.highRiskStatus.blocked || !!this.quantityError || !!this.budgetError || !!this.positionConflict || !!this.selectedPending || !!this.orderProtectionError ||
       (!this.selectedMarket?.tradable && !this.needsExecutionQuote) ||
       this.data.wallet.status !== "active" ||
       (this.side !== "close" && this.selected?.close_only)
     );
+  }
+  get selectedPending() {
+    return this.data.orders?.find((order) => String(order.instrument_id) === this.selectedId && order.status === "pending");
+  }
+  get orderProtectionError() {
+    return protectionError({ side: this.side, tp: this.takeProfit, sl: this.stopLoss,
+      current: this.selectedMarket?.tradable ? this.selected.quote.price : null });
+  }
+  get protectionHint() {
+    const direction = this.side === "short" ? "做空：止盈价低于当前价，止损价高于当前价。" : "做多：止盈价高于当前价，止损价低于当前价。";
+    return `填写触发单价（RSC／单位），不是盈亏金额；留空表示不设置。${direction}`;
   }
   @action chartQuoteUpdated(item) {
     if (!item || this.isDestroying || this.isDestroyed) { return; }
@@ -141,7 +152,7 @@ export default class RscDashboard extends Component {
     const source = q.source === "twelve_data" ? "Twelve Data 备用源 · 分钟采样" : q.source === "yahoo" ? "Yahoo" : q.source;
     const delay = Number(q.delay_seconds) || 0;
     const backupError = q.verification?.backup_error;
-    const backupHint = backupError === "provider_daily_limit" ? " · 今日备用行情额度已用完" : backupError === "quote_stale" ? " · 备用源时间戳较旧，等待更新" : backupError ? " · 备用源暂不可用，等待重试" : "";
+    const backupHint = backupError === "provider_daily_limit" ? " · 今日备用行情额度已用完" : backupError === "provider_background_budget" ? " · 后台备用额度已暂停，预留额度优先供下单和平仓" : backupError === "provider_background_paced" ? " · 后台备用行情按节奏刷新，下单时会重新检查" : backupError === "quote_stale" ? " · 备用源时间戳较旧，等待更新" : backupError ? " · 备用源暂不可用，等待重试" : "";
     return `${source || "行情源"}${delay > 120 ? ` · 约延迟 ${Math.ceil(delay / 60)} 分钟` : ""}${q.verification?.status === "pending" ? " · 两源或前后报价存在差异，复核通过后恢复成交" : q.verification?.preferred_source === "twelve_data" ? " · 已切换至连续核验通过的备用报价" : ""}${backupHint}`;
   }
   @action selectMarket(id) {
@@ -295,15 +306,24 @@ export default class RscDashboard extends Component {
     requestAnimationFrame(() => document.querySelector("#rsc-positions")?.scrollIntoView({ block: "start" }));
   }
   get positions() {
-    return this.data.positions.map((position) => ({
-      ...position,
-      closeQuantity: this.closeQuantities[position.id] ?? position.quantity,
-      marginDraft: this.margins[position.id] ?? "",
-      remaining: position.hold_until ? Math.max(0, Math.ceil((Date.parse(position.hold_until) - this.quoteClock) / 1000)) : 0,
-      closeDisabled: this.busy || this.data.read_only || this.data.wallet.status !== "active" || (position.hold_until && Date.parse(position.hold_until) > this.quoteClock),
-      tp: this.protections[position.id]?.tp ?? position.take_profit ?? "",
-      sl: this.protections[position.id]?.sl ?? position.stop_loss ?? "",
-    }));
+    return this.data.positions.map((position) => {
+      const tp = this.protections[position.id]?.tp ?? position.take_profit ?? "";
+      const sl = this.protections[position.id]?.sl ?? position.stop_loss ?? "";
+      const current = Date.parse(position.protection_reference?.valid_until) >= this.quoteClock ? position.protection_reference.price : null;
+      const error = protectionError({ side: position.side, tp, sl, current, breakEven: position.break_even, liquidation: position.liquidation });
+      const item = this.data.instruments.find((row) => row.id === position.instrument_id);
+      const marketClosed = item && marketView(item, this.quoteClock).status === "session_closed";
+      const pendingClose = this.data.orders?.find((order) => order.instrument_id === position.instrument_id && order.status === "pending" && order.side === "close");
+      return {
+        ...position, tp, sl, protectionError: error, protectionDisabled: this.writeDisabled || !!error,
+        pendingClose, marketClosed,
+        protectionHint: `填写触发单价（RSC／单位），不是盈亏金额；清空后保存可取消。${current ? `当前参考价 ${current}；` : "当前报价不可用，仍可保存；"}${position.side === "short" ? "做空止盈须低于保本价，止损须低于强平价。" : "做多止盈须高于保本价，止损须高于强平价。"}`,
+        closeQuantity: this.closeQuantities[position.id] ?? position.quantity,
+        marginDraft: this.margins[position.id] ?? "",
+        remaining: position.hold_until ? Math.max(0, Math.ceil((Date.parse(position.hold_until) - this.quoteClock) / 1000)) : 0,
+        closeDisabled: this.writeDisabled || !!pendingClose || !!marketClosed || (position.hold_until && Date.parse(position.hold_until) > this.quoteClock),
+      };
+    });
   }
   @action set(field, event) {
     this[field] = event.target.value;
@@ -382,7 +402,7 @@ export default class RscDashboard extends Component {
       });
       this.requestIds.delete(key);
       if (this.isDestroying || this.isDestroyed) { return result; }
-      this.notice = result.status === "filled" ? "已成交。" : result.status === "rejected" ? "委托未成交，请查看委托记录中的原因。" : result.waiting_quote ? "平仓委托已提交：等待有效报价后自动执行，可在委托记录中撤单。有效期 30 分钟，期间价格和盈亏仍会变化。" : uiText("saved");
+      this.notice = path.endsWith("/protection") ? (result.protection_waiting_quote || result.waiting_quote ? "止盈止损已保存，获得有效报价后检查触发；未提交平仓委托。" : "止盈止损已保存。") : result.status === "filled" ? "已成交。" : result.status === "rejected" ? "委托未成交，请查看委托记录中的原因。" : result.waiting_quote ? "平仓委托已提交：等待有效报价后自动执行，可在委托记录中撤单。有效期 30 分钟，期间价格和盈亏仍会变化。" : uiText("saved");
       // Fetch account state without another provider refresh. Advance the state
       // generation now so an older in-flight read cannot overwrite this result.
       const successNotice = this.notice;
@@ -395,13 +415,19 @@ export default class RscDashboard extends Component {
       });
       return result;
     } catch (error) {
-      if (!this.isDestroying && !this.isDestroyed) { this.error = extractError(error); }
+      if (!this.isDestroying && !this.isDestroyed) {
+        this.error = extractError(error);
+        if (["order_pending", "position_unavailable", "position_conflict", "order_not_pending", "market_closed", "insufficient_balance"].includes(error.jqXHR?.responseJSON?.error_code || error.responseJSON?.error_code)) {
+          void this.loadState(false).catch(() => {});
+        }
+      }
     } finally {
       if (!this.isDestroying && !this.isDestroyed) { this.busy = false; }
     }
   }
   @action trade(event) {
     event.preventDefault();
+    if (this.tradingDisabled) { return; }
     return this.send("orders", {
       instrument_id: this.selected.id,
       side: this.side,
@@ -427,6 +453,7 @@ export default class RscDashboard extends Component {
   }
   @action protect(position, event) {
     event.preventDefault();
+    if (position.protectionError) { this.error = position.protectionError; return; }
     return this.send(`positions/${position.id}/protection`, {
       take_profit: position.tp,
       stop_loss: position.sl,
@@ -514,7 +541,7 @@ export default class RscDashboard extends Component {
                     >{{uiText
                         position.valuation_basis
                       }}</small>{{/unless}}{{#if (eq position.risk "high")}}<span class="negative">风险较高</span>{{else if (eq position.risk "liquidation")}}<span class="negative">已达强平线</span>{{/if}}</div>
-                <dl class="rsc-position-metrics"><div><dt>数量</dt><dd>{{formatQuantity position.quantity}}</dd></div><div><dt>均价</dt><dd>{{formatPrice position.average}}</dd></div><div><dt>保证金</dt><dd>{{formatAmount position.margin}}</dd></div><div><dt>浮动盈亏</dt><dd class={{tone position.pnl}}>{{signedAmount position.pnl}}</dd></div></dl>{{#if position.remaining}}<p>距离可手动平仓约 {{position.remaining}} 秒（{{when position.hold_until}}）</p>{{/if}}</div><details class="rsc-position-details"><summary>管理持仓 · 平仓 / 止盈止损</summary><dl class="rsc-position-metrics"><div><dt>强平价</dt><dd>{{formatPrice position.liquidation}}</dd></div><div><dt>单仓权益</dt><dd>{{formatAmount position.equity}}</dd></div><div><dt>保本价</dt><dd>{{formatPrice position.break_even}}</dd></div><div><dt>维持保证金</dt><dd>{{formatAmount position.maintenance}}</dd></div></dl><p class="rsc-muted">风险状态：{{#if (eq position.risk "normal")}}正常{{else if (eq position.risk "high")}}较高{{else if position.risk}}已达强平线{{else}}报价不足{{/if}} · 金额单位 RSC</p>{{#if (eq position.category "forex")}}<p class="rsc-muted">外汇报价过期时，平仓会转为等待报价的委托；30 分钟内恢复后自动成交，可在委托记录撤单。</p>{{/if}}<form class="rsc-partial-close" {{on "submit" (fn this.close position)}}><label>平仓数量<input required inputmode="decimal" value={{position.closeQuantity}} {{on "input" (fn this.closeQuantity position.id)}} /></label><button class="btn" type="submit" disabled={{position.closeDisabled}}>{{#if position.pending_open}}{{uiText "cancel_and_close"}}{{else}}{{uiText "close_position"}}{{/if}}</button></form><form
+                <dl class="rsc-position-metrics"><div><dt>数量</dt><dd>{{formatQuantity position.quantity}}</dd></div><div><dt>均价</dt><dd>{{formatPrice position.average}}</dd></div><div><dt>保证金</dt><dd>{{formatAmount position.margin}}</dd></div><div><dt>浮动盈亏</dt><dd class={{tone position.pnl}}>{{signedAmount position.pnl}}</dd></div></dl>{{#if position.remaining}}<p>距离可手动平仓约 {{position.remaining}} 秒（{{when position.hold_until}}）</p>{{/if}}</div><details class="rsc-position-details"><summary>管理持仓 · 平仓 / 止盈止损</summary><dl class="rsc-position-metrics"><div><dt>强平价</dt><dd>{{formatPrice position.liquidation}}</dd></div><div><dt>单仓权益</dt><dd>{{formatAmount position.equity}}</dd></div><div><dt>保本价</dt><dd>{{formatPrice position.break_even}}</dd></div><div><dt>维持保证金</dt><dd>{{formatAmount position.maintenance}}</dd></div></dl><p class="rsc-muted">风险状态：{{#if (eq position.risk "normal")}}正常{{else if (eq position.risk "high")}}较高{{else if position.risk}}已达强平线{{else}}报价不足{{/if}} · 金额单位 RSC</p>{{#if (eq position.category "forex")}}<p class="rsc-muted">外汇报价过期时，平仓会转为等待报价的委托；30 分钟内恢复后自动成交，可在委托记录撤单。</p>{{/if}}{{#if position.marketClosed}}<p class="rsc-muted">当前休市，暂不能平仓；仍可修改止盈止损。</p>{{/if}}{{#if position.pendingClose}}<p class="alert alert-info">此品种已有待平仓委托，<a href="#rsc-orders">查看或撤销委托</a>后再操作。</p>{{/if}}<form class="rsc-partial-close" {{on "submit" (fn this.close position)}}><label>平仓数量<input required inputmode="decimal" value={{position.closeQuantity}} {{on "input" (fn this.closeQuantity position.id)}} /></label><button class="btn" type="submit" disabled={{position.closeDisabled}}>{{#if position.pending_open}}{{uiText "cancel_and_close"}}{{else}}{{uiText "close_position"}}{{/if}}</button></form><form
                 class="rsc-protection"
                 {{on "submit" (fn this.protect position)}}
               ><label>{{uiText "take_profit"}}<input
@@ -528,8 +555,8 @@ export default class RscDashboard extends Component {
                   /></label><button
                   class="btn"
                   type="submit"
-                  disabled={{this.writeDisabled}}
-                >{{uiText "save"}}</button></form><form
+                  disabled={{position.protectionDisabled}}
+                >{{uiText "save"}}</button></form><p class="rsc-muted">{{position.protectionHint}}</p>{{#if position.protectionError}}<p class="alert alert-error" role="alert">{{position.protectionError}}</p>{{/if}}<form
                 class="rsc-protection"
                 {{on "submit" (fn this.addMargin position)}}
               ><label>{{uiText "add_margin"}}<input
@@ -598,6 +625,10 @@ export default class RscDashboard extends Component {
                   {{#if (eq this.selected.category "forex")}}<div class="rsc-risk-status"><strong>{{this.selected.currency_name}}交易 · {{#if this.forexFee}}每边手续费 {{this.forexFee}}%{{else}}免手续费{{/if}}</strong><span>买入做多为看涨{{this.selected.currency_name}}兑美元，卖出做空为看跌。</span>{{#if this.data.forex_activity.active}}<span>活动期间最高 100×，可按钱包可用余额开仓，不受虚拟币的保证金额度限制。</span>{{else}}<span>当前最高 10×。已有高杠杆仓位可从“我的持仓”平仓、追加保证金或设置止盈止损。</span>{{/if}}<span>“最大可开”会扣除手续费并预留报价变化空间；补保证金不会增加持仓数量。</span><span>仅使用 RSC 模拟交易。100× 下小幅汇率波动也可能触发强平。</span></div>{{/if}}
                   {{#if this.selected.close_only}}<p class="alert alert-info">此杠杆/反向产品目前仅可平仓。</p>{{/if}}
                   <div class="rsc-fields"><label>{{uiText "take_profit"}}<input inputmode="decimal" value={{this.takeProfit}} {{on "input" (fn this.set "takeProfit")}} /></label><label>{{uiText "stop_loss"}}<input inputmode="decimal" value={{this.stopLoss}} {{on "input" (fn this.set "stopLoss")}} /></label></div>
+                  <p class="rsc-muted">{{this.protectionHint}}</p>
+                  {{#if this.orderProtectionError}}<p class="alert alert-error" role="alert">{{this.orderProtectionError}}</p>{{/if}}
+                  {{#if (eq this.selectedMarket.status "session_closed")}}<p class="alert alert-info">当前休市，暂不能提交新委托。请在该市场交易时段再操作；已有持仓仍可修改止盈止损。</p>{{/if}}
+                  {{#if this.selectedPending}}<p class="alert alert-info">此品种已有待成交委托，<a href="#rsc-orders">查看或撤销委托</a>后再下单。</p>{{/if}}
                   {{#if this.quantityError}}<p class="alert alert-error" role="alert">{{this.quantityError}}</p>{{/if}}
                   {{#if this.budgetError}}<p class="alert alert-error" role="alert">{{this.budgetError}}</p>{{/if}}
                   {{#if this.positionConflict}}<p class="alert alert-info" role="alert">{{this.positionConflict}}</p>{{/if}}

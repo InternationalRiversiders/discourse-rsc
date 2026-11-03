@@ -87,17 +87,6 @@ module DiscourseRsc
       result = Exchange.submit(actor: current_user, instrument_id: positive_id(:instrument_id), side: params.require(:side),
                                quantity: params.require(:quantity), leverage: positive_id(:leverage), request_id: params.require(:request_id), high_risk: params[:high_risk].to_s == "true", take_profit: params[:take_profit], stop_loss: params[:stop_loss], cancel_pending: params[:cancel_pending].to_s == "true")
       render_json_dump(result)
-    rescue Error => error
-      # Legacy exchange_order_rejections recorded failed attempts separately from
-      # executed orders. Keep that diagnostic trail without creating a trade or
-      # changing the original error returned to the member.
-      begin
-        Audit.create!(actor_user_id: current_user.id, action: "order_rejected", created_at: Time.current,
-          details: params.permit(:instrument_id, :side, :quantity, :leverage, :take_profit, :stop_loss, :request_id).to_h.transform_values { |value| value.to_s.first(100) }.merge("error" => error.code))
-      rescue ActiveRecord::ActiveRecordError => audit_error
-        Rails.logger.warn("RSC rejected-order audit failed: #{audit_error.class}")
-      end
-      raise
     end
 
     def cancel_order

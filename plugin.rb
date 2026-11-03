@@ -50,6 +50,7 @@ after_initialize do
     app/models/discourse_rsc/history_cache
     app/models/discourse_rsc/exemption
     app/models/discourse_rsc/legacy_record
+    app/services/discourse_rsc/failure_audit
     app/services/discourse_rsc/safety
     app/services/discourse_rsc/ledger
     app/services/discourse_rsc/access

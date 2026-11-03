@@ -8,8 +8,9 @@ module DiscourseRsc
     before_action :ensure_rsc_member, except: [:issue]
 
     rescue_from DiscourseRsc::Error do |error|
-      render json: { errors: [Error.user_message(error.code)],
-                     error_code: error.code }, status: error.status
+      FailureAudit.record(controller: self, error: error) unless request.get? || request.head?
+      render json: { errors: [Error.user_message(error.code, error.details)],
+                     error_code: error.code, error_details: error.details }, status: error.status
     end
 
     def show

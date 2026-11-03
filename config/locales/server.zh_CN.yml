@@ -168,7 +168,7 @@ zh_CN:
       invalid_search: 请输入 2 至 60 个字符搜索标的。
       provider_disabled: 行情同步尚未启用。
       provider_cooldown: 数据源正在冷却，请稍后重试。
-      provider_background_budget: 无持仓标的今日自动核验预算已用完，已为交易和持仓保留备用额度。
+      provider_background_budget: 后台备用行情额度已暂停，剩余额度优先供下单和平仓使用。
       provider_daily_limit: 今日备用行情额度已用完，暂时无法完成交叉核验，请等待额度恢复或主源与已核验报价重新一致。
       provider_busy: 行情请求繁忙，请稍后重试。
       provider_unavailable: 行情服务暂时不可用，请稍后重试。
@@ -204,6 +204,7 @@ zh_CN:
       market_liquidity_limit: 委托超过近期成交量允许的模拟流动性上限。
       take_profit_not_profitable: 止盈价必须越过计入双边手续费后的保本价。
       stop_loss_beyond_liquidation: 止损价格必须在爆仓价之前触发。
+      provider_background_paced: 后台备用行情正在等待下一次刷新，下单和平仓会单独检查报价。
     statuses:
       won: 预测命中
       lost: 未命中

@@ -209,4 +209,29 @@ class ForexPrimaryPolicyTest < ForexQuoteGuardTest
     end
   end
 
+  def test_held_stale_primary_gets_bounded_backup_without_double_primary_fetch
+    travel_to(Time.utc(2026,11,3,12)) do
+      stale=observation('0.15',at:5.minutes.ago).merge('received_at'=>5.minutes.ago.iso8601)
+      item=live_fx(stale)
+      R::Position.create!(user_id:@alice.id,instrument_id:item.id,side:'long',leverage:1,
+        quantity_units:R::Amount.parse('1'),average_units:R::Amount.parse('0.15'),margin_units:R::Amount.parse('0.15'))
+      with_feeds(stale,observation('0.15001',source:'twelve_data')) do |calls|
+        R::MarketData.refresh_if_needed(item.id,purpose: :forex_fast)
+        assert_equal({primary:1,backup:1},calls)
+        assert G.fresh?(item.reload.quote)
+      end
+    end
+  end
+
+  def test_quarantine_attempt_fetches_primary_only_once
+    travel_to(Time.utc(2026,11,3,12)) do
+      item=live_fx(observation('0.15',at:30.seconds.ago).merge('received_at'=>30.seconds.ago.iso8601))
+      with_feeds(observation('0.1503'),R::Error.new('provider_daily_limit')) do |calls|
+        R::MarketData.refresh_if_needed(item.id,purpose: :trade)
+        assert_equal({primary:1,backup:1},calls)
+        assert G.pending?(item.reload.quote)
+      end
+    end
+  end
+
 end

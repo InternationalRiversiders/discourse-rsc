@@ -60,3 +60,15 @@ const flush=async()=>{await Promise.resolve();await Promise.resolve();};
   assert.deepEqual(c.snapshot,{balance:'second-order'});
 }
 console.log('PASS immediate success feedback, background refresh, stale-read suppression and safe idempotent retry');
+for (const response of [{position_id:1,protection_saved:true,protection_waiting_quote:true},{position_id:1,waiting_quote:true}]) {
+  const {c,requests}=fixture();
+  const send=c.send('positions/1/protection',{take_profit:'120'});
+  requests[0].resolve(response);await send;
+  assert.match(c.notice,/止盈止损已保存/);assert.doesNotMatch(c.notice,/平仓委托已提交/);
+  requests[1].resolve({});await flush();
+}
+{
+  const {c,requests}=fixture();const send=c.send('orders',{side:'close'});
+  requests[0].resolve({order_id:1,status:'pending',waiting_quote:true});await send;
+  assert.match(c.notice,/平仓委托已提交/);requests[1].resolve({});await flush();
+}

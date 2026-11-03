@@ -3,8 +3,12 @@ module DiscourseRsc
   module Views
     def self.position(position)
       instrument=position.instrument;valuation=Valuation.position(position,Valuation.mark(instrument));profit=valuation[:pnl]
+      reference = if valuation[:basis] == 'current'
+        q = instrument.quote
+        { price: valuation[:price], valid_until: [Time.iso8601(q.fetch('received_at')) + 120, Time.iso8601(q.fetch('source_time')) + q.fetch('delay_seconds', 0).to_i + ForexQuoteGuard.max_age(q)].min.iso8601(6) }
+      end
       margin=position.margin_units.to_i;equity=profit && [margin+profit,0].max
-      {id:position.id,instrument_id:instrument.id,symbol:instrument.symbol,name:instrument.name,category:instrument.category,side:position.side,leverage:position.leverage,quantity:Amount.format(position.quantity_units),average:Amount.format(position.average_units),margin:Amount.format(margin),pnl:profit && Amount.format(profit),equity:equity && Amount.format(equity),maintenance:Amount.format(margin/4),fee_bps:ForexActivity.fee_bps(instrument, position: position),break_even:Amount.format(TradingRules.break_even(position,ForexActivity.fee_bps(instrument, position: position))),risk:equity && (equity<=margin/4 ? 'liquidation' : equity<=margin/2 ? 'high' : 'normal'),valuation_basis:valuation[:basis],valuation_at:valuation[:at],take_profit:position.take_profit_units && Amount.format(position.take_profit_units),stop_loss:position.stop_loss_units && Amount.format(position.stop_loss_units),hold_until:Risk.hold_until(position),liquidation:Risk.liquidation(position)}
+      {id:position.id,protection_reference:reference,instrument_id:instrument.id,symbol:instrument.symbol,name:instrument.name,category:instrument.category,side:position.side,leverage:position.leverage,quantity:Amount.format(position.quantity_units),average:Amount.format(position.average_units),margin:Amount.format(margin),pnl:profit && Amount.format(profit),equity:equity && Amount.format(equity),maintenance:Amount.format(margin/4),fee_bps:ForexActivity.fee_bps(instrument, position: position),break_even:Amount.format(TradingRules.break_even(position,ForexActivity.fee_bps(instrument, position: position))),risk:equity && (equity<=margin/4 ? 'liquidation' : equity<=margin/2 ? 'high' : 'normal'),valuation_basis:valuation[:basis],valuation_at:valuation[:at],take_profit:position.take_profit_units && Amount.format(position.take_profit_units),stop_loss:position.stop_loss_units && Amount.format(position.stop_loss_units),hold_until:Risk.hold_until(position),liquidation:Risk.liquidation(position)}
     end
 
     def self.order(order)

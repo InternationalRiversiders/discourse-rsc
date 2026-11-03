@@ -22,7 +22,7 @@ export default class extends Component {
     document.removeEventListener("rsc:tip-updated", this.updated);
   }
   async load(refresh = false) {
-    if (!this.args.post?.id || !this.args.post?.topic_id) { return; }
+    if (!(Number(this.args.post?.id) > 0) || !(Number(this.args.post?.topic_id) > 0)) { return; }
     try {
       const data = await this.rscTips.get(this.args.post, refresh);
       if (!this.isDestroying && !this.isDestroyed) { this.data = data; }

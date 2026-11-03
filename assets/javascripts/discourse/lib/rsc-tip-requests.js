@@ -11,6 +11,13 @@ export default class TipRequests {
   }
 
   get(post, refresh = false) {
+    // Optimistic composer posts use -1. Private messages have no public tips.
+    if (!Number.isSafeInteger(Number(post?.id)) || Number(post.id) <= 0 ||
+        !Number.isSafeInteger(Number(post?.topic_id)) || Number(post.topic_id) <= 0 ||
+        post.topic?.isPrivateMessage || post.topic?.archetype === "private_message" ||
+        post.topic_archetype === "private_message") {
+      return Promise.resolve({ total: "0", count: 0, tips: [] });
+    }
     const key = `${post.topic_id}:${post.id}`;
     const cached = this.cache.get(key);
     if (!refresh && cached && this.now() - cached.at < 120000) {

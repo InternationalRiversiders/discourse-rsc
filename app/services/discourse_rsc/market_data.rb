@@ -132,7 +132,7 @@ module DiscourseRsc
       base = forex_base(instrument)
       pair = "USD/#{base}"
       requested = false
-      quote = Discourse.cache.fetch("rsc:fx-fallback:v1:#{base}", expires_in: 60.seconds) do
+      quote = Discourse.cache.fetch("rsc:fx-fallback:v1:#{base}", expires_in: 120.seconds) do
         raise Error.new('provider_cooldown', status: 503) if Discourse.redis.exists?("rsc:fx-fallback:retry:#{base}")
         reason = ForexQuoteGuard.pending?(instrument.quote) ? 'quote_verification' : instrument.quote.dig('verification', 'preferred_source') == 'twelve_data' ? 'backup_continuity' : 'stale_execution'
         FallbackBudget.request(instrument, reason: reason) do
@@ -151,8 +151,10 @@ module DiscourseRsc
             'session_start'=>day.iso8601, 'session_end'=>(day+1.day).iso8601, 'fallback'=>true }
         end
       end
-      source = Time.iso8601(quote.fetch('source_time'))
-      unless source >= 180.seconds.ago && source <= 5.seconds.from_now
+      # Quarantine needs independent minute samples; ordinary reuse can last
+      # the full valid lifetime. Reusing a cached sample never counts as evidence.
+      review_due = ForexQuoteGuard.pending?(instrument.quote) && Time.iso8601(quote.fetch('received_at')) <= 60.seconds.ago
+      unless ForexQuoteGuard.fresh?(quote) && (!review_due || requested)
         Discourse.cache.delete("rsc:fx-fallback:v1:#{base}")
         return forex_fallback(instrument) unless requested
         raise Error.new('quote_stale', status: 409)
@@ -443,13 +445,15 @@ module DiscourseRsc
       FallbackBudget.with_context(purpose) do
         DistributedMutex.synchronize("rsc-quote:#{instrument.id}", validity: 90) do
           instrument.reload
-          sync_one(instrument) if purpose != :forex_review && refresh_due?(instrument, purpose: purpose)
-          verify_forex_quote(instrument) if instrument.category == 'forex' && (ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data')
+          primary_checked = purpose != :forex_review && refresh_due?(instrument, purpose: purpose)
+          sync_one(instrument) if primary_checked
+          held_stale = instrument.category == 'forex' && %i[forex_fast background].include?(purpose) && !ForexQuoteGuard.fresh?(instrument.quote) && FallbackBudget.exposed?(instrument.id)
+          verify_forex_quote(instrument, primary_checked: primary_checked, allow_stale: held_stale) if instrument.category == 'forex' && (held_stale || ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data')
           if %i[trade exit execution].include?(purpose) && !MarketSessions.closed?(instrument) && !ForexQuoteGuard.pending?(instrument.quote)
             primary = instrument.quote
             quote = execution_quote(instrument, primary)
             record_quote(instrument, quote) unless quote.equal?(primary)
-            verify_forex_quote(instrument) if ForexQuoteGuard.pending?(instrument.quote)
+            verify_forex_quote(instrument, primary_checked: primary_checked) if ForexQuoteGuard.pending?(instrument.quote)
           end
         end
       end
@@ -459,22 +463,22 @@ module DiscourseRsc
     # Re-fetch only quarantined observations, at most once per symbol per 60s.
     # ProviderHttp and forex_fallback still enforce their shared quotas/backoff.
     # No database lock is held during the network calls.
-    def self.verify_forex_quote(instrument)
+    def self.verify_forex_quote(instrument, primary_checked: false, allow_stale: false)
       return if MarketSessions.closed?(instrument)
       direct = %i[trade exit execution].include?(Thread.current[:rsc_fallback_purpose])
       return unless direct || ForexReviewQueue.eligible?(instrument.id)
-      if (direct || ForexReviewQueue.requested?(instrument.id) || FallbackBudget.exposed?(instrument.id)) && instrument.quote.dig('verification', 'backup_error') == 'provider_background_budget'
+      if (direct || ForexReviewQueue.requested?(instrument.id) || (FallbackBudget.exposed?(instrument.id) && FallbackBudget.background_available?)) && instrument.quote.dig('verification', 'backup_error') == 'provider_background_budget'
         ForexReviewQueue.finish(instrument.id)
         Discourse.redis.del("rsc:fx-review:#{instrument.id}")
       end
       return if ForexQuoteGuard.pending?(instrument.quote) && !ForexReviewQueue.turn?(instrument.id)
       return unless Discourse.redis.set("rsc:fx-review:#{instrument.id}", '1', nx: true, ex: 60)
       begin
-        record_quote(instrument, fetch_primary_quote(instrument))
+        record_quote(instrument, fetch_primary_quote(instrument)) unless primary_checked
       rescue Error, KeyError, ArgumentError, TypeError
         # Keep the accepted quote and quarantine; failed HTTP is not evidence.
       end
-      return unless ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data'
+      return unless ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data' || allow_stale
       # A failed/anomalous primary does not require another backup request while
       # the already verified backup is still usable. Preserve its real clocks.
       return if !ForexQuoteGuard.pending?(instrument.quote) && ForexQuoteGuard.fresh?(instrument.quote)

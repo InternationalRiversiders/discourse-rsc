@@ -118,6 +118,30 @@ def worker_pids():
             and parts[1] == str(master) and parts[2].startswith('nginx: worker process')}
 
 
+def drain_background(container, hostname):
+    # Quiet stops new jobs, not jobs already running. Observe their heartbeat
+    # before stopping the container; a timeout must leave the old slot alive.
+    code = """require 'sidekiq/api'
+deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 90
+quiet = 0
+loop do
+  workers = Sidekiq::ProcessSet.new.select { |p| p['hostname'] == ARGV.fetch(0) }
+  busy = workers.sum { |p| p['busy'].to_i }
+  quiet = busy.zero? ? quiet + 1 : 0
+  exit 0 if quiet >= 2
+  exit 2 if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+  sleep 5
+end
+"""
+    try:
+        result = subprocess.run(['docker', 'exec', '-w', '/var/www/discourse', container,
+            'bundle', 'exec', 'rails', 'runner', code, hostname],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=130)
+        return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--image', required=True)
@@ -200,10 +224,11 @@ def main():
             time.sleep(2)
         if workers & worker_pids():
             print('Old nginx requests still draining; keep old container running', flush=True)
+        elif not drain_background(old_name, old['Config']['Hostname']):
+            print('Old background jobs still draining or status unknown; keep old container running', flush=True)
         else:
-            # Give quiet background jobs their shutdown grace period too.
             api('POST', f'/containers/{old_name}/stop?t=60')
-            print('Old slot stopped after drain', flush=True)
+            print('Old slot stopped after request and background-job drain', flush=True)
         api('POST', f'/images/{args.image}/tag?repo=local_discourse/{new_name}&tag=latest')
         print(f'DEPLOYED {args.commit} on {new_name}', flush=True)
     except Exception:

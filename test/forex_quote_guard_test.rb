@@ -120,10 +120,10 @@ class ForexQuoteGuardTest < ForexActivityTest
       old=R::MarketData.method(:fetch_primary_quote);calls=0
       R::MarketData.define_singleton_method(:fetch_primary_quote) { |_|calls+=1;observation= {'price'=>'0.1503','source'=>'yahoo','source_time'=>Time.current.iso8601,'received_at'=>Time.current.iso8601,'pricing_method'=>R::MarketData::FX_PRICING,'delay_seconds'=>0,'session_start'=>1.hour.ago.iso8601,'session_end'=>8.hours.from_now.iso8601};observation }
       travel 30.seconds;R::MarketData.refresh_if_needed(item.id,purpose: :trade)
-      assert_equal 2,calls
+      assert_equal 1,calls
       assert G.pending?(item.reload.quote)
       R::MarketData.refresh_if_needed(item.id,purpose: :trade)
-      assert_equal 2,calls
+      assert_equal 1,calls
     ensure
       R::MarketData.define_singleton_method(:fetch_primary_quote,old) if old
     end

@@ -49,13 +49,17 @@ module DiscourseRsc
     def self.protection!(position, instrument, current_price, take_profit, stop_loss, fee_bps: instrument.fee_bps)
       long = position.side == "long"
       if current_price
-        raise Error.new("invalid_protection") if (take_profit && (long ? take_profit <= current_price : take_profit >= current_price)) || (stop_loss && (long ? stop_loss >= current_price : stop_loss <= current_price))
+        check_protection!(take_profit, current_price, above: long, field: 'take_profit', reference: 'current_price')
+        check_protection!(stop_loss, current_price, above: !long, field: 'stop_loss', reference: 'current_price')
       end
-      raise Error.new("invalid_protection") if take_profit && stop_loss && (long ? take_profit <= stop_loss : take_profit >= stop_loss)
-      boundary = break_even(position, fee_bps)
-      raise Error.new("take_profit_not_profitable") if take_profit && (long ? take_profit <= boundary : take_profit >= boundary)
-      liquidation = Amount.parse(Risk.liquidation(position))
-      raise Error.new("stop_loss_beyond_liquidation") if stop_loss && (long ? stop_loss <= liquidation : stop_loss >= liquidation)
+      check_protection!(take_profit, stop_loss, above: long, field: 'take_profit', reference: 'stop_loss') if stop_loss
+      check_protection!(take_profit, break_even(position, fee_bps), above: long, field: 'take_profit', reference: 'break_even', code: 'take_profit_not_profitable')
+      check_protection!(stop_loss, Amount.parse(Risk.liquidation(position)), above: long, field: 'stop_loss', reference: 'liquidation', code: 'stop_loss_beyond_liquidation')
+    end
+
+    def self.check_protection!(value, boundary, above:, field:, reference:, code: 'invalid_protection')
+      return unless value && (above ? value <= boundary : value >= boundary)
+      raise Error.new(code, details: {field: field, relation: above ? 'above' : 'below', reference: reference, boundary: Amount.format(boundary)})
     end
 
     def self.initial_margin(position)

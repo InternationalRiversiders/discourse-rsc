@@ -27,6 +27,7 @@ module DiscourseRsc
       deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 45
       tasks = sources.product(date_buckets)
       result = {}
+      cooling = false
       tasks.rotate(cursor).each do |source, dates|
         break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
         sport, league = source.split(":", 2)
@@ -37,11 +38,13 @@ module DiscourseRsc
         rescue Error, KeyError, ArgumentError => error
           Audit.create!(action: "sports_sync_failed", details: { source: source, dates: dates, error: error.respond_to?(:code) ? error.code : error.class.name }, created_at: Time.current)
           result[source] = false
+          cooling = error.is_a?(Error) && %w[provider_cooldown provider_busy provider_http_429].include?(error.code)
+          break if cooling
         ensure
           Discourse.redis.set('rsc:sports-next-source', (tasks.index([source, dates]) + 1) % tasks.size)
         end
       end
-      result['pending_recheck'] = recheck_pending
+      result['pending_recheck'] = cooling ? { checked: 0, failed: 0, deferred: true } : recheck_pending
       result
     end
 
@@ -71,8 +74,10 @@ module DiscourseRsc
           match.reload.with_lock { match.update!(provider_data: match.provider_data.merge('rechecked_at'=>Time.current.iso8601,'recheck_error'=>nil)) }
         rescue Error, KeyError, ArgumentError => error
           result[:failed] += 1
-          match.reload.with_lock { match.update!(provider_data: match.provider_data.merge('rechecked_at'=>Time.current.iso8601,'recheck_error'=>error.class.name)) }
-          Audit.create!(action: 'sports_recheck_failed', details: {match_id:match.id,error:error.class.name}, created_at:Time.current)
+          code = error.respond_to?(:code) ? error.code : error.class.name
+          match.reload.with_lock { match.update!(provider_data: match.provider_data.merge('rechecked_at'=>Time.current.iso8601,'recheck_error'=>code)) }
+          Audit.create!(action: 'sports_recheck_failed', details: {match_id:match.id,error:code}, created_at:Time.current)
+          break if %w[provider_cooldown provider_busy provider_http_429].include?(code)
         end
       end
       result

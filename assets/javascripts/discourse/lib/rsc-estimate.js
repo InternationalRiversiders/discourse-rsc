@@ -70,3 +70,23 @@ export function openingQuantity(instrument) {
   const floor = ceil(minimum, step) * step;
   return decimal(sized > floor ? sized : floor);
 }
+
+// Exact-decimal input feedback only. The server revalidates at save/execution.
+export function protectionError({ side, tp, sl, current, breakEven, liquidation }) {
+  const long = side !== "short", take = tp === "" || tp == null ? null : atomic(tp), stop = sl === "" || sl == null ? null : atomic(sl);
+  if (tp !== "" && tp != null && (take === null || take <= 0n)) { return "止盈价请输入大于 0 的单价，最多支持 18 位小数。"; }
+  if (sl !== "" && sl != null && (stop === null || stop <= 0n)) { return "止损价请输入大于 0 的单价，最多支持 18 位小数。"; }
+  for (const [value, boundary, above, field, reference] of [
+    [take, current, long, "止盈价", "当前有效报价"],
+    [stop, current, !long, "止损价", "当前有效报价"],
+    [take, sl, long, "止盈价", "止损价"],
+    [take, breakEven, long, "止盈价", "保本价"],
+    [stop, liquidation, long, "止损价", "强平价"],
+  ]) {
+    const limit = atomic(boundary);
+    if (value !== null && limit !== null && (above ? value <= limit : value >= limit)) {
+      return `${field}须${above ? "大于" : "小于"}${reference} ${boundary} RSC／单位。`;
+    }
+  }
+  return "";
+}

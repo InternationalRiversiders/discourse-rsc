@@ -11,6 +11,7 @@ export default class extends Component {
       context.siteSettings.rsc_native_trial_enabled &&
       !context.siteSettings.rsc_read_only &&
       context.currentUser?.rsc_member &&
+      Number(args.post.id) > 0 &&
       args.post.user_id !== context.currentUser.id &&
       args.post.post_type === context.site.post_types.regular &&
       !args.post.hidden &&

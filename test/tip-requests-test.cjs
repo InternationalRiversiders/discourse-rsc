@@ -63,3 +63,12 @@ test('transient errors back off and teardown cancels queued requests',async()=>{
  await assert.rejects(h.queue.get(post(2)));await h.advance(5000);
  const pending=h.queue.get(post(2)).catch(e=>e);h.queue.destroy();await pending;await h.advance(1000);assert.equal(h.calls.length,1);
 });
+test('drafts and private messages never enter the request queue or poison a valid batch', async () => {
+  const h=harness();
+  for (const p of [post(-1),post(0),post('draft'),{id:1,topic_id:-1},{...post(2),topic:{isPrivateMessage:true}},{...post(3),topic:{archetype:'private_message'}}]) {
+    assert.equal((await h.queue.get(p)).count,0);
+  }
+  assert.equal(h.timers.size,0);assert.equal(h.queue.pending.size,0);
+  const real=h.queue.get(post(4));await h.advance(250);await real;
+  assert.equal(h.calls.length,1);assert.deepEqual([...h.calls[0].ids],[4]);
+});
