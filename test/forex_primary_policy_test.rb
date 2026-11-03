@@ -241,7 +241,7 @@ class ForexPrimaryPolicyTest < ForexQuoteGuardTest
       item=live_fx(stale)
       R::Position.create!(user_id:@alice.id,instrument_id:item.id,side:'long',leverage:1,
         quantity_units:R::Amount.parse('1'),average_units:R::Amount.parse('0.15'),margin_units:R::Amount.parse('0.15'))
-      R::ForexReviewQueue.watch(item.id,trading:true)
+      Discourse.redis.setex("rsc:fx-review-request:#{item.id}",600,'1')
       [stale,backup,observation('0.15')].each do |previous|
         %i[read background idle forex_fast forex_review protection].each do |purpose|
           item.update!(quote:previous,synced_at:5.minutes.ago,provider_error:nil)

@@ -31,17 +31,8 @@ module DiscourseRsc
       return 1
     LUA
 
-    def self.watch(id, trading: false)
-      Discourse.redis.setex("rsc:fx-review-watch:#{id}", 600, '1')
-      Discourse.redis.setex("rsc:fx-review-request:#{id}", 600, '1') if trading
-    end
-
-    def self.requested?(id)
-      Discourse.redis.exists?("rsc:fx-review-request:#{id}")
-    end
-
     def self.eligible?(id)
-      Discourse.redis.exists?("rsc:fx-review-watch:#{id}") || FallbackBudget.exposed?(id)
+      ExecutionDemand.automatic?(id)
     end
 
     def self.enqueue(id)
@@ -62,24 +53,26 @@ module DiscourseRsc
     end
 
     def self.next_instrument
-      # Recover pending rows predating this queue, or lost Redis state. This is
-      # only a database scan. Only held/ordered or recently viewed symbols qualify;
-      # unseen catalog quarantine must not continuously spend backup credits.
-      Instrument.where(active: true, category: 'forex')
-        .where("quote->'verification'->>'status' = 'pending'").pluck(:id).each { |id| enqueue(id) if eligible?(id) }
-      id = claim
-      return if id.zero?
-      item = Instrument.find_by(id: id, active: true, category: 'forex')
-      unless item && ForexQuoteGuard.pending?(item.quote) && eligible?(id)
-        finish(id)
-        return
+      # Recover live trading work only. Old page-view/failed-submission markers
+      # cannot spend credits or hold the review lane after the trade disappears.
+      Instrument.where(id: ExecutionDemand.instrument_ids, active: true, category: 'forex')
+        .where("quote->'verification'->>'status' = 'pending'").pluck(:id).each { |id| enqueue(id) }
+      10.times do
+        id = claim
+        return if id.zero?
+        item = Instrument.find_by(id: id, active: true, category: 'forex')
+        unless item && ForexQuoteGuard.pending?(item.quote) && eligible?(id)
+          finish(id)
+          next
+        end
+        if MarketSessions.closed?(item)
+          finish(id, retry_in: 300)
+          next
+        end
+        return if Discourse.redis.exists?("rsc:fx-review:#{id}")
+        return item
       end
-      if MarketSessions.closed?(item)
-        finish(id, retry_in: 300)
-        return
-      end
-      return if Discourse.redis.exists?("rsc:fx-review:#{id}")
-      item
+      nil
     end
   end
 end

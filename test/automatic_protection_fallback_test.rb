@@ -65,7 +65,7 @@ class AutomaticProtectionFallbackTest < ForexPrimaryPolicyTest
           assert_equal 1,R::Order.where(side:'close').count
           assert_equal ['USD/BRL'],calls
           assert_equal 1,B.report[:total_reserved]
-          assert_equal ['protection_execution'],B.report[:rows].map{|r|r[:operation]}.uniq
+          assert_equal ['position_risk'],B.report[:rows].map{|r|r[:operation]}.uniq
           assert_equal 0,R::Entry.sum(:units)
         end
       end
@@ -84,7 +84,7 @@ class AutomaticProtectionFallbackTest < ForexPrimaryPolicyTest
     end
   end
 
-  def test_checks_share_valid_quote_and_clearing_stops_disables_backup
+  def test_checks_share_valid_quote_and_clearing_stops_keeps_liquidation_monitoring
     travel_to(Time.utc(2026,11,3,12)) do
       item,position,stale=protected_position(tp:'1.01',sl:'0.99')
       with_backup_feed(stale,'1.0001') do |calls|
@@ -94,10 +94,11 @@ class AutomaticProtectionFallbackTest < ForexPrimaryPolicyTest
         assert_equal 0,R::Order.where(side:'close').count
         R::Exchange.protect(actor:@alice,position_id:position.id,take_profit:nil,stop_loss:nil,request_id:SecureRandom.uuid)
         travel 4.minutes
+        Discourse.redis.del('rsc:fx-fallback:slot')
         item.update!(quote:stale,synced_at:5.minutes.ago)
         poll
-        assert_equal ['USD/BRL'],calls
-        B.with_context(:protection_execution){refute B.allowed?(item)}
+        assert_equal ['USD/BRL','USD/BRL'],calls
+        B.with_context(:execution){assert B.allowed?(item)}
       end
     end
   end
@@ -108,12 +109,12 @@ class AutomaticProtectionFallbackTest < ForexPrimaryPolicyTest
       [nil,:read,:background,:forex_fast,:protection].each do |purpose|
         B.with_context(purpose){refute B.allowed?(item)}
       end
-      B.with_context(:protection_execution){assert B.allowed?(item)}
+      B.with_context(:execution){assert B.allowed?(item)}
       R::Account.wallet(@alice.id).update!(status:'frozen')
       with_backup_feed(stale,'1.0004') do |calls|
         poll
         assert_empty calls
-        B.with_context(:protection_execution){refute B.allowed?(item)}
+        B.with_context(:execution){refute B.allowed?(item)}
         B.with_context(:forex_review){refute B.allowed?(item)}
       end
     end
@@ -146,13 +147,13 @@ class AutomaticProtectionFallbackTest < ForexPrimaryPolicyTest
         assert_equal 3,calls.size
         refute R::Position.exists?(position.id)
         assert_equal 'stock_take_profit',R::Order.where(side:'close').sole.details['reason']
-        assert B.report[:rows].any?{|r|r[:operation]=='protection_review' && r[:outcome]=='requests'}
+        assert B.report[:rows].any?{|r|r[:operation]=='position_risk_review' && r[:outcome]=='requests'}
         assert_equal 0,R::Entry.sum(:units)
       end
     end
   end
 
-  def test_general_market_poll_also_selects_protection_execution
+  def test_general_market_poll_also_selects_position_risk
     travel_to(Time.utc(2026,11,3,12)) do
       _,position,stale=protected_position
       with_backup_feed(stale,'0.9996') do |calls|

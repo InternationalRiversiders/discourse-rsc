@@ -26,46 +26,12 @@ module DiscourseRsc
       Thread.current[:rsc_fallback_purpose] = previous
     end
 
-    def self.exposed?(id)
-      Position.where(instrument_id: id).exists? || Order.where(instrument_id: id, status: 'pending').exists?
-    end
-
-    def self.executable_order?(instrument)
-      Order.where(instrument_id: instrument.id, status: 'pending')
-        .where('execute_at <= ? AND expires_at > ?', Time.current, Time.current).exists?
-    end
-
-    def self.protection_positions
-      Position.where('take_profit_units IS NOT NULL OR stop_loss_units IS NOT NULL')
-        .where(user_id: Account.where(kind: 'wallet', status: 'active').select(:user_id))
-    end
-
-    def self.protection_order?(instrument)
-      protection_positions.where(instrument_id: instrument.id).exists?
-    end
-
-    # Fail closed: holdings, page views and a recent failed submission are not
-    # orders. A saved stop is a conditional close order: monitoring its trigger
-    # needs a valid price even before Exchange.process creates the closing row.
     def self.allowed?(instrument)
-      case Thread.current[:rsc_fallback_purpose]
-      when :trade, :exit then true
-      when :execution then executable_order?(instrument)
-      when :protection_execution then protection_order?(instrument)
-      when :forex_review then executable_order?(instrument) || protection_order?(instrument)
-      else false
-      end
+      ExecutionDemand.allowed?(instrument.id, purpose: Thread.current[:rsc_fallback_purpose])
     end
 
     def self.operation(instrument)
-      case Thread.current[:rsc_fallback_purpose]
-      when :trade then 'open_order'
-      when :exit then 'close_order'
-      when :execution then 'pending_order'
-      when :protection_execution then 'protection_execution'
-      when :forex_review then executable_order?(instrument) ? 'pending_order_review' : 'protection_review'
-      else 'non_trading'
-      end
+      ExecutionDemand.operation(instrument.id, purpose: Thread.current[:rsc_fallback_purpose])
     end
 
     def self.metric(day, symbol, operation, reason, outcome)
@@ -110,7 +76,7 @@ module DiscourseRsc
     def self.report(day = Time.current.utc.to_date)
       key = "rsc:fallback-usage:#{day}"
       { day: day, timezone: 'UTC', total_reserved: Discourse.redis.get("rsc:fx-fallback:requests:#{day}").to_i,
-        policy: 'execution_only', daily_limit: DAILY_LIMIT,
+        policy: 'trading_and_risk', daily_limit: DAILY_LIMIT,
         tracked_since: Discourse.redis.get("#{key}:started_at"),
         rows: Discourse.redis.hgetall(key).map { |field, count| symbol, op, reason, outcome = field.split('|'); {symbol: symbol, operation: op, reason: reason, outcome: outcome, count: count.to_i} } }
     end

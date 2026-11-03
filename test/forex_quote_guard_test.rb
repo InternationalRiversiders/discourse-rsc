@@ -103,7 +103,8 @@ class ForexQuoteGuardTest < ForexActivityTest
       assert_equal 1,R::Position.count
       close=submit(item,side:'close')
       assert close.details['waiting_quote'];assert_equal 'pending',close.status
-      assert_equal 'quote_verifying',assert_raises(R::Error){submit(item,side:'long')}.code
+      assert_equal 'order_pending',assert_raises(R::Error){submit(item,side:'long')}.code
+      assert_equal 'quote_verifying',assert_raises(R::Error){R::Exchange.price!(item.reload,trading:true)}.code
       R::Exchange.process(item.id);assert_equal 'pending',close.reload.status
       travel 10.seconds;accept(item,'1');R::Exchange.process(item.id)
       assert_equal 'filled',close.reload.status
@@ -155,7 +156,6 @@ class ForexQuoteGuardTest < ForexActivityTest
       q=observation('0.1503')
       R::MarketData.define_singleton_method(:fetch_primary_quote){|_|q}
       R::MarketData.define_singleton_method(:forex_fallback){|_|raise R::Error.new('provider_busy')}
-      R::ForexReviewQueue.watch(item.id)
       R::FallbackBudget.with_context(:trade) { R::MarketData.verify_forex_quote(item) }
       assert G.pending?(item.reload.quote)
       assert_equal '0.15',item.quote['price']

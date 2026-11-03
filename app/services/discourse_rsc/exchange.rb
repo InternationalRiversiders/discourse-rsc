@@ -13,6 +13,7 @@ module DiscourseRsc
       sl = stop_loss.present? ? Amount.positive(stop_loss) : nil
       Safety.ensure_writable!
       unless Command.exists?(key: "stock_submit:#{actor.id}:#{request_id}")
+        submission_state!(actor, Instrument.find(instrument_id), side, units, leverage, high_risk, cancel_pending)
         MarketData.refresh_if_needed(instrument_id, purpose: side == "close" ? :exit : :trade)
       end
       input = [instrument_id, side, units.to_s, leverage, high_risk, tp&.to_s, sl&.to_s]
@@ -21,9 +22,7 @@ module DiscourseRsc
         Commands.lock("rsc-exchange")
         instrument = Instrument.lock.find(instrument_id)
         Risk.lock(actor.id)
-        if side != "close" && leverage > 10 && (!(instrument.category == "crypto" || ForexActivity.active_for?(instrument)) || !high_risk || !SiteSetting.rsc_high_risk_enabled)
-          raise Error.new("high_risk_disabled", status: 403)
-        end
+        position, pending = submission_state!(actor, instrument, side, units, leverage, high_risk, cancel_pending, lock: true)
         Risk.daily!(actor.id, instrument, side: side)
         waiting_quote = false
         price = begin
@@ -34,23 +33,11 @@ module DiscourseRsc
           waiting_quote = true
           nil
         end
-        raise Error.new("invalid_quantity") unless units >= instrument.minimum_units && (units % instrument.step_units.to_i).zero?
-        pending = Order.where(user_id: actor.id, instrument_id: instrument.id, status: "pending").order(:id).lock.to_a
-        replacing = side == "close" && cancel_pending && pending.all? { |order| order.side != "close" }
-        raise Error.new("order_pending", status: 409) if pending.any? && !replacing
-        raise Error.new("too_many_orders") if side != "close" && Order.where(user_id: actor.id, status: "pending").where.not(side: "close").count >= 10
-        position = Position.find_by(user_id: actor.id, instrument_id: instrument.id)
         if side == "close"
-          raise Error.new("position_unavailable") unless position && position.quantity_units >= units
-          hold_until = Risk.hold_until(position)
-          raise Error.new("position_locked", status: 409) if hold_until && hold_until > Time.current
           leverage = position.leverage
-          pending.each { |order| refund_locked(order, "canceled") } if replacing
-        elsif position && (position.side != side || position.leverage != leverage)
-          raise Error.new("position_conflict", status: 409)
+          pending.each { |order| refund_locked(order, "canceled") }
         end
         wallet = Account.wallet(actor.id)
-        raise Error.new("wallet_frozen", status: 403) unless wallet.status == "active"
         delay = instrument.quote.fetch("delay_seconds", 0).to_i
         delayed = TradingRules.delayed?(instrument) || waiting_quote
         fee_bps = ForexActivity.fee_bps(instrument, position: position)
@@ -85,6 +72,31 @@ module DiscourseRsc
         { order_id: order.id, status: order.status, waiting_quote: waiting_quote }
       end
     end
+
+    # Reject known invalid requests before any provider I/O, then repeat the
+    # same checks under the exchange lock so concurrent changes stay safe.
+    def self.submission_state!(actor, instrument, side, units, leverage, high_risk, cancel_pending, lock: false)
+      if side != 'close' && leverage > 10 && (!(instrument.category == 'crypto' || ForexActivity.active_for?(instrument)) || !high_risk || !SiteSetting.rsc_high_risk_enabled)
+        raise Error.new('high_risk_disabled', status: 403)
+      end
+      raise Error.new('invalid_quantity') unless units >= instrument.minimum_units && (units % instrument.step_units.to_i).zero?
+      scope = Order.where(user_id: actor.id, instrument_id: instrument.id, status: 'pending').order(:id)
+      pending = (lock ? scope.lock : scope).to_a
+      replacing = side == 'close' && cancel_pending && pending.all? { |order| order.side != 'close' }
+      raise Error.new('order_pending', status: 409) if pending.any? && !replacing
+      raise Error.new('too_many_orders') if side != 'close' && Order.where(user_id: actor.id, status: 'pending').where.not(side: 'close').count >= 10
+      position = Position.find_by(user_id: actor.id, instrument_id: instrument.id)
+      if side == 'close'
+        raise Error.new('position_unavailable') unless position && position.quantity_units >= units
+        hold_until = Risk.hold_until(position)
+        raise Error.new('position_locked', status: 409) if hold_until && hold_until > Time.current
+      elsif position && (position.side != side || position.leverage != leverage)
+        raise Error.new('position_conflict', status: 409)
+      end
+      raise Error.new('wallet_frozen', status: 403) unless Account.wallet_snapshot(actor.id).status == 'active'
+      [position, pending]
+    end
+    private_class_method :submission_state!
 
     def self.cancel(actor:, order_id:, request_id:)
       Access.ensure_member!(actor)
@@ -156,15 +168,7 @@ module DiscourseRsc
         Position.where(instrument_id: instrument.id).order(:id).each do |position|
           Risk.lock(position.user_id)
           next unless Account.wallet(position.user_id).status == "active"
-          equity = position.margin_units.to_i + pnl(position, price)
-          long = position.side == "long"
-          kind = if equity <= position.margin_units.to_i / 4
-            "stock_liquidated"
-          elsif position.stop_loss_units && (long ? price <= position.stop_loss_units : price >= position.stop_loss_units)
-            "stock_stop_loss"
-          elsif position.take_profit_units && (long ? price >= position.take_profit_units : price <= position.take_profit_units)
-            "stock_take_profit"
-          end
+          kind = automatic_close_reason(position, price)
           next unless kind
           Order.where(user_id: position.user_id, instrument_id: instrument.id, status: "pending").each { |order| refund_locked(order, "canceled") }
           order = Order.create!(user_id: position.user_id, instrument_id: instrument.id, side: "close", leverage: position.leverage,
@@ -241,6 +245,18 @@ module DiscourseRsc
       Amount.positive(quote["price"])
     rescue ArgumentError, KeyError
       raise Error.new("quote_unavailable", status: 409)
+    end
+
+    def self.automatic_close_reason(position, price)
+      equity = position.margin_units.to_i + pnl(position, price)
+      long = position.side == 'long'
+      if equity <= position.margin_units.to_i / 4
+        'stock_liquidated'
+      elsif position.stop_loss_units && (long ? price <= position.stop_loss_units : price >= position.stop_loss_units)
+        'stock_stop_loss'
+      elsif position.take_profit_units && (long ? price >= position.take_profit_units : price <= position.take_profit_units)
+        'stock_take_profit'
+      end
     end
 
     def self.pnl(position, price, quantity = position.quantity_units.to_i)

@@ -391,16 +391,14 @@ module DiscourseRsc
       return [] if Safety.read_only? || !SiteSetting.rsc_market_data_enabled
       pending = Order.where(status: "pending")
       pending_ids = pending.distinct.pluck(:instrument_id)
-      executable_ids = pending.where("execute_at <= ? AND expires_at > ?", Time.current, Time.current).distinct.pluck(:instrument_id)
-      protection_ids = FallbackBudget.protection_positions.distinct.pluck(:instrument_id)
+      demand_ids = ExecutionDemand.instrument_ids
       ids = pending_ids | Position.distinct.pluck(:instrument_id)
       items = Instrument.where(id: ids, active: true, category: "forex").to_a
-      items.sort_by! { |item| [pending_ids.include?(item.id) ? 0 : protection_ids.include?(item.id) ? 1 : 2, item.synced_at || Time.at(0)] }
+      items.sort_by! { |item| [pending_ids.include?(item.id) ? 0 : demand_ids.include?(item.id) ? 1 : 2, item.synced_at || Time.at(0)] }
       deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 12
       done = []
-      # Unheld quarantined symbols cannot wait for the 15-minute idle scan:
-      # confirmation samples expire after five minutes. Review one bounded turn
-      # per poll, preserving the shared provider limits and normal exposure work.
+      # Review live positions/orders on one bounded turn per poll. Browsing
+      # quarantine must not occupy the scarce execution-review lane.
       if (review = ForexReviewQueue.next_instrument)
         refreshed = refresh_if_needed(review.id, purpose: :forex_review)
         yield refreshed.id if block_given?
@@ -409,7 +407,7 @@ module DiscourseRsc
       items.first(SiteSetting.rsc_market_sync_batch).each do |item|
         break if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
         next if done.include?(item.id)
-        purpose = executable_ids.include?(item.id) ? :execution : protection_ids.include?(item.id) ? :protection_execution : :forex_fast
+        purpose = demand_ids.include?(item.id) ? :execution : :forex_fast
         refreshed = refresh_if_needed(item.id, purpose: purpose)
         # Evaluate stops and pending orders immediately after receiving a quote.
         yield refreshed.id if block_given?
@@ -449,14 +447,13 @@ module DiscourseRsc
       end
       # The same lock/cache covers page reads, orders and scheduled refreshes.
       # No money transaction or instrument row lock is held during HTTP.
-      ForexReviewQueue.watch(instrument.id, trading: %i[trade exit].include?(purpose)) if instrument.category == 'forex' && %i[read trade exit].include?(purpose)
       FallbackBudget.with_context(purpose) do
         DistributedMutex.synchronize("rsc-quote:#{instrument.id}", validity: 90) do
           instrument.reload
           primary_checked = purpose != :forex_review && refresh_due?(instrument, purpose: purpose)
           sync_one(instrument) if primary_checked
           verify_forex_quote(instrument, primary_checked: primary_checked) if instrument.category == 'forex' && (ForexQuoteGuard.pending?(instrument.quote) || instrument.quote.dig('verification', 'preferred_source') == 'twelve_data')
-          if %i[trade exit execution protection_execution].include?(purpose) && !MarketSessions.closed?(instrument) && !ForexQuoteGuard.pending?(instrument.quote)
+          if %i[trade exit execution].include?(purpose) && !MarketSessions.closed?(instrument) && !ForexQuoteGuard.pending?(instrument.quote)
             primary = instrument.quote
             quote = execution_quote(instrument, primary)
             record_quote(instrument, quote) unless quote.equal?(primary)
@@ -472,8 +469,7 @@ module DiscourseRsc
     # No database lock is held during the network calls.
     def self.verify_forex_quote(instrument, primary_checked: false)
       return if MarketSessions.closed?(instrument)
-      direct = %i[trade exit execution protection_execution].include?(Thread.current[:rsc_fallback_purpose])
-      return unless direct || ForexReviewQueue.eligible?(instrument.id)
+      return unless FallbackBudget.allowed?(instrument)
       if FallbackBudget.allowed?(instrument) && instrument.quote.dig('verification', 'backup_error') == 'provider_background_budget'
         ForexReviewQueue.finish(instrument.id)
         Discourse.redis.del("rsc:fx-review:#{instrument.id}")
@@ -548,7 +544,7 @@ module DiscourseRsc
       age = case purpose
       when :trade, :protection then q['source'] == 'coinbase_ws' ? 3 : 20
       when :exit then instrument.category == "forex" ? 5 : (q['source'] == 'coinbase_ws' ? 3 : 20)
-      when :forex_fast, :execution, :protection_execution then 20
+      when :forex_fast, :execution then 20
       when :fast then 15
       when :background then 15 # The poll runs once/minute; allow its previous batch to finish late.
       when :idle then 15 * 60
@@ -601,8 +597,7 @@ module DiscourseRsc
       # Fetch instruments with open exposure first. Idle catalog instruments use
       # the remaining provider budget and rotate by last attempt, including errors.
       pending_ids = Order.where(status: 'pending').distinct.pluck(:instrument_id)
-      executable_ids = Order.where(status: 'pending').where('execute_at <= ? AND expires_at > ?', Time.current, Time.current).distinct.pluck(:instrument_id)
-      protection_ids = FallbackBudget.protection_positions.distinct.pluck(:instrument_id)
+      demand_ids = ExecutionDemand.instrument_ids
       active_ids = Position.distinct.pluck(:instrument_id) | pending_ids
       scope = Instrument.where(active: true, provider: %w[yahoo coinbase twelve_data kraken okx])
       schedules = MarketSessions.hours
@@ -632,19 +627,13 @@ module DiscourseRsc
               break unless id
               ActiveRecord::Base.connection_pool.with_connection do
                 item = Instrument.find(id)
-                purpose = if executable_ids.include?(id)
-                  :execution
-                elsif protection_ids.include?(id)
-                  :protection_execution
-                elsif pending_ids.include?(id)
-                  :execution
-                else
-                  active_ids.include?(id) ? :background : :idle
-                end
+                purpose = demand_ids.include?(id) ? :execution : (active_ids.include?(id) ? :background : :idle)
                 refreshed = refresh_if_needed(item.id, purpose: purpose)
                 ok = refreshed.provider_error.blank?
                 result_lock.synchronize { results[item.symbol] = ok }
-                on_refresh.call(id) if ok && on_refresh && active_ids.include?(id)
+                # Expiry/refunds and fills use their own locked price checks.
+                # A provider error must not suppress order lifecycle processing.
+                on_refresh.call(id) if on_refresh && active_ids.include?(id)
               end
             end
           end

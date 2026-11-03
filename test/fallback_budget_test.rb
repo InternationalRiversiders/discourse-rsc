@@ -24,7 +24,7 @@ class FallbackBudgetTest < ForexFallbackTest
     item=fx
     R::Position.create!(user_id:@alice.id,instrument_id:item.id,side:'long',leverage:1,
       quantity_units:R::Amount.parse('1'),average_units:R::Amount.parse('1'),margin_units:R::Amount.parse('1'))
-    R::ForexReviewQueue.watch(item.id,trading:true)
+    Discourse.redis.setex("rsc:fx-review-request:#{item.id}",600,'1')
     [nil,:read,:forex_fast,:background,:idle,:protection,:forex_review,:execution].each do |purpose|
       B.with_context(purpose) do
         error=assert_raises(R::Error){B.request(item,reason:'quote_verification'){flunk 'Non-trading HTTP'}}
@@ -37,7 +37,7 @@ class FallbackBudgetTest < ForexFallbackTest
   end
 
   def test_only_due_live_orders_allow_background_execution_or_review
-    item=fx
+    fund;item=fx
     order=R::Order.create!(user_id:@alice.id,instrument_id:item.id,side:'long',leverage:1,
       quantity_units:R::Amount.parse('1'),reserved_units:0,status:'pending',
       execute_at:1.second.ago,expires_at:10.minutes.from_now,details:{})
@@ -103,7 +103,7 @@ class FallbackBudgetTest < ForexFallbackTest
     item=fx;Discourse.redis.set("rsc:fx-fallback:requests:#{Time.current.utc.to_date}",749)
     B.with_context(:exit){assert_equal :ok,B.request(item,reason:'stale_execution'){:ok}}
     assert_equal 750,B.report[:total_reserved]
-    assert_equal 'execution_only',B.report[:policy]
+    assert_equal 'trading_and_risk',B.report[:policy]
   end
 
   def test_valid_backup_reused_past_one_minute_but_review_gets_independent_samples

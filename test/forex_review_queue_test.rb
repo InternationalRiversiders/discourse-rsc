@@ -7,7 +7,6 @@ class ForexReviewQueueTest < ForexPrimaryPolicyTest
   def quarantined(code)
     item=forex("FX:#{code}")
     item.update!(provider:'yahoo',provider_symbol:"#{code}=X",quote:observation('1'))
-    Q.watch(item.id)
     accept(item,'1.002')
     assert G.pending?(item.quote)
     item
@@ -34,6 +33,7 @@ class ForexReviewQueueTest < ForexPrimaryPolicyTest
     travel_to(Time.utc(2026,11,3,12)) do
       SiteSetting.rsc_market_data_enabled=true
       SiteSetting.rsc_twelve_data_api_key='isolated-test-key'
+      fund
       first=quarantined('BRL');second=quarantined('NOK')
       R::Order.create!(user_id:@alice.id,instrument_id:first.id,side:'long',leverage:1,
         quantity_units:R::Amount.parse('1'),reserved_units:0,status:'pending',
@@ -55,7 +55,7 @@ class ForexReviewQueueTest < ForexPrimaryPolicyTest
       refute G.pending?(first.reload.quote)
       assert_equal 'backup_consensus',first.quote.dig('verification','method')
       assert_equal '1.001',first.quote['price']
-      assert_equal second.id,Q.claim
+      assert_equal 0,Q.claim
       assert_equal 1,R::Order.where(status: 'pending').count
       assert_equal 0,R::Entry.sum(:units)
     end
@@ -123,7 +123,7 @@ class ForexReviewQueueTest < ForexPrimaryPolicyTest
         assert_equal 0,Q.claim
         R::MarketData.refresh_if_needed(first.id,purpose: :read)
         assert_equal 0,calls[:backup]
-        assert Q.eligible?(first.id)
+        refute Q.eligible?(first.id)
       end
     end
   end

@@ -50,8 +50,9 @@ class StockLatencyTest < NativeBusinessTest
       update_cn_quote(item)
       assert R::MarketSessions.closed?(item)
       assert R::MarketSessions.delayed_settlement?(item)
-      assert_equal 'market_closed', assert_raises(R::Error) { open_order(item) }.code
+      assert_equal 'order_pending', assert_raises(R::Error) { open_order(item) }.code
       R::Exchange.process(item.id)
+      assert_equal 'market_closed', assert_raises(R::Error) { open_order(item) }.code
       assert_equal 'filled', order.reload.status
       assert_equal 1, R::Position.count
       assert_equal 0, R::Entry.sum(:units)
