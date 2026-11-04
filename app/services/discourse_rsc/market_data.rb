@@ -143,16 +143,19 @@ module DiscourseRsc
             apikey: SiteSetting.rsc_twelve_data_api_key, dp: 11)
           raise Error.new('provider_invalid_data', status: 503) unless data['symbol'] == pair
           at = Time.at(Integer(data.fetch('timestamp'))).utc
-          raise Error.new('quote_stale', status: 409) unless at >= 180.seconds.ago && at <= 5.seconds.from_now
           price = reciprocal(data.fetch('rate'))
           day = Time.current.utc.beginning_of_day
-          { 'price'=>price, 'local_price'=>price, 'local_currency'=>'USD', 'fx_rate'=>'1',
+          observation = { 'price'=>price, 'local_price'=>price, 'local_currency'=>'USD', 'fx_rate'=>'1',
             'source'=>'twelve_data', 'source_time'=>at.iso8601, 'received_at'=>Time.current.iso8601(6),
             'delay_seconds'=>0, 'delay_reported'=>true, 'pricing_method'=>FX_PRICING,
             'base_currency'=>base, 'inverse_rate'=>decimal(data.fetch('rate')),
             'session_start'=>day.iso8601, 'session_end'=>(day+1.day).iso8601, 'fallback'=>true }
+          QuoteTelemetry.response(instrument, observation)
+          raise Error.new('quote_stale', status: 409) unless ForexQuoteGuard.fresh?(observation)
+          observation
         end
       end
+      QuoteTelemetry.count(instrument, quote, 'cache', 'hit') unless requested
       # Quarantine needs independent minute samples; ordinary reuse can last
       # the full valid lifetime. Reusing a cached sample never counts as evidence.
       review_due = ForexQuoteGuard.pending?(instrument.quote) && Time.iso8601(quote.fetch('received_at')) <= 60.seconds.ago
@@ -286,7 +289,9 @@ module DiscourseRsc
         old_time = Time.iso8601(instrument.quote["source_time"]) rescue Time.at(0)
         if instrument.category == 'forex' || Time.iso8601(quote.fetch("source_time")) >= old_time
           if instrument.category == 'forex'
-            quote = ForexQuoteGuard.apply(instrument.quote, quote)
+            incoming = quote
+            quote = ForexQuoteGuard.apply(instrument.quote, incoming)
+            QuoteTelemetry.decision(instrument, incoming, quote)
             return false unless quote
             if quote == instrument.quote
               instrument.update!(synced_at: Time.current)

@@ -56,10 +56,33 @@ module DiscourseRsc
         nil
       end
       return :urgent if held.any? && (prices.empty? || held.any? { |p| prices.any? { |price| Exchange.automatic_close_reason(p, price) } })
+      # A frozen accepted price cannot indefinitely classify a holding as safe.
+      # Candidate timestamps never reset this clock. Severe uncertainty uses
+      # the same reserve as imminent risk; no stale price becomes executable.
+      forex = instrument.category == 'forex'
+      age = forex ? risk_quote_age(instrument.quote) : 0
+      deadline = risk_review_after(held)
+      return :urgent if held.any? && age >= deadline * 2
       return :opening if purpose == :forex_review && ForexReviewQueue.opening_review?(instrument.id)
-      return :protection if held.any? { |p| p.take_profit_units || p.stop_loss_units || prices.any? { |price| near_exit?(p, price) } }
+      return :protection if held.any? { |p|
+        (!forex && (p.take_profit_units || p.stop_loss_units)) || age >= deadline ||
+          prices.any? { |price| near_exit?(p, price) }
+      }
       return :opening if order?(instrument.id)
       :routine
+    end
+
+    def self.risk_review_after(held)
+      leverage = held.map { |p| p.leverage.to_i }.max.to_i
+      leverage >= 50 ? 360 : leverage >= 10 ? 600 : 900
+    end
+
+    def self.risk_quote_age(quote)
+      times = %w[source_time received_at].map { |key| Time.iso8601(quote.fetch(key)) }
+      return Float::INFINITY if times.any? { |at| at > 5.seconds.from_now }
+      [Time.current - times.min, 0].max
+    rescue KeyError, ArgumentError, TypeError
+      Float::INFINITY
     end
 
     def self.rank(instrument)

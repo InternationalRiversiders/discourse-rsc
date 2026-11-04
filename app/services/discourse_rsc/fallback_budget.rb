@@ -155,6 +155,7 @@ module DiscourseRsc
     def self.report(day = Time.current.utc.to_date)
       key = "rsc:fallback-usage:#{day}"
       { day: day, timezone: 'UTC', total_reserved: Discourse.redis.get("rsc:fx-fallback:requests:#{day}").to_i,
+        quote_telemetry: QuoteTelemetry.report(day),
         policy: 'priority_exits', daily_limit: DAILY_LIMIT,
         routine_used: Discourse.redis.get("rsc:fallback-routine:#{day}").to_i, routine_limit: ROUTINE_LIMIT,
         non_priority_ceiling: NON_PRIORITY_CEILING, opening_ceiling: OPENING_CEILING, protection_ceiling: PROTECTION_CEILING, routine_interval: ROUTINE_INTERVAL,
