@@ -298,6 +298,7 @@ module DiscourseRsc
               return false
             end
             ForexReviewQueue.finish(instrument.id)
+            ForexReviewQueue.end_opening(instrument.id)
           end
           quote = observe_delay(instrument.quote, quote, category: instrument.category)
           attributes = {quote: quote, provider_error: nil, synced_at: Time.current}
@@ -470,9 +471,11 @@ module DiscourseRsc
     def self.verify_forex_quote(instrument, primary_checked: false)
       return if MarketSessions.closed?(instrument)
       return unless FallbackBudget.allowed?(instrument)
+      new_opening = Thread.current[:rsc_fallback_purpose] == :trade && ForexQuoteGuard.pending?(instrument.quote) &&
+        ForexReviewQueue.begin_opening(instrument.id)
       # Newly eligible higher-priority work may resume a routine deferral.
       # Routine polls cannot continually erase their own backoff.
-      if %w[provider_background_budget provider_background_paced].include?(instrument.quote.dig('verification', 'backup_error')) &&
+      if (new_opening || %w[provider_background_budget provider_background_paced].include?(instrument.quote.dig('verification', 'backup_error'))) &&
           FallbackBudget.review_can_resume?(instrument)
         ForexReviewQueue.finish(instrument.id)
         Discourse.redis.del("rsc:fx-review:#{instrument.id}")

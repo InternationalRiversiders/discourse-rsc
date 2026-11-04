@@ -32,7 +32,32 @@ module DiscourseRsc
     LUA
 
     def self.eligible?(id)
-      ExecutionDemand.automatic?(id)
+      ExecutionDemand.automatic?(id) || opening_review?(id)
+    end
+
+    # A real opening submission may finish its review after the HTTP response.
+    # One shared, non-renewing ten-minute lease and at most four actual requests
+    # per symbol; viewing pages never creates demand or extends this window.
+    def self.begin_opening(id)
+      started = Discourse.redis.set("rsc:fx-opening-review:#{id}", '0', nx: true, ex: 600)
+      enqueue(id)
+      started
+    end
+
+    def self.end_opening(id)
+      Discourse.redis.del("rsc:fx-opening-review:#{id}")
+    end
+
+    def self.opening_review?(id)
+      count = Discourse.redis.get("rsc:fx-opening-review:#{id}")
+      count.present? && count.to_i < 4
+    end
+
+    def self.record_opening_request(id)
+      ProviderHttp.evaluate(<<~LUA, keys: ["rsc:fx-opening-review:#{id}"], argv: [])
+        if redis.call('EXISTS', KEYS[1]) == 1 then return redis.call('INCR', KEYS[1]) end
+        return 0
+      LUA
     end
 
     def self.enqueue(id)
@@ -64,8 +89,8 @@ module DiscourseRsc
     end
 
     def self.next_instrument
-      # Recover live trading work only. Old page-view/failed-submission markers
-      # cannot spend credits or hold the review lane after the trade disappears.
+      # Recover positions/orders; bounded opening reviews are already queued.
+      # Page views and expired opening leases cannot keep a review alive.
       Instrument.where(id: ExecutionDemand.instrument_ids, active: true, category: 'forex')
         .where("quote->'verification'->>'status' = 'pending'").to_a.sort_by { |item| ExecutionDemand.rank(item) }.each do |item|
           enqueue(item.id)

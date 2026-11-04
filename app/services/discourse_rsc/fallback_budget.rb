@@ -5,14 +5,17 @@ module DiscourseRsc
     RETENTION = 14.days.to_i
     DAILY_LIMIT = 750
     ROUTINE_LIMIT = 150
-    NON_PRIORITY_CEILING = 450 # Last 300 credits are for exits/protection.
+    NON_PRIORITY_CEILING = 450 # Routine checks stop early.
+    OPENING_CEILING = 650 # Preserve the last 100 for exits/imminent triggers.
+    PROTECTION_CEILING = 600 # Leave 50 additional credits for user submissions.
     ROUTINE_INTERVAL = 600
     ROUTINE_GLOBAL_INTERVAL = 576 # Spread 150 normal probes across a full day.
     RESERVE = <<~LUA
       local used = tonumber(redis.call('GET', KEYS[2]) or '0')
       local tier, now = ARGV[2], tonumber(ARGV[3])
       if used >= 750 then return {-2} end
-      if (tier == 'routine' or tier == 'opening') and used >= 450 then return {-3} end
+      if tier == 'routine' and used >= 450 then return {-3} end
+      if tier == 'opening' and used >= 650 then return {-3} end
       local old_symbol = redis.call('GET', KEYS[4]) or ''
       local old_routine = redis.call('GET', KEYS[5]) or ''
       local old_protection = redis.call('GET', KEYS[6]) or ''
@@ -28,8 +31,8 @@ module DiscourseRsc
         if not burst and (now - started < 600 or now - (tonumber(old_routine) or 0) < 576) then return {-4} end
       elseif tier == 'protection' then
         -- Pace non-imminent protection checks using time and quota remaining.
-        -- Keep 100 for imminent triggers/manual exits; urgency bypasses pacing.
-        local remaining = 750 - used - 100
+        -- Keep 50 for openings and 100 for imminent triggers/exits; urgency bypasses pacing.
+        local remaining = 600 - used
         if remaining <= 0 then return {-3} end
         local interval = math.max(60, math.ceil(tonumber(ARGV[5]) / remaining))
         if not burst and now - (tonumber(old_protection) or 0) < interval then return {-4} end
@@ -90,15 +93,16 @@ module DiscourseRsc
       tier = ExecutionDemand.priority(instrument, purpose: Thread.current[:rsc_fallback_purpose])
       return true if %i[exit urgent].include?(tier)
       used = Discourse.redis.get("rsc:fx-fallback:requests:#{Time.current.utc.to_date}").to_i
-      return used < NON_PRIORITY_CEILING if tier == :opening
-      return false unless tier == :protection && used < DAILY_LIMIT - 100
+      return used < OPENING_CEILING if tier == :opening
+      return false unless tier == :protection && used < PROTECTION_CEILING
       now = Time.current
-      interval = [60, ((now.utc.tomorrow.beginning_of_day - now) / (DAILY_LIMIT-used-100)).ceil].max
+      interval = [60, ((now.utc.tomorrow.beginning_of_day - now) / (PROTECTION_CEILING-used)).ceil].max
       now.to_f - Discourse.redis.get('rsc:fallback-protection-slot').to_f >= interval
     end
 
     def self.record_request(day, instrument, operation, reason, tier)
       metric(day, instrument.symbol, operation, reason, 'requests')
+      ForexReviewQueue.record_opening_request(instrument.id) if tier == :opening
       key = "rsc:fallback-priority:#{day}"
       Discourse.redis.hincrby(key, tier.to_s, 1)
       Discourse.redis.expire(key, RETENTION)
@@ -153,7 +157,7 @@ module DiscourseRsc
       { day: day, timezone: 'UTC', total_reserved: Discourse.redis.get("rsc:fx-fallback:requests:#{day}").to_i,
         policy: 'priority_exits', daily_limit: DAILY_LIMIT,
         routine_used: Discourse.redis.get("rsc:fallback-routine:#{day}").to_i, routine_limit: ROUTINE_LIMIT,
-        non_priority_ceiling: NON_PRIORITY_CEILING, routine_interval: ROUTINE_INTERVAL,
+        non_priority_ceiling: NON_PRIORITY_CEILING, opening_ceiling: OPENING_CEILING, protection_ceiling: PROTECTION_CEILING, routine_interval: ROUTINE_INTERVAL,
         requests_by_priority: Discourse.redis.hgetall("rsc:fallback-priority:#{day}").transform_values(&:to_i),
         tracked_since: Discourse.redis.get("#{key}:started_at"),
         rows: Discourse.redis.hgetall(key).map { |field, count| symbol, op, reason, outcome = field.split('|'); {symbol: symbol, operation: op, reason: reason, outcome: outcome, count: count.to_i} } }

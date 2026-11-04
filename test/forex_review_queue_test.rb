@@ -143,4 +143,58 @@ class ForexReviewQueueTest < ForexPrimaryPolicyTest
     end
   end
 
+  def test_failed_opening_can_complete_review_without_position_or_order
+    travel_to(Time.utc(2026,11,3,12)) do
+      SiteSetting.rsc_market_data_enabled=true
+      SiteSetting.rsc_twelve_data_api_key='isolated-test-key'
+      item=quarantined('BRL')
+      item.update!(quote:item.quote.merge('verification'=>item.quote['verification'].merge('backup_error'=>'provider_background_budget')))
+      Q.finish(item.id,retry_in:3600)
+      # A fresh primary observation must not erase the reason for the deferral.
+      accept(item,'1.002')
+      assert_equal 'provider_background_budget',item.quote.dig('verification','backup_error')
+      3.times do |n|
+        Discourse.redis.del("rsc:fx-review:#{item.id}")
+        with_feeds(observation('1.002'),observation('1.001',source:'twelve_data')) do |calls|
+          if n.zero?
+            R::MarketData.refresh_if_needed(item.id,purpose: :trade)
+          else
+            assert_equal [item.id],R::MarketData.sync_forex
+          end
+          assert_equal 1,calls[:backup]
+        end
+        travel 60.seconds if n<2
+      end
+      refute G.pending?(item.reload.quote)
+      assert_equal 'backup_consensus',item.quote.dig('verification','method')
+      refute Q.opening_review?(item.id)
+      assert_equal 0,R::Order.count
+      assert_equal 0,R::Position.count
+      assert_equal 0,R::Entry.sum(:units)
+    end
+  end
+
+  def test_opening_review_is_bounded_and_does_not_authorize_general_polling
+    travel_to(Time.utc(2026,11,3,12)) do
+      item=quarantined('BRL')
+      Q.begin_opening(item.id)
+      assert Q.eligible?(item.id)
+      assert R::ExecutionDemand.allowed?(item.id,purpose: :forex_review)
+      refute R::ExecutionDemand.allowed?(item.id,purpose: :execution)
+      refute R::ExecutionDemand.allowed?(item.id,purpose: :read)
+      assert_equal :opening,R::ExecutionDemand.priority(item,purpose: :forex_review)
+      key="rsc:fx-opening-review:#{item.id}"
+      Discourse.redis.expire(key,120)
+      Q.begin_opening(item.id)
+      assert_operator Discourse.redis.ttl(key),:<=,120
+      4.times{Q.record_opening_request(item.id)}
+      refute Q.eligible?(item.id)
+      Q.begin_opening(item.id)
+      refute Q.eligible?(item.id)
+      assert_nil Q.next_instrument
+      Discourse.redis.del(key)
+      refute Q.opening_review?(item.id)
+    end
+  end
+
 end

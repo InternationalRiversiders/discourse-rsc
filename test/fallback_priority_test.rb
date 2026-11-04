@@ -39,23 +39,25 @@ class FallbackPriorityTest < ExecutionLifecycleTest
     travel_to(Time.utc(2026,11,3,12)) do
       item,_,_=exposed_position(leverage:1)
       Discourse.redis.set("rsc:fx-fallback:requests:#{Time.current.utc.to_date}",450)
-      [:execution,:trade].each{|purpose|blocked('provider_background_budget'){reserve(item,purpose:purpose)}}
+      blocked('provider_background_budget'){reserve(item)}
+      assert_equal :ok,reserve(item,purpose: :trade)
+      release_slot
       assert_equal :ok,reserve(item,purpose: :exit)
       release_slot
       position=R::Position.find_by!(instrument_id:item.id)
       position.update!(stop_loss_units:R::Amount.parse('0.999'))
       assert_equal :ok,reserve(item)
-      assert_equal 452,B.report[:total_reserved]
-      assert_equal({'exit'=>1,'protection'=>1},B.report[:requests_by_priority])
+      assert_equal 453,B.report[:total_reserved]
+      assert_equal({'opening'=>1,'exit'=>1,'protection'=>1},B.report[:requests_by_priority])
     end
   end
 
   def test_non_imminent_stops_are_paced_but_trigger_and_manual_exit_bypass
     travel_to(Time.utc(2026,11,3,12)) do
       item,position,_=protected_position(tp:'1.1',sl:'0.9')
-      Discourse.redis.set("rsc:fx-fallback:requests:#{Time.current.utc.to_date}",600)
+      Discourse.redis.set("rsc:fx-fallback:requests:#{Time.current.utc.to_date}",550)
       assert_equal :ok,reserve(item)
-      release_slot;travel 2.minutes
+      release_slot;travel 1.minute
       blocked('provider_background_paced'){reserve(item)}
       assert_equal :ok,reserve(item,purpose: :exit)
       release_slot
@@ -107,7 +109,7 @@ class FallbackPriorityTest < ExecutionLifecycleTest
   def test_distant_protection_review_can_complete_despite_daily_pacing
     travel_to(Time.utc(2026,11,3,12)) do
       item,_,_=protected_position(tp:'1.1',sl:'0.9')
-      Discourse.redis.set("rsc:fx-fallback:requests:#{Time.current.utc.to_date}",600)
+      Discourse.redis.set("rsc:fx-fallback:requests:#{Time.current.utc.to_date}",550)
       assert_equal :ok,reserve(item)
       2.times do
         travel 60.seconds;release_slot
@@ -115,7 +117,7 @@ class FallbackPriorityTest < ExecutionLifecycleTest
       end
       travel 60.seconds;release_slot
       blocked('provider_background_paced'){reserve(item,reason:'quote_verification')}
-      assert_equal 603,B.report[:total_reserved]
+      assert_equal 553,B.report[:total_reserved]
       assert_equal 0,B.report[:routine_used]
     end
   end
@@ -193,4 +195,17 @@ class FallbackPriorityTest < ExecutionLifecycleTest
       blocked('provider_execution_only'){reserve(item,purpose: :read)}
     end
   end
+  def test_opening_reserve_survives_background_protection_and_preserves_exits
+    travel_to(Time.utc(2026,11,3,12)) do
+      item,_,_=protected_position(tp:'1.1',sl:'0.9')
+      Discourse.redis.set("rsc:fx-fallback:requests:#{Time.current.utc.to_date}",600)
+      blocked('provider_background_budget'){reserve(item)}
+      assert_equal :ok,reserve(item,purpose: :trade)
+      release_slot
+      Discourse.redis.set("rsc:fx-fallback:requests:#{Time.current.utc.to_date}",650)
+      blocked('provider_background_budget'){reserve(item,purpose: :trade)}
+      assert_equal :ok,reserve(item,purpose: :exit)
+    end
+  end
+
 end

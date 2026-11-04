@@ -36,7 +36,8 @@ module DiscourseRsc
     def self.allowed?(id, purpose:)
       case purpose
       when :trade, :exit then true
-      when :execution, :forex_review then automatic?(id)
+      when :execution then automatic?(id)
+      when :forex_review then automatic?(id) || ForexReviewQueue.opening_review?(id)
       else false
       end
     end
@@ -55,6 +56,7 @@ module DiscourseRsc
         nil
       end
       return :urgent if held.any? && (prices.empty? || held.any? { |p| prices.any? { |price| Exchange.automatic_close_reason(p, price) } })
+      return :opening if purpose == :forex_review && ForexReviewQueue.opening_review?(instrument.id)
       return :protection if held.any? { |p| p.take_profit_units || p.stop_loss_units || prices.any? { |price| near_exit?(p, price) } }
       return :opening if order?(instrument.id)
       :routine
@@ -85,7 +87,7 @@ module DiscourseRsc
       when :trade then 'open_order'
       when :exit then 'close_order'
       when :execution then order?(id) ? 'pending_order' : 'position_risk'
-      when :forex_review then order?(id) ? 'pending_order_review' : 'position_risk_review'
+      when :forex_review then order?(id) ? 'pending_order_review' : positions.where(instrument_id: id).exists? ? 'position_risk_review' : 'opening_review'
       else 'non_trading'
       end
     end

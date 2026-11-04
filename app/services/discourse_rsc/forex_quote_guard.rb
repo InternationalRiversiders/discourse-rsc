@@ -47,6 +47,7 @@ module DiscourseRsc
         observations[previous['source']] = [previous.slice(*FIELDS)]
       end
       source = incoming.fetch('source')
+      state = state.except('backup_error', 'backup_checked_at') if source == 'twelve_data'
       samples = Array(observations[source]).select { |s| Time.iso8601(s['source_time']) >= now - 300 }
       last = samples.last
       at = Time.iso8601(incoming.fetch('source_time'))
@@ -100,12 +101,12 @@ module DiscourseRsc
         preferred = reason == 'cross_source' ? nil : (reason == 'backup_consensus' ? 'twelve_data' : preferred)
         return accepted(incoming, reason, observations: observations, preferred: preferred)
       end
-      previous.merge('verification' => {
+      previous.merge('verification' => state.slice('backup_error', 'backup_checked_at').merge(
         'version' => VERSION, 'status' => 'pending', 'reason' => conflict || switched ? 'source_disagreement' : 'price_jump',
         'since' => state['since'] || now.iso8601(6), 'checked_at' => now.iso8601(6),
         'disputed' => !!disputed, 'preferred_source' => preferred,
         'observations' => observations, 'candidate' => incoming.slice(*FIELDS)
-      })
+      ))
     end
 
     def self.accepted(quote, reason, observations: {}, preferred: nil)
