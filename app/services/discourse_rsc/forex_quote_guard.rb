@@ -35,7 +35,7 @@ module DiscourseRsc
       10
     end
 
-    def self.apply(previous, incoming, now: Time.current)
+    def self.apply(previous, incoming, now: Time.current, primary_only: false)
       return nil unless fresh?(incoming, now)
       baseline = previous['price'].present? && previous['source_time'].present? && previous['source'].present? && !previous['legacy_snapshot'] &&
         previous['pricing_method'] == incoming['pricing_method']
@@ -86,7 +86,12 @@ module DiscourseRsc
       backup_consensus = source == 'twelve_data' && samples.size >= 3 &&
         (Time.iso8601(samples.last['source_time']) - Time.iso8601(samples.first['source_time'])) >= 120 &&
         samples.all? { |sample| near?(sample, incoming) }
-      reason = if !conflict && agreement
+      primary_consensus = primary_only && source == 'yahoo' && samples.size >= 3 &&
+        (Time.iso8601(samples.last['source_time']) - Time.iso8601(samples.first['source_time'])) >= 120 &&
+        samples.all? { |sample| near?(sample, incoming) }
+      reason = if primary_consensus
+        'primary_consensus'
+      elsif !conflict && agreement
         'cross_source'
       elsif preferred == source && !jump && !pending?(previous)
         'backup_continuity'
@@ -115,9 +120,25 @@ module DiscourseRsc
         'method' => reason, 'checked_at' => Time.current.iso8601(6) })
     end
 
-    def self.execution_details(instrument)
+    # A separate, primary-only stream prevents a manual backup fill from
+    # changing the feed used by unattended stops and liquidation. Same-source
+    # jumps need distinct observations; cached/revised timestamps do not count.
+    def self.automatic_quote(quote)
+      quote['automatic_quote'] || (quote['source'] == 'yahoo' ? quote.except('automatic_quote') : {})
+    end
+
+    def self.review_primary(previous, incoming)
+      return previous unless incoming['source'] == 'yahoo'
+      baseline = previous.deep_dup
+      state = baseline.fetch('verification', {})
+      baseline['verification'] = state.except('preferred_source', 'disputed', 'backup_error', 'backup_checked_at')
+        .merge('observations' => state.fetch('observations', {}).slice('yahoo'))
+      apply(baseline, incoming.except('automatic_quote'), primary_only: true) || previous
+    end
+
+    def self.execution_details(instrument, quote: instrument.quote)
       return {} unless instrument.category == 'forex'
-      { 'executed_at' => Time.current.iso8601(6), 'execution_quote' => instrument.quote.slice(*FIELDS, 'verification') }
+      { 'executed_at' => Time.current.iso8601(6), 'execution_quote' => quote.slice(*FIELDS, 'verification') }
     end
   end
 end

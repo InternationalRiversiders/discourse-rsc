@@ -26,10 +26,10 @@ class ExecutionLifecycleTest < AutomaticProtectionFallbackTest
   end
 
   [['long',100,'0.992'],['short',100,'1.008'],['long',1,'0.24']].each do |side,leverage,price|
-    define_method("test_#{side}_#{leverage}x_liquidation_without_stops_uses_reviewed_backup") do
+    define_method("test_#{side}_#{leverage}x_liquidation_without_stops_uses_reviewed_primary") do
       travel_to(Time.utc(2026,11,3,12)) do
         item,position,stale=exposed_position(side:side,leverage:leverage)
-        with_backup_feed(stale,price) do |calls|
+        with_backup_feed(-> { observation(price) },R::Error.new('provider_daily_limit')) do |calls|
           review_samples(item) do |n|
             poll
             assert R::Position.exists?(position.id) if n<2
@@ -37,10 +37,9 @@ class ExecutionLifecycleTest < AutomaticProtectionFallbackTest
           refute R::Position.exists?(position.id)
           closing=R::Order.where(side:'close').sole
           assert_equal 'stock_liquidated',closing.details['reason']
-          assert_equal 'twelve_data',closing.details.dig('execution_quote','source')
-          assert_equal 3,calls.size
-          assert B.report[:rows].any?{|r|r[:operation]=='position_risk' && r[:outcome]=='requests'}
-          assert B.report[:rows].any?{|r|r[:operation]=='position_risk_review' && r[:outcome]=='requests'}
+          assert_equal 'yahoo',closing.details.dig('execution_quote','source')
+          assert_empty calls
+          assert_equal 0,B.report[:total_reserved]
           before=R::Account.wallet(@alice.id).balance
           poll;R::Exchange.process(item.id)
           assert_equal before,R::Account.wallet(@alice.id).balance
@@ -54,12 +53,12 @@ class ExecutionLifecycleTest < AutomaticProtectionFallbackTest
   def test_added_margin_is_rechecked_before_liquidation_at_confirmed_price
     travel_to(Time.utc(2026,11,3,12)) do
       item,position,stale=exposed_position
-      with_backup_feed(stale,'0.992') do |calls|
+      with_backup_feed(-> { observation('0.992') },R::Error.new('provider_daily_limit')) do |calls|
         review_samples(item) do |n|
           R::Exchange.add_margin(actor:@alice,position_id:position.id,amount:'1',request_id:SecureRandom.uuid) if n==2
           poll
         end
-        assert_equal 3,calls.size
+        assert_empty calls
         assert R::Position.exists?(position.id)
         assert_equal R::Amount.parse('2'),position.reload.margin_units
         assert_equal 0,R::Order.where(side:'close').count
@@ -71,11 +70,11 @@ class ExecutionLifecycleTest < AutomaticProtectionFallbackTest
   def test_general_poll_checks_liquidation_and_refunds_expired_orders_without_a_price
     travel_to(Time.utc(2026,11,3,12)) do
       item,position,stale=exposed_position
-      with_backup_feed(stale,'0.992') do |calls|
+      with_backup_feed(-> { observation('0.992') },R::Error.new('provider_daily_limit')) do |calls|
         review_samples(item) { R::MarketData.sync { |id| R::Exchange.process(id) } }
         refute R::Position.exists?(position.id)
         assert_equal 'stock_liquidated',R::Order.where(side:'close').sole.details['reason']
-        assert_equal 3,calls.size
+        assert_empty calls
       end
       item.update!(quote:G.accepted(observation('1'),'continuous'),provider_error:nil)
       SiteSetting.rsc_market_data_enabled=false
@@ -123,7 +122,7 @@ class ExecutionLifecycleTest < AutomaticProtectionFallbackTest
     end
   end
 
-  def test_abandoned_browsing_review_does_not_block_live_position_review
+  def test_abandoned_browsing_and_position_reviews_leave_backup_queue
     travel_to(Time.utc(2026,11,3,12)) do
       unused=forex('FX:NOK');unused.update!(provider:'yahoo',provider_symbol:'NOK=X',quote:observation('1'))
       accept(unused,'1.002')
@@ -132,8 +131,8 @@ class ExecutionLifecycleTest < AutomaticProtectionFallbackTest
       item,position,_=exposed_position
       accept(item,'1.002')
       assert G.pending?(item.reload.quote)
-      assert_equal item.id,R::ForexReviewQueue.next_instrument.id
-      assert_equal item.id,R::ForexReviewQueue.claim
+      assert_nil R::ForexReviewQueue.next_instrument
+      assert_equal 0,R::ForexReviewQueue.claim
       assert R::Position.exists?(position.id)
     end
   end

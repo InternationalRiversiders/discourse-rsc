@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 module DiscourseRsc
-  # One definition of live trading work, shared by polling, anomaly review and
-  # backup-credit authorization. Every position needs liquidation monitoring;
-  # stop settings are not a prerequisite for a valid risk price.
+  # Holdings remain polling work, but are not FX backup-credit demand.
+  # Explicit orders and bounded submission reviews may still use the backup.
   module ExecutionDemand
     def self.wallet_users
       Account.where(kind: 'wallet', status: 'active').select(:user_id)
@@ -36,53 +35,43 @@ module DiscourseRsc
     def self.allowed?(id, purpose:)
       case purpose
       when :trade, :exit then true
-      when :execution then automatic?(id)
-      when :forex_review then automatic?(id) || ForexReviewQueue.opening_review?(id)
+      when :execution then backup_demand?(id)
+      when :forex_review then backup_demand?(id) || ForexReviewQueue.opening_review?(id)
       else false
       end
     end
 
-    # Candidates may escalate a check, but are NEVER executable prices.
-    # This avoids waiting on the routine timer when a quarantined move threatens
-    # a stop or liquidation. The exchange still requires a verified fresh quote.
+    # Autonomous FX protection is primary-only. Explicit queued orders still
+    # represent a user's trading request and may use the backup when necessary.
+    def self.backup_demand?(id)
+      order?(id) || (Instrument.where(id: id).where.not(category: 'forex').exists? && automatic?(id))
+    end
+
+    # Candidates may prioritize primary polling, but are NEVER executable.
+    # Priority alone does not grant backup access; allowed? is the separate gate.
     def self.priority(instrument, purpose:)
       return :exit if purpose == :exit
       return :opening if purpose == :trade
       return :exit if orders.where(instrument_id: instrument.id, side: 'close').exists?
+      if instrument.category == 'forex' && (order?(instrument.id) || (purpose == :forex_review && ForexReviewQueue.opening_review?(instrument.id)))
+        return :opening
+      end
       held = positions.where(instrument_id: instrument.id).to_a
-      prices = [instrument.quote['price'], instrument.quote.dig('verification', 'candidate', 'price')].filter_map do |value|
+      quote = instrument.category == 'forex' ? ForexQuoteGuard.automatic_quote(instrument.quote) : instrument.quote
+      prices = [quote['price'], quote.dig('verification', 'candidate', 'price')].filter_map do |value|
         Amount.positive(value) if value.present?
       rescue Error, ArgumentError, TypeError
         nil
       end
       return :urgent if held.any? && (prices.empty? || held.any? { |p| prices.any? { |price| Exchange.automatic_close_reason(p, price) } })
-      # A frozen accepted price cannot indefinitely classify a holding as safe.
-      # Candidate timestamps never reset this clock. Severe uncertainty uses
-      # the same reserve as imminent risk; no stale price becomes executable.
       forex = instrument.category == 'forex'
-      age = forex ? risk_quote_age(instrument.quote) : 0
-      deadline = risk_review_after(held)
-      return :urgent if held.any? && age >= deadline * 2
       return :opening if purpose == :forex_review && ForexReviewQueue.opening_review?(instrument.id)
       return :protection if held.any? { |p|
-        (!forex && (p.take_profit_units || p.stop_loss_units)) || age >= deadline ||
+        (!forex && (p.take_profit_units || p.stop_loss_units)) ||
           prices.any? { |price| near_exit?(p, price) }
       }
       return :opening if order?(instrument.id)
       :routine
-    end
-
-    def self.risk_review_after(held)
-      leverage = held.map { |p| p.leverage.to_i }.max.to_i
-      leverage >= 50 ? 360 : leverage >= 10 ? 600 : 900
-    end
-
-    def self.risk_quote_age(quote)
-      times = %w[source_time received_at].map { |key| Time.iso8601(quote.fetch(key)) }
-      return Float::INFINITY if times.any? { |at| at > 5.seconds.from_now }
-      [Time.current - times.min, 0].max
-    rescue KeyError, ArgumentError, TypeError
-      Float::INFINITY
     end
 
     def self.rank(instrument)

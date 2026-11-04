@@ -158,23 +158,37 @@ module DiscourseRsc
         begin
           price = price!(instrument, trading: true)
         rescue Error => error
-          next unless error.code == 'market_closed' && MarketSessions.delayed_settlement?(instrument)
-          begin
-            price = price!(instrument)
-          rescue Error
-            next
+          price = nil
+          if error.code == 'market_closed' && MarketSessions.delayed_settlement?(instrument)
+            begin
+              price = price!(instrument)
+            rescue Error
+              price = nil
+            end
           end
         end
+        automatic_quote = instrument.category == 'forex' ? ForexQuoteGuard.automatic_quote(instrument.quote) : instrument.quote
+        automatic_price = if instrument.category == 'forex'
+          begin
+            price!(instrument, trading: true, quote: automatic_quote)
+          rescue Error
+            nil
+          end
+        else
+          price
+        end
         Position.where(instrument_id: instrument.id).order(:id).each do |position|
+          next unless automatic_price
           Risk.lock(position.user_id)
           next unless Account.wallet(position.user_id).status == "active"
-          kind = automatic_close_reason(position, price)
+          kind = automatic_close_reason(position, automatic_price)
           next unless kind
           Order.where(user_id: position.user_id, instrument_id: instrument.id, status: "pending").each { |order| refund_locked(order, "canceled") }
           order = Order.create!(user_id: position.user_id, instrument_id: instrument.id, side: "close", leverage: position.leverage,
                                 status: "executing", quantity_units: position.quantity_units, details: { "automatic" => true })
-          close_locked(instrument, order, position, price, kind)
+          close_locked(instrument, order, position, automatic_price, kind, quote: automatic_quote)
         end
+        next unless price
         pending_orders = Order.where(instrument_id: instrument.id, status: "pending")
         pending_orders.order(:id).each do |order|
           Risk.lock(order.user_id)
@@ -224,8 +238,7 @@ module DiscourseRsc
       end
     end
 
-    def self.price!(instrument, trading: false)
-      quote = instrument.quote
+    def self.price!(instrument, trading: false, quote: instrument.quote)
       raise Error.new('quote_verifying', status: 409) if instrument.category == 'forex' && ForexQuoteGuard.pending?(quote)
       if trading && MarketData.forex_base(instrument) && quote["pricing_method"] != MarketData::FX_PRICING
         raise Error.new("quote_stale", status: 409)
@@ -308,9 +321,9 @@ module DiscourseRsc
       order.update!(status: "filled", reserved_units: 0, details: order.details.merge("price" => Amount.format(price), "fee" => Amount.format(fee), "gross" => Amount.format(gross), "margin" => Amount.format(margin)))
     end
 
-    def self.close_locked(instrument, order, position, price, kind)
-      order.details = order.details.merge(ForexQuoteGuard.execution_details(instrument))
-      price = execution_price(instrument, position.side == "long" ? "short" : "long", price)
+    def self.close_locked(instrument, order, position, price, kind, quote: instrument.quote)
+      order.details = order.details.merge(ForexQuoteGuard.execution_details(instrument, quote: quote))
+      price = execution_price(instrument, position.side == "long" ? "short" : "long", price, quote: quote)
       quantity = order.quantity_units.to_i
       margin = position.margin_units.to_i * quantity / position.quantity_units.to_i
       profit = pnl(position, price, quantity)
@@ -330,9 +343,9 @@ module DiscourseRsc
       order.update!(status: "filled", details: order.details.merge("price" => Amount.format(price), "payout" => Amount.format(payout), "pnl" => Amount.format(profit), "fee" => Amount.format(fee), "fee_bps" => fee_bps, "margin" => Amount.format(margin), "reason" => kind, "gross" => Amount.format(quantity * price / U)))
     end
 
-    def self.execution_price(instrument, side, price, preview: false)
+    def self.execution_price(instrument, side, price, preview: false, quote: instrument.quote)
       buy = side == "long"
-      market = instrument.quote[buy ? "ask" : "bid"]
+      market = quote[buy ? "ask" : "bid"]
       execution = market.present? ? Amount.positive(market) : price
       if instrument.category == "crypto" && (SiteSetting.rsc_crypto_extra_slippage_enabled || !reliable_book?(instrument.quote))
         bps = preview ? 5 : 2 + SecureRandom.random_number(4)

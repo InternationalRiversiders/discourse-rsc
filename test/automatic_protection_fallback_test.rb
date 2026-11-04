@@ -28,7 +28,10 @@ class AutomaticProtectionFallbackTest < ForexPrimaryPolicyTest
   def with_backup_feed(primary, price)
     old_primary=R::MarketData.method(:fetch_primary_quote)
     old_http=R::ProviderHttp.method(:get)
-    R::MarketData.define_singleton_method(:fetch_primary_quote){|_| primary}
+    R::MarketData.define_singleton_method(:fetch_primary_quote) do |_|
+      raise primary if primary.is_a?(Exception)
+      primary.respond_to?(:call) ? primary.call : primary
+    end
     calls=[]
     R::ProviderHttp.define_singleton_method(:get) do |host,path,params|
       raise "Unexpected provider #{host} #{path}" unless host=='api.twelvedata.com' && path=='/exchange_rate'
@@ -50,119 +53,55 @@ class AutomaticProtectionFallbackTest < ForexPrimaryPolicyTest
    ['long','1.0003','0.9997','0.9996','stock_stop_loss'],
    ['short','0.9997','1.0003','0.9996','stock_take_profit'],
    ['short','0.9997','1.0003','1.0004','stock_stop_loss']].each do |side,tp,sl,price,reason|
-    define_method("test_stale_primary_#{side}_#{reason}_uses_backup_and_closes_once") do
-      travel_to(Time.utc(2026,11,3,12)) do
+    define_method("test_primary_#{side}_#{reason}_closes_once_without_backup") do
+      travel_to(Time.utc(2026,11,4,12)) do
         item,position,stale=protected_position(side:side,tp:tp,sl:sl)
         with_backup_feed(stale,price) do |calls|
+          poll;poll
+          assert_empty calls
+          assert R::Position.exists?(position.id)
+          assert_equal 0,R::Order.where(side:'close').count
+        end
+        with_backup_feed(observation(price),R::Error.new('provider_daily_limit')) do |calls|
           poll
           refute R::Position.exists?(position.id)
           closing=R::Order.where(side:'close').sole
-          assert_equal 'filled',closing.status
           assert_equal reason,closing.details['reason']
-          assert_equal 'twelve_data',closing.details.dig('execution_quote','source')
-          poll
-          R::Exchange.process(item.id)
+          assert_equal 'yahoo',closing.details.dig('execution_quote','source')
+          poll; R::Exchange.process(item.id)
           assert_equal 1,R::Order.where(side:'close').count
-          assert_equal ['USD/BRL'],calls
-          assert_equal 1,B.report[:total_reserved]
-          assert_equal ['position_risk'],B.report[:rows].map{|r|r[:operation]}.uniq
+          assert_empty calls
+          assert_equal 0,B.report[:total_reserved]
           assert_equal 0,R::Entry.sum(:units)
         end
       end
     end
   end
 
-  def test_fresh_primary_triggers_stop_without_any_backup_call
-    travel_to(Time.utc(2026,11,3,12)) do
-      item,position,_=protected_position
-      with_backup_feed(observation('1.0004'),R::Error.new('provider_daily_limit')) do |calls|
-        poll
-        refute R::Position.exists?(position.id)
-        assert_empty calls
-        assert_equal 'yahoo',R::Order.where(side:'close').sole.details.dig('execution_quote','source')
-      end
-    end
-  end
-
-  def test_checks_share_valid_quote_and_clearing_stops_keeps_liquidation_monitoring
-    travel_to(Time.utc(2026,11,3,12)) do
+  def test_checks_and_stop_removal_never_authorize_backup
+    travel_to(Time.utc(2026,11,4,12)) do
       item,position,stale=protected_position(tp:'1.01',sl:'0.99')
-      with_backup_feed(stale,'1.0001') do |calls|
-        poll; poll
-        assert_equal ['USD/BRL'],calls
-        assert R::Position.exists?(position.id)
-        assert_equal 0,R::Order.where(side:'close').count
+      with_backup_feed(stale,'0.1') do |calls|
+        poll
         R::Exchange.protect(actor:@alice,position_id:position.id,take_profit:nil,stop_loss:nil,request_id:SecureRandom.uuid)
-        travel 4.minutes
-        Discourse.redis.del('rsc:fx-fallback:slot')
-        item.update!(quote:stale,synced_at:5.minutes.ago)
-        poll
-        assert_equal ['USD/BRL'],calls
-        travel 6.minutes
-        Discourse.redis.del('rsc:fx-fallback:slot')
-        poll
-        assert_equal ['USD/BRL','USD/BRL'],calls
-        B.with_context(:execution){assert B.allowed?(item)}
-      end
-    end
-  end
-
-  def test_frozen_wallet_and_page_views_do_not_grant_protection_budget
-    travel_to(Time.utc(2026,11,3,12)) do
-      item,_,stale=protected_position
-      [nil,:read,:background,:forex_fast,:protection].each do |purpose|
-        B.with_context(purpose){refute B.allowed?(item)}
-      end
-      B.with_context(:execution){assert B.allowed?(item)}
-      R::Account.wallet(@alice.id).update!(status:'frozen')
-      with_backup_feed(stale,'1.0004') do |calls|
+        travel 30.minutes
         poll
         assert_empty calls
-        B.with_context(:execution){refute B.allowed?(item)}
-        B.with_context(:forex_review){refute B.allowed?(item)}
-      end
-    end
-  end
-
-  def test_backup_failure_does_not_close_at_an_old_or_unverified_price
-    travel_to(Time.utc(2026,11,3,12)) do
-      item,position,stale=protected_position
-      with_backup_feed(stale,R::Error.new('provider_unavailable')) do |calls|
-        before=R::Account.wallet(@alice.id).balance
-        poll; poll
-        assert_equal ['USD/BRL'],calls
         assert R::Position.exists?(position.id)
-        assert_equal 0,R::Order.where(side:'close').count
-        assert_equal before,R::Account.wallet(@alice.id).balance
-      end
-    end
-  end
-
-  def test_suspect_price_needs_independent_review_before_automatic_close
-    travel_to(Time.utc(2026,11,3,12)) do
-      item,position,stale=protected_position
-      with_backup_feed(stale,'1.002') do |calls|
-        3.times do |n|
-          Discourse.redis.del('rsc:fx-fallback:slot',"rsc:fx-review:#{item.id}")
-          poll
-          assert R::Position.exists?(position.id) if n<2
-          travel 60.seconds if n<2
+        %i[execution forex_review read background forex_fast protection].each do |purpose|
+          B.with_context(purpose){refute B.allowed?(item)}
         end
-        assert_equal 3,calls.size
-        refute R::Position.exists?(position.id)
-        assert_equal 'stock_take_profit',R::Order.where(side:'close').sole.details['reason']
-        assert B.report[:rows].any?{|r|r[:operation]=='position_risk_review' && r[:outcome]=='requests'}
-        assert_equal 0,R::Entry.sum(:units)
+        assert_equal 0,B.report[:total_reserved]
       end
     end
   end
 
-  def test_general_market_poll_also_selects_position_risk
-    travel_to(Time.utc(2026,11,3,12)) do
-      _,position,stale=protected_position
-      with_backup_feed(stale,'0.9996') do |calls|
+  def test_general_market_poll_uses_primary_for_protection
+    travel_to(Time.utc(2026,11,4,12)) do
+      _,position,_=protected_position
+      with_backup_feed(observation('0.9996'),'1.001') do |calls|
         R::MarketData.sync { |id| R::Exchange.process(id) }
-        assert_equal ['USD/BRL'],calls
+        assert_empty calls
         refute R::Position.exists?(position.id)
         assert_equal 'stock_stop_loss',R::Order.where(side:'close').sole.details['reason']
       end

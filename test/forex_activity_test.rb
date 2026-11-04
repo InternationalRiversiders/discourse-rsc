@@ -16,6 +16,11 @@ class ForexActivityTest < NativeBusinessTest
     SiteSetting.rsc_forex_activity_ends_at = 14.days.from_now.iso8601
     SiteSetting.rsc_high_risk_enabled = true
   end
+  # Synthetic FX ticks identify their primary feed, like real observations.
+  def quote(price)
+    super.merge('source' => 'yahoo')
+  end
+
   def forex(symbol='FX:JPY')
     item = instrument('1')
     item.update!(symbol: symbol, category: 'forex', asset_type: 'forex', fee_bps: 5,

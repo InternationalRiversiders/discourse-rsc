@@ -289,10 +289,20 @@ module DiscourseRsc
         old_time = Time.iso8601(instrument.quote["source_time"]) rescue Time.at(0)
         if instrument.category == 'forex' || Time.iso8601(quote.fetch("source_time")) >= old_time
           if instrument.category == 'forex'
-            incoming = quote
+            incoming = quote.except('automatic_quote')
+            previous_automatic = ForexQuoteGuard.automatic_quote(instrument.quote)
+            automatic = ForexQuoteGuard.review_primary(previous_automatic, incoming)
+            if incoming['source'] == 'yahoo'
+              QuoteTelemetry.decision(instrument, incoming, ForexQuoteGuard.fresh?(incoming) ? automatic : nil,
+                                      previous: previous_automatic, stage: 'automatic_decision')
+            end
             quote = ForexQuoteGuard.apply(instrument.quote, incoming)
             QuoteTelemetry.decision(instrument, incoming, quote)
-            return false unless quote
+            unless quote
+              instrument.update!(quote: instrument.quote.merge('automatic_quote' => automatic)) unless automatic.empty? || automatic == instrument.quote['automatic_quote']
+              return false
+            end
+            quote = quote.merge('automatic_quote' => automatic) unless automatic.empty?
             if quote == instrument.quote
               instrument.update!(synced_at: Time.current)
               return false

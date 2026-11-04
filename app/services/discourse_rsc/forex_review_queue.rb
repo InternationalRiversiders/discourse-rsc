@@ -32,7 +32,7 @@ module DiscourseRsc
     LUA
 
     def self.eligible?(id)
-      ExecutionDemand.automatic?(id) || opening_review?(id)
+      ExecutionDemand.backup_demand?(id) || opening_review?(id)
     end
 
     # A real opening submission may finish its review after the HTTP response.
@@ -89,9 +89,9 @@ module DiscourseRsc
     end
 
     def self.next_instrument
-      # Recover positions/orders; bounded opening reviews are already queued.
+      # Recover explicit orders; bounded opening reviews are already queued.
       # Page views and expired opening leases cannot keep a review alive.
-      Instrument.where(id: ExecutionDemand.instrument_ids, active: true, category: 'forex')
+      Instrument.where(id: ExecutionDemand.orders.select(:instrument_id), active: true, category: 'forex')
         .where("quote->'verification'->>'status' = 'pending'").to_a.sort_by { |item| ExecutionDemand.rank(item) }.each do |item|
           enqueue(item.id)
           FallbackBudget.with_context(:execution) { turn?(item.id) } if ExecutionDemand.rank(item).zero?

@@ -76,7 +76,7 @@ class ForexFallbackTest < ForexActivityTest
   def test_only_execution_uses_backup_even_during_primary_backoff
     travel_to(Time.utc(2026,10,27,12)) do
       item=fx;activity;SiteSetting.rsc_market_data_enabled=true
-      primary=quote('0.15').merge('source_time'=>10.minutes.ago.iso8601,'pricing_method'=>R::MarketData::FX_PRICING)
+      primary=quote('0.14993').merge('source_time'=>10.minutes.ago.iso8601,'pricing_method'=>R::MarketData::FX_PRICING)
       item.update!(quote:primary,provider_error:'provider_http_429',synced_at:Time.current)
       feeds(primary,{'symbol'=>'USD/CNY','rate'=>'6.67','timestamp'=>Time.current.to_i}) do |calls|
         assert_equal primary,R::MarketData.fetch_quote(item)

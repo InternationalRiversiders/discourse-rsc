@@ -62,7 +62,7 @@ module DiscourseRsc
       quote.slice('source', 'source_time', 'price')
     end
 
-    def self.decision(instrument, incoming, result)
+    def self.decision(instrument, incoming, result, previous: instrument.quote, stage: 'decision')
       safely do
         outcome = if result.nil?
           'rejected_stale'
@@ -70,19 +70,19 @@ module DiscourseRsc
           'pending_review'
         elsif identity(result) != identity(incoming)
           'source_retained'
-        elsif identity(result) == identity(instrument.quote)
+        elsif identity(result) == identity(previous)
           'accepted_repeat'
         else
           'adopted'
         end
-        completed = ForexQuoteGuard.pending?(instrument.quote) && result && !ForexQuoteGuard.pending?(result)
+        completed = ForexQuoteGuard.pending?(previous) && result && !ForexQuoteGuard.pending?(result)
         method = result&.dig('verification', 'method') || 'unknown'
         operation = FallbackBudget.operation(instrument)
         # A rolled-back database write is not an adopted quote. Preserve the
         # request purpose if an outer transaction commits after its context exits.
         ActiveRecord.after_all_transactions_commit do
-          count(instrument, incoming, 'decision', outcome, operation: operation)
-          count(instrument, incoming, 'review_completed', method, operation: operation) if completed
+          count(instrument, incoming, stage, outcome, operation: operation)
+          count(instrument, incoming, stage == 'decision' ? 'review_completed' : 'automatic_review_completed', method, operation: operation) if completed
         end
       end
     end
