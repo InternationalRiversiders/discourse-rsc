@@ -13,13 +13,17 @@ export function marketView(item, now = Date.now()) {
     received <= now + 5000 &&
     source <= now + 5000 &&
     source >= now - (delay + (quote.source === "twelve_data" ? 180 : 120)) * 1000;
+  // FX sessions come from the server's 24/5 calendar. A quarantined quote may
+  // retain yesterday's provider window; that is not a market closure.
+  const forexCalendar = item.category === "forex" && typeof item.market_closed === "boolean";
   const open =
     item.category === "crypto" ||
+    (forexCalendar ? !item.market_closed :
     (!item.market_closed && now >= Date.parse(quote.session_start) &&
-      now < Date.parse(quote.session_end));
+      now < Date.parse(quote.session_end)));
   const available = typeof quote.price === "string" && Number(quote.price) > 0;
   const knownClosed = item.category !== "crypto" &&
-    (item.market_closed || (Number.isFinite(Date.parse(quote.session_start)) &&
+    (item.market_closed || (!forexCalendar && Number.isFinite(Date.parse(quote.session_start)) &&
       Number.isFinite(Date.parse(quote.session_end)) && !open));
   const status = !available
     ? "no_quote"

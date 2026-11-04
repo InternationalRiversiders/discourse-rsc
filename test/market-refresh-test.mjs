@@ -22,3 +22,14 @@ const backup={...item,quote:{...item.quote,source:'twelve_data',source_time:at(-
 assert.equal(marketView(backup,now).tradable,true);
 assert.equal(marketView(backup,now+31000).tradable,false);
 assert.equal(marketView({...backup,quote:{...backup.quote,source:'yahoo'}},now).tradable,false);
+
+const yesterday = {...item,quote:{...item.quote,session_start:at(-86400000),session_end:at(-1000)}};
+for (const verification of [undefined,{status:'pending'}]) {
+  const view=marketView({...yesterday,quote:{...yesterday.quote,verification}},now);
+  assert.equal(view.status,verification ? 'quote_verifying' : 'stale_quote');
+  assert.equal(view.tradable,false);
+  assert.equal(canRefreshForTrade(view),true);
+  assert.equal(marketView({...yesterday,market_closed:true},now).status,'session_closed');
+}
+assert.equal(marketView({...yesterday,quote:{...yesterday.quote,source_time:at(-1000)}},now).tradable,true);
+assert.equal(marketView({...yesterday,category:'cn'},now).status,'session_closed');

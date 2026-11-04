@@ -574,20 +574,28 @@ module DiscourseRsc
       # Never turn a closed session, yesterday's price, or a frozen feed into a
       # delayed live quote. Learn only from recent, advancing source timestamps.
       return quote unless starts && ends && received>=starts && received<ends && source>=starts
-      samples=Array(previous['delay_observations']).select do |sample|
+      same_session = previous['source'] == quote['source'] && previous['session_start'] == quote['session_start'] && previous['session_end'] == quote['session_end']
+      measured_delay = same_session && previous['delay_inferred'] && previous['delay_seconds'].to_i
+      lag = (received - source).ceil
+      # Sparse refreshes and small variations in the feed's delay must not erase
+      # a measured delay. Keep its original bound, never enlarge it to make a
+      # frozen quote executable. A genuinely live observation clears the delay.
+      if measured_delay && lag >= 180 && (lag - measured_delay).abs <= ForexQuoteGuard.max_age(quote)
+        quote = quote.merge('delay_seconds' => measured_delay, 'delay_inferred' => true)
+      end
+      samples=Array(same_session ? previous['delay_observations'] : []).select do |sample|
         Time.iso8601(sample.fetch('received_at'))>=received-10.minutes && Time.iso8601(sample.fetch('source_time'))>=starts
       end
       if previous['source_time']==quote['source_time']
-        if previous['delay_inferred']
+        if measured_delay && lag >= 180
           quote['delay_seconds']=previous['delay_seconds'];quote['delay_inferred']=true
         end
       else
-        lag=(received-source).ceil
         if lag.between?(180,3600)
           samples << {'source_time'=>quote['source_time'],'received_at'=>quote['received_at'],'lag'=>lag}
           samples=samples.last(3)
           lags=samples.map { |sample| sample.fetch('lag') }
-          if lags.size>=2 && lags.max-lags.min<=90 && Time.iso8601(samples.last['source_time'])>Time.iso8601(samples.first['source_time'])
+          if !quote['delay_inferred'] && lags.size>=2 && lags.max-lags.min<=90 && Time.iso8601(samples.last['source_time'])>Time.iso8601(samples.first['source_time'])
             quote['delay_seconds']=lags.max;quote['delay_inferred']=true
           end
         else

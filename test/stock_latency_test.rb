@@ -134,6 +134,43 @@ class StockLatencyTest < NativeBusinessTest
     end
   end
 
+  def test_measured_delay_survives_sparse_refresh_and_jitter_without_growing
+    travel_to(Time.utc(2026, 11, 2, 3, 10)) do
+      item = cn
+      previous = item.quote.merge('delay_inferred' => true, 'delay_observations' => [])
+      travel 11.minutes
+      incoming = item.quote.merge('delay_seconds' => 0, 'delay_reported' => false,
+        'received_at' => Time.current.iso8601, 'source_time' => 913.seconds.ago.iso8601)
+      observed = R::MarketData.observe_delay(previous, incoming, category: 'cn')
+      assert observed['delay_inferred']
+      assert_equal 900, observed['delay_seconds']
+      item.update!(quote: observed)
+      assert_equal R::Amount.parse('100'), R::Exchange.price!(item, trading: true)
+      travel 3.minutes
+      frozen = R::MarketData.observe_delay(observed, incoming.merge('received_at' => Time.current.iso8601), category: 'cn')
+      assert_equal 900, frozen['delay_seconds']
+      item.update!(quote: frozen)
+      assert_equal 'quote_stale', assert_raises(R::Error) { R::Exchange.price!(item, trading: true) }.code
+    end
+  end
+
+  def test_measured_delay_clears_for_live_reported_or_new_session_quotes
+    travel_to(Time.utc(2026, 11, 2, 3, 10)) do
+      previous = cn.quote.merge('delay_inferred' => true)
+      raw = previous.except('delay_inferred').merge('delay_seconds' => 0, 'delay_reported' => false)
+      live = R::MarketData.observe_delay(previous, raw.merge('source_time' => 20.seconds.ago.iso8601), category: 'cn')
+      assert_equal 0, live['delay_seconds']
+      refute live['delay_inferred']
+      reported = R::MarketData.observe_delay(previous, raw.merge('delay_reported' => true), category: 'cn')
+      assert_equal 0, reported['delay_seconds']
+      next_day = raw.merge('source_time' => (1.day.from_now - 900).iso8601,
+        'received_at' => 1.day.from_now.iso8601,
+        'session_start' => (Time.iso8601(raw['session_start']) + 1.day).iso8601,
+        'session_end' => (Time.iso8601(raw['session_end']) + 1.day).iso8601)
+      assert_equal 0, R::MarketData.observe_delay(previous, next_day, category: 'cn')['delay_seconds']
+    end
+  end
+
   def test_stock_pending_lunch_refresh_without_catalog_polling
     travel_to(Time.utc(2026, 11, 2, 3, 20)) do
       fund; item = cn; order = open_order(item)

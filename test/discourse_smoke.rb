@@ -16,7 +16,8 @@ class DiscourseSmokeTest < Minitest::Test
     Discourse.redis.keys("#{RateLimiter.key_prefix}*").each { |key| Discourse.redis.del(key) }
     Discourse.cache.delete('rsc:trading-hours')
     Discourse.redis.del('rsc:fx-review-queue:v1', 'rsc:fx-review-active:v1')
-    %w[rsc:fx-review-watch:* rsc:fx-review-request:* rsc:fallback-usage:* rsc:fallback-routine* rsc:fallback-protection* rsc:fallback-priority:* rsc:fx-fallback:cold:* rsc:fx-fallback:failures:* rsc:fx-fallback:holding:*].each do |pattern|
+    # Clear every simulated day's counter, not just the real wall-clock date.
+    %w[rsc:fx-fallback:requests:* rsc:fx-review-watch:* rsc:fx-review-request:* rsc:fallback-usage:* rsc:fallback-routine* rsc:fallback-protection* rsc:fallback-priority:* rsc:fx-fallback:cold:* rsc:fx-fallback:failures:* rsc:fx-fallback:holding:*].each do |pattern|
       Discourse.redis.keys(pattern).each { |key| Discourse.redis.del(key) }
     end
     Discourse.cache.keys('rsc:yahoo-chart:v2:*').each { |key| Discourse.redis.del(key) }

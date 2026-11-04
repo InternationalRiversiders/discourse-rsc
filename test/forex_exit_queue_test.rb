@@ -37,6 +37,39 @@ class ForexExitQueueTest < ForexActivityTest
       assert_equal 1,R::Position.count
     end
   end
+
+  def test_quarantined_cross_day_quote_allows_queued_exit_but_never_a_fill
+    travel_to(Time.utc(2026,10,26,23,59,30)) do
+      item=opened
+      item.update!(quote:item.quote.merge('session_end'=>Time.utc(2026,10,27).iso8601))
+      travel 3.minutes
+      item.update!(quote:item.quote.merge('verification'=>{'status'=>'pending'}))
+      refute R::MarketSessions.closed?(item)
+      order=submit(item,side:'close')
+      assert_equal 'pending',order.status
+      assert order.details['waiting_quote']
+      before=R::Journal.count
+      R::Exchange.process(item.id)
+      assert_equal 'pending',order.reload.status
+      assert_equal before,R::Journal.count
+      tick_quote(item)
+      assert_equal 'filled',order.reload.status
+      assert_equal 0,R::Entry.sum(:units)
+    end
+  end
+
+  def test_fresh_cross_midnight_fx_quote_uses_calendar_but_weekend_stays_closed
+    travel_to(Time.utc(2026,10,26,23,59,30)) do
+      item=opened
+      item.update!(quote:item.quote.merge('session_end'=>Time.utc(2026,10,27).iso8601))
+      travel 31.seconds
+      assert_equal R::Amount.parse('1'),R::Exchange.price!(item,trading:true)
+      assert_equal 'filled',submit(item,side:'close').status
+      travel_to(Time.utc(2026,10,31,12))
+      item.update!(quote:quote('1'))
+      assert_equal 'market_closed',assert_raises(R::Error){R::Exchange.price!(item,trading:true)}.code
+    end
+  end
   def test_stale_exits_still_validate_quantity_position_wallet_and_opening_rules
     travel_to(Time.utc(2026,10,26,12)) do
       item=opened;stale(item)
