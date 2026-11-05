@@ -104,7 +104,7 @@ export default class extends Component {
     this.detailBusy = true;
     this.detailError = "";
     try {
-      const detail = await ajax(`/rsc/traders/${id}.json`, { data: { section, page } });
+      const detail = await ajax(`/rsc/traders/${id}.json`, { data: { section, page, performance_metric: "realized_pnl" } });
       if (generation === this.detailGeneration && !this.isDestroying) {
         // Paginated responses omit the series; retain it for the same user.
         this.detail = { ...detail, performance: detail.performance ?? this.detail?.performance };
@@ -207,7 +207,7 @@ export default class extends Component {
           class="rsc-trader-detail"
           aria-busy={{if this.detailBusy "true" "false"}}
           aria-label={{uiText "trader_detail"}}
-        ><div class="rsc-trader-heading"><h2><ForumUser @user={{row.forum_user}} @name={{row.username}} /> · {{uiText "trader_detail"}}</h2><button type="button" class="btn btn-flat" {{on "click" this.closeTrader}}>收起</button></div>
+        ><div class="rsc-trader-heading"><h2><ForumUser @user={{row.forum_user}} @name={{row.username}} /><span class="rsc-trader-label">交易档案</span></h2><button type="button" class="btn btn-flat" {{on "click" this.closeTrader}}>收起</button></div>
           {{#if this.detailError}}<p role="alert" class="alert alert-error">{{this.detailError}}</p>{{/if}}
           {{#if this.detailBusy}}<p role="status" class="rsc-muted">正在加载…</p>{{/if}}
           {{#if this.detail}}
@@ -258,12 +258,13 @@ export default class extends Component {
               </div>
             </div>
             {{#if this.performance}}
-              <svg viewBox="0 0 600 160" preserveAspectRatio="none" role="img" aria-label={{uiText "historical_performance"}}>
+              <div class="rsc-performance-scale"><span>最高 {{formatAmount this.performance.max}} RSC</span><span>最低 {{formatAmount this.performance.min}} RSC</span></div>
+              <svg class={{valueTone this.performance.last}} viewBox="0 0 600 160" preserveAspectRatio="none" role="img" aria-label={{uiText "historical_performance"}}>
                 {{#each this.performance.segments as |segment|}}<polyline points={{segment}} fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" />{{/each}}
               </svg>
-              <div class="rsc-chart-axis"><span>{{when this.performance.start}} → {{when this.performance.end}}</span><span>累计 {{formatPercent this.performance.last}}</span></div>
+              <div class="rsc-chart-axis"><span>{{when this.performance.start}} → {{when this.performance.end}}</span><span>累计 {{formatAmount this.performance.last}} RSC</span></div>
             {{else}}<p class="rsc-performance-empty">该时段没有足够的收益记录</p>{{/if}}
-            <p class="rsc-muted rsc-performance-note">{{uiText "performance_hint"}}</p>
+            <p class="rsc-muted rsc-performance-note">{{uiText "performance_hint"}}{{#unless this.detail.performance.complete}} 部分记录缺少时间，曲线仅展示可定位的结算。{{/unless}}</p>
           </div></div>
           {{/if}}
         </section></td></tr>{{/if}}

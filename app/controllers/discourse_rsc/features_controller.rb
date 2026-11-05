@@ -64,7 +64,9 @@ module DiscourseRsc
     end
     def trader
       result = Reports.trader(positive_id(:id), section: params.fetch(:section, "positions"), page: params.fetch(:page, 1))
-      result[:performance] = Reports.performance(positive_id(:id)) if params.fetch(:page, "1").to_s == "1"
+      if params.fetch(:page, "1").to_s == "1"
+        result[:performance] = params[:performance_metric] == 'realized_pnl' ? Reports.performance(positive_id(:id)) : Reports.percentage_performance(positive_id(:id))
+      end
       render_json_dump(result)
     end
     def portfolio

@@ -179,8 +179,8 @@ en:
         side: Side
         participants: Participants
         trader_detail: Trading profile
-        historical_performance: Historical time-weighted returns
-        performance_hint: Observations at legacy cash-flow boundaries, not daily equity.
+        historical_performance: Cumulative realized profit
+        performance_hint: Based on fills and settlements, net of trading fees. Excludes unrealized P&L, transfers and rewards.
           Post-cutover returns are not included.
         zoom_in: Zoom in
         zoom_out: Zoom out

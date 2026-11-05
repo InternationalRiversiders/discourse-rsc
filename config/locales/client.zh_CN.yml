@@ -178,8 +178,8 @@ zh_CN:
         side: 方向
         participants: 参与者
         trader_detail: 交易档案
-        historical_performance: 历史时间加权收益
-        performance_hint: 仅展示旧系统资金流发生时的观测节点，不是每日净值；不包含切换后的收益。
+        historical_performance: 累计已实现收益
+        performance_hint: 按成交与结算记录累计，已扣交易手续费；不含未平仓浮盈亏、转账和奖励。
         zoom_in: 放大
         zoom_out: 缩小
         pan_earlier: 更早行情

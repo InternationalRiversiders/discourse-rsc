@@ -325,6 +325,9 @@ export default class RscDashboard extends Component {
       };
     });
   }
+  @action selectSide(side) {
+    if (!this.busy) { this.side = side; }
+  }
   @action set(field, event) {
     this[field] = event.target.value;
   }
@@ -610,7 +613,20 @@ export default class RscDashboard extends Component {
               {{#if this.orderTicketOpen}}<section class="rsc-card rsc-order-ticket">
                 <div class="rsc-ticket-heading"><h2>{{uiText "order"}}</h2><span>{{this.selected.symbol}}</span><button class="btn btn-flat rsc-close-order" type="button" {{on "click" this.closeOrderTicket}}>收起下单</button></div>
                 <form {{on "submit" this.trade}}>
-                  <label>{{uiText "direction"}}<select {{on "change" (fn this.set "side")}}><option value="long" selected={{eq this.side "long"}}>{{#if (eq this.selected.category "forex")}}看涨{{this.selected.currency_name}}{{else}}{{uiText "long"}}{{/if}}</option><option value="short" selected={{eq this.side "short"}}>{{#if (eq this.selected.category "forex")}}看跌{{this.selected.currency_name}}{{else}}{{uiText "short"}}{{/if}}</option></select></label>
+                  <fieldset class="rsc-direction-picker">
+                    <legend>{{uiText "direction"}}</legend>
+                    <div class="rsc-direction-options">
+                      <button type="button" class="btn rsc-direction rsc-direction-short" aria-pressed={{if (eq this.side "short") "true" "false"}} disabled={{this.busy}} {{on "click" (fn this.selectSide "short")}}>
+                        <span class="rsc-direction-title">{{uiText "short"}} <span class="rsc-direction-check" aria-hidden="true">{{dIcon "check"}}</span></span>
+                        <small>{{#if (eq this.selected.category "forex")}}看跌{{this.selected.currency_name}}兑美元{{else}}预期价格下跌{{/if}}</small>
+                      </button>
+                      <button type="button" class="btn rsc-direction rsc-direction-long" aria-pressed={{if (eq this.side "long") "true" "false"}} disabled={{this.busy}} {{on "click" (fn this.selectSide "long")}}>
+                        <span class="rsc-direction-title">{{uiText "long"}} <span class="rsc-direction-check" aria-hidden="true">{{dIcon "check"}}</span></span>
+                        <small>{{#if (eq this.selected.category "forex")}}看涨{{this.selected.currency_name}}兑美元{{else}}预期价格上涨{{/if}}</small>
+                      </button>
+                    </div>
+                  </fieldset>
+                  {{#if (eq this.selected.category "forex")}}<div class="rsc-risk-status"><strong>{{this.selected.currency_name}}交易 · {{#if this.forexFee}}每边手续费 {{this.forexFee}}%{{else}}免手续费{{/if}}</strong><span>买入做多为看涨{{this.selected.currency_name}}兑美元，卖出做空为看跌。</span>{{#if this.data.forex_activity.active}}<span>活动期间最高 100×，可按钱包可用余额开仓，不受虚拟币的保证金额度限制。</span>{{else}}<span>当前最高 10×。已有高杠杆仓位可从“我的持仓”平仓、追加保证金或设置止盈止损。</span>{{/if}}<span>“最大可开”会扣除手续费并预留报价变化空间；补保证金不会增加持仓数量。</span><span>仅使用 RSC 模拟交易。100× 下小幅汇率波动也可能触发强平。</span></div>{{/if}}
                   {{#if (eq this.selected.category "forex")}}<label>RSC 名义金额<input inputmode="decimal" value={{this.notional}} {{on "input" this.changeNotional}} /></label><p class="rsc-muted">按交易总额换算货币数量，按数量步进向下取整；保证金另按杠杆计算，以当前数量提交。</p>{{/if}}
                   <div class="rsc-fields rsc-ticket-inputs">
                     <div><label>{{uiText "quantity"}}<input required inputmode="decimal" value={{this.quantity}} {{on "input" this.changeQuantity}} /></label>
@@ -622,7 +638,6 @@ export default class RscDashboard extends Component {
                     <label class="rsc-checkbox"><input type="checkbox" checked={{this.highRisk}} {{on "change" this.toggleHighRisk}} />{{uiText "high_risk_mode"}}</label>
                     <div class="rsc-risk-status"><strong>高杠杆（11–100×）</strong>{{#if this.data.high_risk.budget}}<span>剩余保证金额度 {{formatAmount this.data.high_risk.budget.available_margin}} / {{formatAmount this.data.high_risk.budget.maximum_margin}} RSC</span>{{/if}}<span>{{#if this.highRiskStatus.occupying}}已持有：{{this.highRiskStatus.occupying}}{{else}}暂无高杠杆仓位{{/if}}</span>{{#if this.highRiskStatus.seconds}}<span>冷却倒计时 <b>{{this.highRiskStatus.countdown}}</b>（现有同标的高杠杆仓位可继续加仓）</span>{{else}}<span>当前无冷却</span>{{/if}}{{#if this.highRiskStatus.hold}}<span>当前仓位还需 {{this.highRiskStatus.hold}} 秒可手动平仓</span>{{/if}}</div>
                   {{/if}}{{/if}}
-                  {{#if (eq this.selected.category "forex")}}<div class="rsc-risk-status"><strong>{{this.selected.currency_name}}交易 · {{#if this.forexFee}}每边手续费 {{this.forexFee}}%{{else}}免手续费{{/if}}</strong><span>买入做多为看涨{{this.selected.currency_name}}兑美元，卖出做空为看跌。</span>{{#if this.data.forex_activity.active}}<span>活动期间最高 100×，可按钱包可用余额开仓，不受虚拟币的保证金额度限制。</span>{{else}}<span>当前最高 10×。已有高杠杆仓位可从“我的持仓”平仓、追加保证金或设置止盈止损。</span>{{/if}}<span>“最大可开”会扣除手续费并预留报价变化空间；补保证金不会增加持仓数量。</span><span>仅使用 RSC 模拟交易。100× 下小幅汇率波动也可能触发强平。</span></div>{{/if}}
                   {{#if this.selected.close_only}}<p class="alert alert-info">此杠杆/反向产品目前仅可平仓。</p>{{/if}}
                   <div class="rsc-fields"><label>{{uiText "take_profit"}}<input inputmode="decimal" value={{this.takeProfit}} {{on "input" (fn this.set "takeProfit")}} /></label><label>{{uiText "stop_loss"}}<input inputmode="decimal" value={{this.stopLoss}} {{on "input" (fn this.set "stopLoss")}} /></label></div>
                   <p class="rsc-muted">{{this.protectionHint}}</p>
@@ -634,7 +649,7 @@ export default class RscDashboard extends Component {
                   {{#if this.positionConflict}}<p class="alert alert-info" role="alert">{{this.positionConflict}}</p>{{/if}}
                   {{#if this.estimate}}<div class="rsc-order-estimate"><p>名义金额 {{formatAmount this.estimate.gross}} · 保证金 {{formatAmount this.estimate.margin}}</p><p>开仓手续费 {{formatAmount this.estimate.fee}} · 预计占用 {{formatAmount this.estimate.reserve}} RSC</p><small>当前可建仓数量 {{formatQuantity this.estimate.maximum}} · {{#if this.selected.fee_bps}}平仓另收手续费，费用按名义金额计算{{else}}当前品种开平仓免手续费{{/if}}；实际成交前会复核额度。</small></div>{{/if}}
                   {{#if this.needsExecutionQuote}}<p class="rsc-muted" role="status">{{uiText "refresh_quote_before_order"}}</p>{{/if}}
-                  <button class="btn btn-primary" type="submit" disabled={{this.tradingDisabled}}>{{#if this.needsExecutionQuote}}{{uiText "refresh_and_submit"}}{{else}}{{uiText "submit_order"}}{{/if}}</button>
+                  <button class="btn btn-primary rsc-submit-direction" data-side={{this.side}} type="submit" disabled={{this.tradingDisabled}}>{{#if this.needsExecutionQuote}}刷新报价并{{else}}提交{{/if}}{{#if (eq this.side "short")}}做空{{else}}做多{{/if}}委托</button>
                   <details class="rsc-trading-help"><summary>交易规则 · 数量步进 {{formatQuantity this.selected.step}}</summary><p class="rsc-muted">{{this.executionHint}}</p><p class="rsc-muted">最小数量 {{formatQuantity this.selected.minimum}}。四档比例按可用余额与剩余额度共同估算，包含手续费及预占空间；{{this.positionLimitHint}}</p></details>
                 </form>
               </section>{{/if}}

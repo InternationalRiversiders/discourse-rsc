@@ -9,15 +9,15 @@ data = r::Reports.portfolio_data(ids)
 rows = ids.map { |id| r::Reports.portfolio(id, data: data) }
 elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
 campaign = r::Campaign.preview
-period_ids = r::LegacyRecord.where(source_table: "account_performance_periods").pluck(Arel.sql("data ->> 'discourse_user_id'")).map(&:to_i)
+period_ids = ids
 complete = 0
 inconsistent = 0
 period_ids.each do |id|
   report = r::Reports.performance(id)
   next unless report[:complete]
   complete += 1
-  expected = (BigDecimal(report[:archived_factor]) / 10**18 - 1) * 100
-  observed = BigDecimal(report[:points].last[:return_pct])
+  expected = BigDecimal(rows.find { |row| row[:user_id] == id }.fetch(:realized_pnl))
+  observed = BigDecimal(report[:points].last&.fetch(:pnl) || "0")
   inconsistent += 1 if (expected - observed).abs > BigDecimal("0.00001")
 end
 raise "Read path mutated accounts" unless before == [r::Journal.count, r::Event.count, r::Account.sum(:balance_units).to_i]

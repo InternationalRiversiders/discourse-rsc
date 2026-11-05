@@ -87,7 +87,7 @@ const { chromium } = require(process.env.RSC_PLAYWRIGHT || "playwright");
     await board.getByRole("button", { name: "DEMO-A", exact: true }).click();
     const firstItem = board.locator(".rsc-quote-item").filter({ has: page.getByRole("button", { name: "DEMO-A", exact: true }) });
     await firstItem.getByRole("button", { name: "做空", exact: true }).click();
-    assert.equal(await page.locator(".rsc-order-ticket select").first().inputValue(), "short");
+    assert.equal(await page.locator(".rsc-direction-short").getAttribute("aria-pressed"), "true");
     await firstItem.getByRole("button", { name: "做多", exact: true }).click();
     console.log("Market categories, search, pagination, sorting, selection, quick trade and stale quotes passed");
     await page.locator(".rsc-chart svg polyline").waitFor();

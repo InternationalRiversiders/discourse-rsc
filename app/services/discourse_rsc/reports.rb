@@ -146,7 +146,9 @@ module DiscourseRsc
 
     # Reconstruct only observed flow boundaries. The archive does not contain a
     # daily equity series, so no interpolated dates or post-cutover returns are added.
-    def self.performance(user_id)
+    # Compatibility for clients that still expect return_pct values. New clients
+    # request performance_metric=realized_pnl instead of interpreting RSC as %.
+    def self.percentage_performance(user_id)
       period = LegacyRecord.where(source_table: "account_performance_periods")
         .where("data ->> 'discourse_user_id' = ? AND data ->> 'period_key' = 'all-time'", user_id.to_s).first&.data
       return { points: [], source: "legacy_flow_boundaries", complete: false } unless period
@@ -166,6 +168,65 @@ module DiscourseRsc
       end
       { points: points, source: "legacy_flow_boundaries", complete: complete,
         archived_factor: period["twr_factor_scaled"], segment_opening_equity: period["segment_opening_equity_rsc"] }
+    end
+
+    # Realized gains are observable at fills/settlements. Historical mark-to-market
+    # equity cannot be reconstructed reliably from today's prices or cash flows.
+    def self.performance(user_id)
+      now = Time.current
+      observations = []
+      missing = 0
+      add = lambda do |at, amount|
+        stamp = at.is_a?(Time) || at.is_a?(ActiveSupport::TimeWithZone) ? at : Time.iso8601(at.to_s)
+        observations << [stamp, BigDecimal(amount.to_s)] if stamp <= now
+      rescue ArgumentError, TypeError
+        missing += 1
+      end
+      fields = %w[fee pnl payout margin executed_at].map { |key| Arel.sql("details ->> '#{key}'") }
+      Order.where(user_id: user_id, status: 'filled').where("NOT (details ? 'legacy_id')")
+        .pluck(:side, *fields, :updated_at).each do |side, fee, pnl, payout, margin, executed, updated|
+        amount = if side != 'close'
+          -BigDecimal(fee || '0')
+        elsif payout && margin
+          BigDecimal(payout) - BigDecimal(margin)
+        else
+          BigDecimal(pnl || '0') - BigDecimal(fee || '0')
+        end
+        add.call(executed.presence || updated, amount)
+      end
+      Prediction.where(user_id: user_id).where.not(status: 'pending')
+        .pluck(:settled_at, :updated_at, :payout_units, :stake_units).each do |settled, updated, payout, stake|
+        add.call(settled || updated, Amount.format(payout.to_i - stake.to_i))
+      end
+      ForecastTrade.where(user_id: user_id).pluck(:created_at, :pnl_units).each do |at, pnl|
+        add.call(at, Amount.format(pnl))
+      end
+      archive = LegacyRecord.where("data ->> 'discourse_user_id' = ?", user_id.to_s)
+      archive.where(source_table: 'exchange_trades').pluck(:data).each do |trade|
+        amount = if %w[buy long short].include?(trade['side'])
+          -BigDecimal(trade.fetch('fee_rsc', '0'))
+        else
+          BigDecimal(trade.fetch('net_rsc')) - BigDecimal(trade.fetch('margin_rsc'))
+        end
+        add.call(trade['created_at'], amount)
+      end
+      archive.where(source_table: 'exchange_pnl_adjustments').pluck(:data).each do |row|
+        add.call(row['created_at'], row['amount_rsc'])
+      end
+      points = []
+      total = BigDecimal('0')
+      observations.sort_by!(&:first)
+      unless observations.empty?
+        points << {at: (observations.first[0] - 0.001).iso8601(6), pnl: '0'}
+        observations.group_by(&:first).each do |at, rows|
+          total += rows.sum { |row| row[1] }
+          points << {at: at.iso8601(6), pnl: total.to_s('F')}
+        end
+        # The realized balance stays constant between settlements; this is not
+        # a fabricated market valuation. Keep quiet accounts visible in ranges.
+        points << {at: now.iso8601(6), pnl: total.to_s('F')} if observations.last[0] < now
+      end
+      {points: points, source: 'trade_settlements', metric: 'realized_pnl', unit: 'RSC', complete: missing.zero?}
     end
 
     def self.post_tips(post)

@@ -626,6 +626,45 @@
   }
 }
 .rsc-order-ticket {
+  .rsc-direction-picker {
+    min-width: 0;
+    margin: 0 0 12px;
+    padding: 0;
+    border: 0;
+    legend { margin-bottom: 6px; font-size: inherit; color: var(--primary-medium); }
+  }
+  .rsc-direction-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .rsc-direction-short { --rsc-direction-fill: #b52f48; }
+  .rsc-direction-long { --rsc-direction-fill: #147653; }
+  .btn.rsc-direction {
+    --rsc-direction-color: color-mix(in srgb, var(--rsc-direction-fill) 60%, var(--primary));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 68px;
+    padding: 10px 8px;
+    border: 2px solid var(--rsc-direction-color);
+    border-radius: 8px;
+    color: var(--rsc-direction-color);
+    background: var(--secondary);
+    white-space: normal;
+    .rsc-direction-title { font-size: 17px; font-weight: 700; }
+    small { font-size: 12px; line-height: 1.4; }
+    .d-icon { color: inherit; }
+    .rsc-direction-check { opacity: 0; }
+    &[aria-pressed="true"] { background: var(--rsc-direction-fill); border-color: var(--rsc-direction-fill); color: #fff; }
+    &[aria-pressed="true"] .rsc-direction-check { opacity: 1; }
+    &:hover { box-shadow: inset 0 0 0 1px var(--rsc-direction-color); }
+    &:focus-visible { outline: 3px solid var(--tertiary); outline-offset: 3px; }
+  }
+  .btn.rsc-submit-direction:not(:disabled) {
+    color: #fff;
+    &[data-side="short"] { background: #b52f48; }
+    &[data-side="long"] { background: #147653; }
+  }
   form > label {
     margin-bottom: 0.8em;
   }
@@ -1731,7 +1770,10 @@
     border-block: 2px solid var(--rsc-line);
   }
   .rsc-trader-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .rsc-trader-heading h2 { margin: 0; font-size: 15px; }
+  .rsc-trader-heading h2 { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; margin: 0; font-size: 15px; }
+  .rsc-trader-heading .rsc-forum-user { min-width: 0; }
+  .rsc-trader-label { flex-shrink: 0; white-space: nowrap; font-size: 12px; color: var(--primary-medium); }
+  .rsc-trader-heading > button { flex-shrink: 0; }
   .rsc-trader-detail .rsc-market-summary { margin-block: 12px; }
   .rsc-trader-detail .rsc-market-summary strong { font-size: 18px; }
   .rsc-performance { max-width: 720px; margin-top: 16px; }
@@ -1740,6 +1782,8 @@
   .rsc-performance-ranges { display: flex; gap: 4px; }
   .rsc-performance-ranges .btn { min-height: 28px; padding: 3px 8px; font-size: 12px; }
   .rsc-performance > svg { display: block; width: 100%; height: 160px; margin-block: 8px; color: var(--rsc-ink); }
+  .rsc-performance > svg.positive { color: var(--success); }
+  .rsc-performance > svg.negative { color: var(--danger); }
   .rsc-performance-empty { padding: 24px 0; color: var(--primary-medium); }
   .rsc-performance-note { font-size: 11px; margin-bottom: 0; }
 }
@@ -1772,6 +1816,7 @@
 .rsc-order-estimate { padding: .8em; background: var(--primary-very-low); border-radius: .6em; margin: .8em 0; }
 .rsc-order-estimate p { margin: .2em 0 .4em; }
 .rsc-order-estimate small { display: block; color: var(--primary-medium); margin-top: .5em; }
+.rsc-performance-scale { display: flex; justify-content: space-between; gap: 12px; color: var(--primary-medium); font-size: 12px; font-variant-numeric: tabular-nums; }
 .rsc-position-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: .8em; }
 .rsc-position-metrics dt { font-size: var(--font-down-1); color: var(--primary-medium); }
 .rsc-position-metrics dd { margin: .3em 0 0; overflow-wrap: anywhere; }

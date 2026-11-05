@@ -89,14 +89,47 @@ class ReadinessTest < NativeBusinessTest
     assert_equal 3, R::Reports.page(rows, page: 2)[:rows].size
   end
 
-  def test_performance_uses_flow_boundaries_and_does_not_invent_daily_returns
-    archive("account_performance_periods", { discourse_user_id: @alice.id, period_key: "all-time", opening_equity_rsc: "100", starts_at: "2026-01-01T00:00:00Z", twr_factor_scaled: "1320000000000000000", segment_opening_equity_rsc: "140" })
-    archive("account_performance_flows", { id: 1, discourse_user_id: @alice.id, period_key: "all-time", signed_amount_rsc: "50", equity_before_rsc: "110", created_at: "2026-01-02T00:00:00Z" })
-    archive("account_performance_flows", { id: 2, discourse_user_id: @alice.id, period_key: "all-time", signed_amount_rsc: "-52", equity_before_rsc: "192", created_at: "2026-01-03T00:00:00Z" })
+  def test_performance_uses_actual_settlements_and_excludes_cash_flows
+    fund
+    archive('exchange_trades', {discourse_user_id: @alice.id, side: 'long', fee_rsc: '2', created_at: 3.days.ago.iso8601})
+    archive('exchange_trades', {discourse_user_id: @alice.id, side: 'close', net_rsc: '112', margin_rsc: '100', created_at: 2.days.ago.iso8601})
+    archive('exchange_pnl_adjustments', {discourse_user_id: @alice.id, amount_rsc: '-1', created_at: 1.day.ago.iso8601})
+    item = instrument
+    R::Order.create!(user_id: @alice.id, instrument_id: item.id, leverage: 5, side: 'close', status: 'filled', quantity_units: R::Amount.parse('1'),
+      details: {'pnl' => '-500', 'payout' => '0', 'margin' => '20', 'fee' => '1', 'executed_at' => 1.hour.ago.iso8601})
+    R::Order.create!(user_id: @alice.id, instrument_id: item.id, leverage: 5, side: 'close', status: 'filled', quantity_units: 1,
+      details: {'legacy_id' => 123, 'pnl' => '9999'})
+    R::Order.create!(user_id: @alice.id, instrument_id: item.id, leverage: 5, side: 'long', status: 'pending', quantity_units: 1, details: {'fee' => '50'})
+    R::Prediction.create!(user_id: @alice.id, sport_match: match, pick: 'home', status: 'won', odds: '2',
+      stake_units: R::Amount.parse('10'), payout_units: R::Amount.parse('20'), settled_at: 30.minutes.ago)
+    market = R::ForecastMarket.create!(external_id: 'performance-demo', condition_id: 'performance-demo',
+      event_title: 'Demo', question: 'Demo?', slug: 'performance-demo', rules: 'Demo', terms_digest: 'demo', ends_at: 1.day.from_now)
+    R::ForecastPosition.create!(market_id: market.id, user_id: @alice.id, outcome: 0, realized_units: R::Amount.parse('3'))
+    R::ForecastTrade.create!(market_id: market.id, user_id: @alice.id, outcome: 0, side: 'sell',
+      shares_units: 1, cash_units: R::Amount.parse('3'), pnl_units: R::Amount.parse('3'), created_at: 20.minutes.ago)
     result = R::Reports.performance(@alice.id)
-    assert_equal ["0", "10.0", "32.0"], result[:points].map { |p| p[:return_pct] }
+    assert_equal 'RSC', result[:unit]
+    assert_equal 'realized_pnl', result[:metric]
     assert result[:complete]
-    assert_equal 3, result[:points].size
+    assert_equal ['0', '-2.0', '10.0', '9.0', '-11.0', '-1.0', '2.0', '2.0'], result[:points].map { |p| p[:pnl] }
+    assert_equal 1.hour.ago.to_i, Time.iso8601(result[:points][4][:at]).to_i
+    assert_equal R::Reports.portfolio(@alice.id)[:realized_pnl], result[:points].last[:pnl]
+  ensure
+    if market
+      R::ForecastTrade.where(market_id: market.id).delete_all
+      R::ForecastPosition.where(market_id: market.id).delete_all
+      market.destroy!
+    end
+  end
+
+  def test_performance_does_not_invent_returns_from_missing_history
+    fund
+    assert_empty R::Reports.performance(@alice.id)[:points]
+    archive('account_performance_periods', {discourse_user_id: @alice.id, period_key: 'all-time', opening_equity_rsc: '100', starts_at: '2026-01-01T00:00:00Z'})
+    assert_empty R::Reports.performance(@alice.id)[:points]
+    assert_equal '0', R::Reports.percentage_performance(@alice.id)[:points].first[:return_pct]
+    archive('exchange_trades', {discourse_user_id: @alice.id, side: 'long', fee_rsc: '2', created_at: 'not a date'})
+    refute R::Reports.performance(@alice.id)[:complete]
   end
 
   def campaign_fixture
@@ -156,7 +189,7 @@ class ReadinessTest < NativeBusinessTest
     SiteSetting.rsc_market_sync_batch = 100
     101.times do |i|
       item = R::Instrument.create!(symbol: "CAP-#{i}", name: "Capacity", provider: "yahoo", category: "us")
-      R::Position.create!(user_id: @alice.id, instrument_id: item.id, side: "long", leverage: 1, quantity_units: 1, average_units: 1, margin_units: 1) if i < 76
+      R::Position.create!(user_id: @alice.id, instrument_id: item.id, leverage: 5, side: "long", leverage: 1, quantity_units: 1, average_units: 1, margin_units: 1) if i < 76
     end
     original = R::MarketData.method(:fetch_quote)
     response = quote("100")
