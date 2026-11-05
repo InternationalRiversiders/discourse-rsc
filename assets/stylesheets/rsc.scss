@@ -625,45 +625,44 @@
     color: var(--primary-medium);
   }
 }
-.rsc-order-ticket {
-  .rsc-direction-picker {
-    min-width: 0;
-    margin: 0 0 12px;
-    padding: 0;
-    border: 0;
-    legend { margin-bottom: 6px; font-size: inherit; color: var(--primary-medium); }
-  }
+.rsc-app .rsc-order-ticket {
   .rsc-direction-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .rsc-direction-short { --rsc-direction-fill: #b52f48; }
-  .rsc-direction-long { --rsc-direction-fill: #147653; }
-  .btn.rsc-direction {
-    --rsc-direction-color: color-mix(in srgb, var(--rsc-direction-fill) 60%, var(--primary));
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    min-width: 0;
-    min-height: 68px;
-    padding: 10px 8px;
-    border: 2px solid var(--rsc-direction-color);
-    border-radius: 8px;
-    color: var(--rsc-direction-color);
-    background: var(--secondary);
-    white-space: normal;
-    .rsc-direction-title { font-size: 17px; font-weight: 700; }
-    small { font-size: 12px; line-height: 1.4; }
-    .d-icon { color: inherit; }
-    .rsc-direction-check { opacity: 0; }
-    &[aria-pressed="true"] { background: var(--rsc-direction-fill); border-color: var(--rsc-direction-fill); color: #fff; }
-    &[aria-pressed="true"] .rsc-direction-check { opacity: 1; }
-    &:hover { box-shadow: inset 0 0 0 1px var(--rsc-direction-color); }
-    &:focus-visible { outline: 3px solid var(--tertiary); outline-offset: 3px; }
-  }
-  .btn.rsc-submit-direction:not(:disabled) {
+  .rsc-trade-action { min-width: 0; }
+  .btn.rsc-submit-direction {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 5px; width: 100%; min-height: 76px; padding: 12px 8px;
+    border: 2px solid transparent; border-radius: 8px; white-space: normal;
     color: #fff;
-    &[data-side="short"] { background: #b52f48; }
-    &[data-side="long"] { background: #147653; }
+    &[data-side="short"] { background: #147653; }
+    &[data-side="long"] { background: #b52f48; }
+    strong { font-size: 20px; line-height: 1.3; }
+    small { font-size: 11px; line-height: 1.5; font-variant-numeric: tabular-nums; span { display: block; } }
+    &:hover:not(:disabled) { filter: brightness(1.1); }
+    &:focus-visible { outline: 3px solid var(--tertiary); outline-offset: 3px; }
+    &:disabled { opacity: .45; }
+  }
+  .rsc-order-direction-hint { display: block; margin-top: 5px; font-size: 11px; line-height: 1.5; color: var(--primary-high); overflow-wrap: anywhere; }
+  .rsc-execution-notice {
+    margin: 10px 0; padding: 10px; display: grid; gap: 4px; font-size: 12px; line-height: 1.5;
+    border-inline-start: 3px solid var(--tertiary); background: var(--tertiary-very-low);
+    strong { color: var(--tertiary); }
+    &[data-mode="delayed"] { border-color: var(--danger); background: var(--danger-low); strong { color: var(--danger); } }
+  }
+  .rsc-ticket-protection { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--primary-low); }
+  .rsc-ticket-inputs > div { display: grid; grid-template-rows: 28px 44px auto; gap: 6px; align-content: start; }
+  .rsc-ticket-inputs label { align-self: center; margin: 0; }
+  .rsc-ticket-inputs input { margin: 0; }
+  .rsc-ticket-inputs input.rsc-leverage-range { height: 44px; min-height: 44px; padding: 0; }
+  .rsc-leverage-heading { display: flex; align-items: center; gap: 6px; }
+  .rsc-leverage-heading label { flex: 1; margin: 0; }
+  .rsc-ticket-inputs .rsc-leverage-heading input[type="number"] { width: 76px; min-width: 0; min-height: 28px; height: 28px; padding: 4px; text-align: center; color: var(--tertiary); font-weight: 700; margin: 0; }
+  .rsc-leverage-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-top: 8px; }
+  .rsc-leverage-presets .btn { padding: 6px 0; font-size: 11px; min-width: 0; }
+  .rsc-ticket-inputs .rsc-allocation-buttons, .rsc-ticket-inputs .rsc-leverage-presets { margin-top: 0; }
+  .rsc-allocation-buttons .btn, .rsc-leverage-presets .btn {
+    border: 2px solid var(--primary-low); border-radius: 7px;
+    &[aria-pressed="true"] { border-color: var(--tertiary); background: var(--tertiary); color: var(--secondary); font-weight: 700; }
+    &:focus-visible { outline: 2px solid var(--tertiary); outline-offset: 2px; }
   }
   form > label {
     margin-bottom: 0.8em;

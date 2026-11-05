@@ -67,13 +67,13 @@ export default class RscDashboard extends Component {
   @tracked quantity = "1";
   @tracked notional = "";
   @tracked leverage = "1";
-  @tracked side = "long";
   @tracked highRisk = false;
   @tracked margins = {};
   @tracked protections = {};
   @tracked closeQuantities = {};
   @tracked takeProfit = "";
   @tracked stopLoss = "";
+  @tracked allocation = null;
   @tracked marketQuery = {};
   @tracked marketFilterRevision = 0;
   stateGeneration = 0;
@@ -123,22 +123,17 @@ export default class RscDashboard extends Component {
   get tradingDisabled() {
     return (
       this.data.read_only ||
-      this.busy || Number(this.leverage) > this.maxLeverage || this.highRiskStatus.blocked || !!this.quantityError || !!this.budgetError || !!this.positionConflict || !!this.selectedPending || !!this.orderProtectionError ||
+      this.busy || !/^[1-9][0-9]*$/.test(this.leverage) || Number(this.leverage) > this.maxLeverage || this.highRiskStatus.blocked || !!this.quantityError || !!this.selectedPending ||
       (!this.selectedMarket?.tradable && !this.needsExecutionQuote) ||
       this.data.wallet.status !== "active" ||
-      (this.side !== "close" && this.selected?.close_only)
+      this.selected?.close_only
     );
   }
   get selectedPending() {
     return this.data.orders?.find((order) => String(order.instrument_id) === this.selectedId && order.status === "pending");
   }
-  get orderProtectionError() {
-    return protectionError({ side: this.side, tp: this.takeProfit, sl: this.stopLoss,
-      current: this.selectedMarket?.tradable ? this.selected.quote.price : null });
-  }
   get protectionHint() {
-    const direction = this.side === "short" ? "做空：止盈价低于当前价，止损价高于当前价。" : "做多：止盈价高于当前价，止损价低于当前价。";
-    return `填写触发单价（RSC／单位），不是盈亏金额；留空表示不设置。${direction}`;
+    return "选填触发单价（RSC／单位），不是盈亏金额。做多：止盈高于当前价、止损低于当前价；做空相反。也可成交后在持仓中设置。";
   }
   @action chartQuoteUpdated(item) {
     if (!item || this.isDestroying || this.isDestroyed) { return; }
@@ -160,10 +155,10 @@ export default class RscDashboard extends Component {
     this.marketDetailOpen = true;
     this.orderTicketOpen = false;
     this.quantity = openingQuantity(this.selected);
+    this.allocation = null;
     this.notional = notionalForQuantity(this.selected, this.quantity) || "";
     const position = this.data.positions.find((item) => String(item.instrument_id) === String(id));
     this.leverage = String(position?.leverage || 1);
-    this.side = position?.side || "long";
     this.highRisk = Number(this.leverage) > 10;
     this.takeProfit = ""; this.stopLoss = "";
     this.notice = "";
@@ -200,19 +195,24 @@ export default class RscDashboard extends Component {
     if (!this.highRisk && Number(this.leverage) > 10) {
       this.leverage = "10";
     }
+    if (this.allocation) { this.allocate(this.allocation); }
   }
   get marginLimit() {
     if (this.selected?.margin_budget_exempt) { return null; }
     return Number(this.leverage) > 10 ? (this.data.high_risk?.budget?.available_margin ?? "0") : null;
   }
-  get estimate() { return estimate(this.selected, this.quantity, this.leverage, this.data.wallet.balance, this.side, this.marginLimit); }
-  get budgetError() {
-    const available = this.estimate?.maximum;
-    return available && atomic(this.quantity) > atomic(available) ? "数量超出当前可建仓额度，请使用下方比例按钮重新填入。" : "";
+  get allocationSide() {
+    const position = this.data.positions.find(item => String(item.instrument_id) === this.selectedId);
+    if (position) { return position.side; }
+    // Before choosing a direction, size against the more expensive side so
+    // either button fits the cash budget even when bid and ask differ.
+    const prices = this.selected?.execution_prices;
+    return (atomic(prices?.short) || 0n) > (atomic(prices?.long) || 0n) ? "short" : "long";
   }
-  get positionConflict() {
+  get estimate() { return estimate(this.selected, this.quantity, this.leverage, this.data.wallet.balance, this.allocationSide, this.marginLimit); }
+  positionConflictFor(side) {
     const position = this.data.positions.find((item) => String(item.instrument_id) === this.selectedId);
-    if (position && (position.side !== this.side || Number(position.leverage) !== Number(this.leverage))) {
+    if (position && (position.side !== side || Number(position.leverage) !== Number(this.leverage))) {
       return `已有${position.side === "long" ? "做多" : "做空"} ${position.leverage}× 仓位，加仓需保持相同方向和杠杆；如需切换，请先平仓。`;
     }
     return "";
@@ -227,20 +227,24 @@ export default class RscDashboard extends Component {
     return "";
   }
   @action allocate(quarters) {
-    const quantity = quantityForFraction(this.selected, this.leverage, this.data.wallet.balance, quarters, this.side, this.marginLimit);
+    this.allocation = null;
+    const quantity = quantityForFraction(this.selected, this.leverage, this.data.wallet.balance, quarters, this.allocationSide, this.marginLimit);
     if (quantity === null || atomic(quantity) < (atomic(this.selected?.minimum) || 1n)) {
       this.error = "该比例的余额或剩余额度不足以满足最小建仓数量。";
       return;
     }
     this.error = "";
+    this.allocation = quarters;
     this.quantity = quantity;
     this.notional = notionalForQuantity(this.selected, quantity) || "";
   }
   @action changeQuantity(event) {
+    this.allocation = null;
     this.quantity = event.target.value;
     this.notional = notionalForQuantity(this.selected, this.quantity) ?? "";
   }
   @action changeNotional(event) {
+    this.allocation = null;
     this.notional = event.target.value;
     this.quantity = quantityForNotional(this.selected, this.notional) ?? "";
   }
@@ -274,6 +278,32 @@ export default class RscDashboard extends Component {
       : 10;
   }
   get forexFee() { return Number(this.selected?.fee_bps || 0) / 100; }
+  get leveragePresets() { return (this.maxLeverage > 10 ? [10, 25, 50, 100] : [1, 2, 5, 10]).map(value => ({ value: String(value) })); }
+  @action chooseLeverage(value) {
+    if (this.busy) { return; }
+    this.leverage = String(value);
+    if (this.allocation) { this.allocate(this.allocation); }
+  }
+  @action changeLeverage(event) { this.chooseLeverage(event.target.value); }
+  get executionMode() { return this.selected?.execution_mode === "immediate" ? "immediate" : "delayed"; }
+  get executionLabel() { return this.executionMode === "immediate" ? "即时成交" : "延时成交"; }
+  get executionNotice() {
+    if (this.executionMode === "immediate") {
+      return this.needsExecutionQuote ? "提交时先刷新并核验报价，有效后直接成交；无法取得有效报价时不会成交。" : "按当前新鲜有效的报价直接成交，无需等待下一条报价。";
+    }
+    const minutes = Math.ceil(Number(this.selected?.quote?.delay_seconds || 0) / 60);
+    return `${minutes > 0 ? `行情约延迟 ${minutes} 分钟。` : ""}等待提交后产生的有效报价确认，成交价以该报价为准，不按当前显示价立即成交。`;
+  }
+  orderOption(side) {
+    const cost = estimate(this.selected, this.quantity, this.leverage, this.data.wallet.balance, side, this.marginLimit);
+    const error = this.positionConflictFor(side) || protectionError({ side, tp: this.takeProfit, sl: this.stopLoss,
+      current: this.selectedMarket?.tradable ? this.selected.quote.price : null }) ||
+      (cost && atomic(this.quantity) > atomic(cost.maximum) ? "数量超出此方向可建仓额度，请减少数量。" : "");
+    // This percentage is display-only. All money and submitted quantities stay decimal strings.
+    const percent = cost && Number(this.data.wallet.balance) > 0 ? (Number(cost.reserve) / Number(this.data.wallet.balance) * 100).toFixed(1) : null;
+    return { side, label: side === "short" ? "做空" : "做多", cost, percent, error, disabled: this.tradingDisabled || !cost || !!error };
+  }
+  get orderOptions() { return [this.orderOption("short"), this.orderOption("long")]; }
   get executionHint() {
     if (this.selected?.execution_mode === "immediate") { return this.selected?.category === "forex" ? "开仓、平仓均使用当前新鲜且核验通过的报价直接成交，无需等待下一笔报价。" : "按当前新鲜有效的买入价／卖出价直接成交，无需等待下一笔报价。"; }
     return "等待提交之后的新报价确认；提交后 10 秒内可撤单。普通仓位成交后没有额外持仓锁定。";
@@ -324,9 +354,6 @@ export default class RscDashboard extends Component {
         closeDisabled: this.writeDisabled || !!pendingClose || !!marketClosed || (position.hold_until && Date.parse(position.hold_until) > this.quoteClock),
       };
     });
-  }
-  @action selectSide(side) {
-    if (!this.busy) { this.side = side; }
   }
   @action set(field, event) {
     this[field] = event.target.value;
@@ -430,15 +457,19 @@ export default class RscDashboard extends Component {
   }
   @action trade(event) {
     event.preventDefault();
-    if (this.tradingDisabled) { return; }
+    // Enter in an input must never silently choose the first (short) button.
+  }
+  @action tradeSide(side, event) {
+    event.preventDefault();
+    if (this.orderOption(side).disabled || !event.currentTarget.form.reportValidity()) { return; }
     return this.send("orders", {
       instrument_id: this.selected.id,
-      side: this.side,
+      side,
       quantity: this.quantity,
       leverage: this.leverage,
       high_risk: this.selected?.category === "forex" ? Number(this.leverage) > 10 : this.highRisk,
-      take_profit: this.side === "close" ? "" : this.takeProfit,
-      stop_loss: this.side === "close" ? "" : this.stopLoss,
+      take_profit: this.takeProfit,
+      stop_loss: this.stopLoss,
     });
   }
   @action close(position, event) {
@@ -613,43 +644,33 @@ export default class RscDashboard extends Component {
               {{#if this.orderTicketOpen}}<section class="rsc-card rsc-order-ticket">
                 <div class="rsc-ticket-heading"><h2>{{uiText "order"}}</h2><span>{{this.selected.symbol}}</span><button class="btn btn-flat rsc-close-order" type="button" {{on "click" this.closeOrderTicket}}>收起下单</button></div>
                 <form {{on "submit" this.trade}}>
-                  <fieldset class="rsc-direction-picker">
-                    <legend>{{uiText "direction"}}</legend>
-                    <div class="rsc-direction-options">
-                      <button type="button" class="btn rsc-direction rsc-direction-short" aria-pressed={{if (eq this.side "short") "true" "false"}} disabled={{this.busy}} {{on "click" (fn this.selectSide "short")}}>
-                        <span class="rsc-direction-title">{{uiText "short"}} <span class="rsc-direction-check" aria-hidden="true">{{dIcon "check"}}</span></span>
-                        <small>{{#if (eq this.selected.category "forex")}}看跌{{this.selected.currency_name}}兑美元{{else}}预期价格下跌{{/if}}</small>
-                      </button>
-                      <button type="button" class="btn rsc-direction rsc-direction-long" aria-pressed={{if (eq this.side "long") "true" "false"}} disabled={{this.busy}} {{on "click" (fn this.selectSide "long")}}>
-                        <span class="rsc-direction-title">{{uiText "long"}} <span class="rsc-direction-check" aria-hidden="true">{{dIcon "check"}}</span></span>
-                        <small>{{#if (eq this.selected.category "forex")}}看涨{{this.selected.currency_name}}兑美元{{else}}预期价格上涨{{/if}}</small>
-                      </button>
-                    </div>
-                  </fieldset>
-                  {{#if (eq this.selected.category "forex")}}<div class="rsc-risk-status"><strong>{{this.selected.currency_name}}交易 · {{#if this.forexFee}}每边手续费 {{this.forexFee}}%{{else}}免手续费{{/if}}</strong><span>买入做多为看涨{{this.selected.currency_name}}兑美元，卖出做空为看跌。</span>{{#if this.data.forex_activity.active}}<span>活动期间最高 100×，可按钱包可用余额开仓，不受虚拟币的保证金额度限制。</span>{{else}}<span>当前最高 10×。已有高杠杆仓位可从“我的持仓”平仓、追加保证金或设置止盈止损。</span>{{/if}}<span>“最大可开”会扣除手续费并预留报价变化空间；补保证金不会增加持仓数量。</span><span>仅使用 RSC 模拟交易。100× 下小幅汇率波动也可能触发强平。</span></div>{{/if}}
+                  {{#if (eq this.selected.category "forex")}}<div class="rsc-risk-status"><strong>{{this.selected.currency_name}}交易 · {{#if this.forexFee}}每边手续费 {{this.forexFee}}%{{else}}免手续费{{/if}}</strong><span>买入做多为看涨{{this.selected.currency_name}}兑美元，卖出做空为看跌。</span>{{#if this.data.forex_activity.active}}<span>活动期间最高 100×，可按钱包可用余额开仓，不受虚拟币的保证金额度限制。</span>{{else}}<span>当前最高 10×。已有高杠杆仓位可从“我的持仓”平仓、追加保证金或设置止盈止损。</span>{{/if}}<span>比例按可用余额估算，已计入开仓手续费；补保证金不会增加持仓数量。</span><span>仅使用 RSC 模拟交易。100× 下小幅汇率波动也可能触发强平。</span></div>{{/if}}
                   {{#if (eq this.selected.category "forex")}}<label>RSC 名义金额<input inputmode="decimal" value={{this.notional}} {{on "input" this.changeNotional}} /></label><p class="rsc-muted">按交易总额换算货币数量，按数量步进向下取整；保证金另按杠杆计算，以当前数量提交。</p>{{/if}}
                   <div class="rsc-fields rsc-ticket-inputs">
-                    <div><label>{{uiText "quantity"}}<input required inputmode="decimal" value={{this.quantity}} {{on "input" this.changeQuantity}} /></label>
-                      <span class="rsc-allocation-buttons">{{#each (array 1 2 3 4) as |quarter|}}<button type="button" class="btn btn-small" {{on "click" (fn this.allocate quarter)}}>{{#if (eq quarter 4)}}最大可开{{else if (eq quarter 2)}}1/2{{else}}{{quarter}}/4{{/if}}</button>{{/each}}</span>
+                    <div><label for="rsc-order-quantity">{{uiText "quantity"}}</label><input id="rsc-order-quantity" required inputmode="decimal" value={{this.quantity}} disabled={{this.busy}} {{on "input" this.changeQuantity}} />
+                      <span class="rsc-allocation-buttons">{{#each (array 1 2 3 4) as |quarter|}}<button type="button" class="btn btn-small" aria-pressed={{if (eq this.allocation quarter) "true" "false"}} disabled={{this.busy}} {{on "click" (fn this.allocate quarter)}}>{{#if (eq quarter 4)}}最大可开{{else if (eq quarter 2)}}1/2{{else}}{{quarter}}/4{{/if}}</button>{{/each}}</span>
                     </div>
-                    <div><label>{{uiText "leverage"}} <output>{{this.leverage}}×</output><input class="rsc-leverage-range" aria-label="杠杆滑块" type="range" min="1" max={{this.maxLeverage}} step="1" value={{this.leverage}} {{on "input" (fn this.set "leverage")}} /></label><input aria-label="杠杆倍数" required type="number" min="1" max={{this.maxLeverage}} step="1" value={{this.leverage}} {{on "input" (fn this.set "leverage")}} /></div>
+                    <div class="rsc-leverage-controls"><div class="rsc-leverage-heading"><label for="rsc-leverage-number">{{uiText "leverage"}}</label><input id="rsc-leverage-number" aria-label="杠杆倍数" required type="number" min="1" max={{this.maxLeverage}} step="1" value={{this.leverage}} disabled={{this.busy}} {{on "input" this.changeLeverage}} /></div><input class="rsc-leverage-range" aria-label="杠杆滑块" type="range" min="1" max={{this.maxLeverage}} step="1" value={{this.leverage}} disabled={{this.busy}} {{on "input" this.changeLeverage}} /><span class="rsc-leverage-presets">{{#each this.leveragePresets as |preset|}}<button type="button" class="btn btn-small" aria-pressed={{if (eq this.leverage preset.value) "true" "false"}} disabled={{this.busy}} {{on "click" (fn this.chooseLeverage preset.value)}}>{{preset.value}}×</button>{{/each}}</span></div>
                   </div>
                   {{#if this.data.high_risk_enabled}}{{#if (eq this.selected.category "crypto")}}
                     <label class="rsc-checkbox"><input type="checkbox" checked={{this.highRisk}} {{on "change" this.toggleHighRisk}} />{{uiText "high_risk_mode"}}</label>
                     <div class="rsc-risk-status"><strong>高杠杆（11–100×）</strong>{{#if this.data.high_risk.budget}}<span>剩余保证金额度 {{formatAmount this.data.high_risk.budget.available_margin}} / {{formatAmount this.data.high_risk.budget.maximum_margin}} RSC</span>{{/if}}<span>{{#if this.highRiskStatus.occupying}}已持有：{{this.highRiskStatus.occupying}}{{else}}暂无高杠杆仓位{{/if}}</span>{{#if this.highRiskStatus.seconds}}<span>冷却倒计时 <b>{{this.highRiskStatus.countdown}}</b>（现有同标的高杠杆仓位可继续加仓）</span>{{else}}<span>当前无冷却</span>{{/if}}{{#if this.highRiskStatus.hold}}<span>当前仓位还需 {{this.highRiskStatus.hold}} 秒可手动平仓</span>{{/if}}</div>
                   {{/if}}{{/if}}
                   {{#if this.selected.close_only}}<p class="alert alert-info">此杠杆/反向产品目前仅可平仓。</p>{{/if}}
-                  <div class="rsc-fields"><label>{{uiText "take_profit"}}<input inputmode="decimal" value={{this.takeProfit}} {{on "input" (fn this.set "takeProfit")}} /></label><label>{{uiText "stop_loss"}}<input inputmode="decimal" value={{this.stopLoss}} {{on "input" (fn this.set "stopLoss")}} /></label></div>
-                  <p class="rsc-muted">{{this.protectionHint}}</p>
-                  {{#if this.orderProtectionError}}<p class="alert alert-error" role="alert">{{this.orderProtectionError}}</p>{{/if}}
                   {{#if (eq this.selectedMarket.status "session_closed")}}<p class="alert alert-info">当前休市，暂不能提交新委托。请在该市场交易时段再操作；已有持仓仍可修改止盈止损。</p>{{/if}}
                   {{#if this.selectedPending}}<p class="alert alert-info">此品种已有待成交委托，<a href="#rsc-orders">查看或撤销委托</a>后再下单。</p>{{/if}}
                   {{#if this.quantityError}}<p class="alert alert-error" role="alert">{{this.quantityError}}</p>{{/if}}
-                  {{#if this.budgetError}}<p class="alert alert-error" role="alert">{{this.budgetError}}</p>{{/if}}
-                  {{#if this.positionConflict}}<p class="alert alert-info" role="alert">{{this.positionConflict}}</p>{{/if}}
                   {{#if this.estimate}}<div class="rsc-order-estimate"><p>名义金额 {{formatAmount this.estimate.gross}} · 保证金 {{formatAmount this.estimate.margin}}</p><p>开仓手续费 {{formatAmount this.estimate.fee}} · 预计占用 {{formatAmount this.estimate.reserve}} RSC</p><small>当前可建仓数量 {{formatQuantity this.estimate.maximum}} · {{#if this.selected.fee_bps}}平仓另收手续费，费用按名义金额计算{{else}}当前品种开平仓免手续费{{/if}}；实际成交前会复核额度。</small></div>{{/if}}
-                  {{#if this.needsExecutionQuote}}<p class="rsc-muted" role="status">{{uiText "refresh_quote_before_order"}}</p>{{/if}}
-                  <button class="btn btn-primary rsc-submit-direction" data-side={{this.side}} type="submit" disabled={{this.tradingDisabled}}>{{#if this.needsExecutionQuote}}刷新报价并{{else}}提交{{/if}}{{#if (eq this.side "short")}}做空{{else}}做多{{/if}}委托</button>
+                  <div class="rsc-execution-notice" data-mode={{this.executionMode}} role="status"><strong>{{this.executionLabel}}</strong><span>{{this.executionNotice}}</span></div>
+                  <div class="rsc-direction-options" role="group" aria-label="选择方向并提交委托">
+                    {{#each this.orderOptions key="side" as |option|}}
+                      <div class="rsc-trade-action">
+                        <button class="btn rsc-submit-direction" data-side={{option.side}} type="button" disabled={{option.disabled}} aria-label="提交{{option.label}}委托" aria-describedby="rsc-order-hint-{{option.side}}" {{on "click" (fn this.tradeSide option.side)}}><strong>{{option.label}}</strong>{{#if option.cost}}<small><span>预计 {{displayAmount option.cost.reserve}} RSC</span>{{#if option.percent}}<span>占可用余额 {{option.percent}}%</span>{{/if}}</small>{{/if}}</button>
+                        <span id="rsc-order-hint-{{option.side}}" class="rsc-order-direction-hint">{{#if option.error}}{{option.error}}{{else if (eq this.selected.category "forex")}}{{#if (eq option.side "short")}}看跌{{else}}看涨{{/if}}{{this.selected.currency_name}}兑美元{{else}}{{#if (eq option.side "short")}}预期价格下跌{{else}}预期价格上涨{{/if}}{{/if}}</span>
+                      </div>
+                    {{/each}}
+                  </div>
+                  <div class="rsc-ticket-protection"><div class="rsc-fields"><label>{{uiText "take_profit"}}（选填）<input inputmode="decimal" value={{this.takeProfit}} disabled={{this.busy}} {{on "input" (fn this.set "takeProfit")}} /></label><label>{{uiText "stop_loss"}}（选填）<input inputmode="decimal" value={{this.stopLoss}} disabled={{this.busy}} {{on "input" (fn this.set "stopLoss")}} /></label></div><p class="rsc-muted">{{this.protectionHint}}</p></div>
                   <details class="rsc-trading-help"><summary>交易规则 · 数量步进 {{formatQuantity this.selected.step}}</summary><p class="rsc-muted">{{this.executionHint}}</p><p class="rsc-muted">最小数量 {{formatQuantity this.selected.minimum}}。四档比例按可用余额与剩余额度共同估算，包含手续费及预占空间；{{this.positionLimitHint}}</p></details>
                 </form>
               </section>{{/if}}

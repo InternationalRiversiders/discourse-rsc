@@ -11,7 +11,7 @@ const { chromium } = require(process.env.RSC_PLAYWRIGHT);
       page.on('pageerror', e => errors.push(e.message));
       await page.route('**/rsc/orders.json', async route => {
         if (route.request().method() !== 'POST') { return route.continue(); }
-        orders.push(new URLSearchParams(route.request().postData()).get('side'));
+        orders.push(Object.fromEntries(new URLSearchParams(route.request().postData())));
         await route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify({status: 'rejected'})});
       });
       await page.goto('http://rsc.test:3000/login', {waitUntil: 'networkidle'});
@@ -27,35 +27,111 @@ const { chromium } = require(process.env.RSC_PLAYWRIGHT);
         await page.setViewportSize({width, height: 1000});
         await page.goto(`http://rsc.test:3000/rsc/market?instrument_id=${c.forex_id}`);
         await page.locator('.rsc-open-order').click();
-        const ticket = page.locator('.rsc-order-ticket'), short = ticket.locator('.rsc-direction-short'), long = ticket.locator('.rsc-direction-long');
+        const ticket = page.locator('.rsc-order-ticket'), short = ticket.locator('[data-side="short"]'), long = ticket.locator('[data-side="long"]');
         assert.equal(await ticket.locator('select').count(), 0);
         const left = await short.boundingBox(), right = await long.boundingBox();
         assert(left.x < right.x && Math.abs(left.y - right.y) < 2, 'Short left and long right on all screens');
         const info = await ticket.locator('.rsc-risk-status').boundingBox(), controls = await ticket.locator('.rsc-ticket-inputs').boundingBox();
         assert(info.y < controls.y, 'FX explanation comes before amount controls');
-        await ticket.getByLabel('数量', {exact: true}).fill('12.34');
+        const protection = await ticket.locator('.rsc-ticket-protection').boundingBox();
+        assert(left.y < protection.y, 'Protection is optional and below the trading buttons');
+        const colors = await ticket.locator('.rsc-submit-direction').evaluateAll(buttons => buttons.map(b => getComputedStyle(b).backgroundColor));
+        assert.equal(colors[0], 'rgb(20, 118, 83)'); assert.equal(colors[1], 'rgb(181, 47, 72)');
+        assert.equal(await ticket.locator('.rsc-execution-notice').getAttribute('data-mode'), 'immediate');
+        assert(!(await ticket.locator('.rsc-execution-notice').innerText()).includes('15 分钟'));
+        const half = ticket.locator('.rsc-allocation-buttons').getByRole('button', {name: '1/2', exact: true});
         await ticket.getByLabel('杠杆倍数', {exact: true}).fill('10');
-        const count = orders.length;
-        await short.focus(); await page.keyboard.press('Space');
-        assert.equal(orders.length, count, 'Selecting direction must not submit');
-        assert.equal(await short.getAttribute('aria-pressed'), 'true');
-        assert.equal(await long.getAttribute('aria-pressed'), 'false');
-        assert.equal(await ticket.getByLabel('数量', {exact: true}).inputValue(), '12.34');
-        assert.equal(await ticket.getByLabel('杠杆倍数', {exact: true}).inputValue(), '10');
-        assert((await ticket.locator('[type=submit]').innerText()).includes('做空'));
+        await half.click();
+        assert.equal(await half.getAttribute('aria-pressed'), 'true');
+        const quantity10 = Number(await ticket.getByLabel('数量', {exact: true}).inputValue());
+        const preset25 = ticket.locator('.rsc-leverage-presets').getByRole('button', {name: '25×', exact: true});
+        await preset25.click();
+        assert.equal(await preset25.getAttribute('aria-pressed'), 'true');
+        assert.equal(await ticket.getByLabel('杠杆倍数', {exact: true}).inputValue(), '25');
+        assert.equal(await ticket.getByLabel('杠杆滑块', {exact: true}).inputValue(), '25');
+        assert.equal(await half.getAttribute('aria-pressed'), 'true');
+        const halfRect = await half.boundingBox(), presetRect = await preset25.boundingBox();
+        assert(Math.abs(halfRect.y - presetRect.y) < 2, 'Fraction and leverage presets align');
+        assert.equal(await half.evaluate(b => getComputedStyle(b).backgroundColor), await preset25.evaluate(b => getComputedStyle(b).backgroundColor), 'Hovered selection keeps its highlight');
+        const quantity25 = Number(await ticket.getByLabel('数量', {exact: true}).inputValue());
+        assert(Math.abs(quantity25 / quantity10 - 2.5) < .01, 'Leverage keeps the selected cash fraction, not the old quantity');
+        assert((await short.innerText()).includes('余额 50.0%'));
         await ticket.screenshot({path: `${process.env.RSC_BROWSER_OUTPUT}/ticket-${scheme}-${width}.png`});
-        await ticket.locator('[type=submit]').click();
-        await page.waitForResponse(r => r.url().includes('/rsc/state.json'));
-        assert.equal(orders.at(-1), 'short');
-        await long.click();
-        assert.equal(await long.getAttribute('aria-pressed'), 'true');
-        assert((await ticket.locator('[type=submit]').innerText()).includes('做多'));
-        await ticket.locator('[type=submit]').click();
-        await page.waitForResponse(r => r.url().includes('/rsc/state.json'));
-        assert.equal(orders.at(-1), 'long');
+        await ticket.getByLabel('数量', {exact: true}).fill('12.34');
+        assert.equal(await half.getAttribute('aria-pressed'), 'false', 'Manual edits clear the cash-fraction highlight');
+        const count = orders.length;
+        await ticket.getByLabel('数量', {exact: true}).press('Enter');
+        await page.waitForTimeout(150);
+        assert.equal(orders.length, count, 'Enter in a numeric draft must not choose a direction');
+        await ticket.getByLabel('杠杆倍数', {exact: true}).fill('10');
+        const submit = async (button, side) => {
+          const refreshed = page.waitForResponse(r => r.url().includes('/rsc/state.json'));
+          await button.click(); await refreshed;
+          assert.equal(orders.at(-1).side, side);
+          assert.equal(orders.at(-1).quantity, '12.34');
+          assert.equal(orders.at(-1).leverage, '10');
+          await page.waitForFunction(() => !document.querySelector('.rsc-submit-direction[data-side="long"]').disabled);
+        };
+        await submit(short, 'short');
+        await submit(long, 'long');
+        const take = ticket.getByLabel('止盈价（选填）', {exact: true});
+        await take.fill('1.3');
+        assert(await short.isDisabled(), 'A long-side take profit must not be submitted as a short');
+        assert(!(await long.isDisabled()));
+        assert((await ticket.locator('#rsc-order-hint-short').innerText()).includes('止盈价须小于'));
+        await submit(long, 'long');
+        assert.equal(orders.at(-1).take_profit, '1.3');
+        await take.fill('');
+        assert(!(await short.isDisabled()), 'Fields remain editable after a rejected request');
+        await ticket.getByLabel('数量', {exact: true}).fill('9999999999');
+        assert(await short.isDisabled() && await long.isDisabled(), 'Insufficient budget blocks both directions');
+        await half.click();
+        assert(!(await short.isDisabled()) && !(await long.isDisabled()));
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
-        console.log('PASS direction, payload, draft preservation and layout', scheme, width);
+        console.log('PASS ticket directions, payload, allocation, leverage, protections and layout', scheme, width);
       }
+      // The execution notice must follow server metadata, not a fixed FX/15-minute label.
+      let scenario = 'delayed';
+      const patchInstrument = item => {
+        if (!item || String(item.id) !== String(c.forex_id)) { return item; }
+        const delayed = scenario === 'delayed', closed = scenario === 'closed';
+        return {...item, category: delayed ? 'cn' : 'forex', market_closed: closed,
+          execution_mode: delayed ? 'delayed_confirmation' : 'immediate',
+          quote: {...item.quote, delay_seconds: delayed ? 900 : 0,
+            source_time: new Date(Date.now() - (delayed ? 900000 : 7200000)).toISOString(),
+            received_at: new Date().toISOString(),
+            session_start: new Date(Date.now() - 3600000).toISOString(), session_end: new Date(Date.now() + 3600000).toISOString()}};
+      };
+      await page.route('**/rsc/state.json*', async route => {
+        const response = await route.fetch({url: route.request().url().replace("rsc.test", "127.0.0.1"), headers: {...route.request().headers(), host: "rsc.test:3000"}}), data = await response.json();
+        data.instruments = data.instruments?.map(patchInstrument);
+        await route.fulfill({response, json: data});
+      });
+      await page.route('**/rsc/instruments/*/history.json*', async route => {
+        const response = await route.fetch({url: route.request().url().replace("rsc.test", "127.0.0.1"), headers: {...route.request().headers(), host: "rsc.test:3000"}}), data = await response.json();
+        data.instrument = patchInstrument(data.instrument);
+        await route.fulfill({response, json: data});
+      });
+      for (scenario of ['delayed', 'stale', 'closed']) {
+        await page.goto(`http://rsc.test:3000/rsc/market?instrument_id=${c.forex_id}`);
+        await page.locator('.rsc-open-order').click();
+        const ticket = page.locator('.rsc-order-ticket');
+        const notice = await ticket.locator('.rsc-execution-notice').innerText();
+        if (scenario === 'delayed') {
+          assert(notice.includes('延时成交') && notice.includes('15 分钟') && notice.includes('提交后产生'));
+          assert.equal(await ticket.locator('.rsc-leverage-presets button').last().innerText(), '10×');
+        } else if (scenario === 'stale') {
+          assert(notice.includes('先刷新并核验报价') && !notice.includes('15 分钟'));
+          assert(!(await ticket.locator('[data-side="short"]').isDisabled()), 'Stale FX can request a fresh execution quote');
+        } else {
+          assert(await ticket.locator('[data-side="short"]').isDisabled());
+          assert(await ticket.locator('[data-side="long"]').isDisabled());
+          assert((await ticket.innerText()).includes('当前休市'));
+        }
+      }
+      await page.unroute('**/rsc/state.json*');
+      await page.unroute('**/rsc/instruments/*/history.json*');
+      console.log('PASS delayed, stale and closed quote feedback', scheme);
       await page.goto('http://rsc.test:3000/rsc/leaderboard');
       await page.locator('.rsc-ranking-table tbody tr').filter({hasText: c.username}).first().locator('.rsc-trader-link').click();
       await page.locator('.rsc-performance svg').waitFor();
