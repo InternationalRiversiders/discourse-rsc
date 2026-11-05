@@ -28,7 +28,7 @@ module DiscourseRsc
         price = begin
           price!(instrument, trading: true)
         rescue Error => error
-          raise unless forex_exit?(instrument, side) && instrument.active && %w[quote_stale quote_unavailable quote_verifying].include?(error.code)
+          raise unless waiting_exit?(instrument, side) && instrument.active && %w[quote_stale quote_unavailable quote_verifying].include?(error.code)
           raise Error.new("market_closed", status: 409) if MarketSessions.closed?(instrument)
           waiting_quote = true
           nil
@@ -300,7 +300,7 @@ module DiscourseRsc
       end
       tp = order.details["take_profit"] && Amount.parse(order.details["take_profit"])
       sl = order.details["stop_loss"] && Amount.parse(order.details["stop_loss"])
-      order.details = order.details.merge("fee_bps" => fee_bps).merge(ForexQuoteGuard.execution_details(instrument))
+      order.details = order.details.merge("fee_bps" => fee_bps).merge(execution_details(instrument.quote))
       if tp || sl
         projected = Position.new(side: order.side, quantity_units: (position&.quantity_units.to_i || 0) + quantity, average_units: ((position&.quantity_units.to_i || 0) * (position&.average_units.to_i || 0) + quantity * price) / ((position&.quantity_units.to_i || 0) + quantity), margin_units: (position&.margin_units.to_i || 0) + margin, leverage: order.leverage)
         TradingRules.protection!(projected, instrument, price, tp, sl, fee_bps: fee_bps)
@@ -322,7 +322,7 @@ module DiscourseRsc
     end
 
     def self.close_locked(instrument, order, position, price, kind, quote: instrument.quote)
-      order.details = order.details.merge(ForexQuoteGuard.execution_details(instrument, quote: quote))
+      order.details = order.details.merge(execution_details(quote))
       price = execution_price(instrument, position.side == "long" ? "short" : "long", price, quote: quote)
       quantity = order.quantity_units.to_i
       margin = position.margin_units.to_i * quantity / position.quantity_units.to_i
@@ -368,6 +368,17 @@ module DiscourseRsc
 
     def self.forex_exit?(instrument, side)
       side == "close" && immediate_forex?(instrument)
+    end
+
+    def self.waiting_exit?(instrument, side)
+      forex_exit?(instrument, side) || (side == "close" && TradingRules.stock?(instrument))
+    end
+
+    def self.execution_details(quote)
+      { 'executed_at' => Time.current.iso8601(6),
+        'execution_quote' => quote.slice(*ForexQuoteGuard::FIELDS, 'verification',
+          'bid', 'ask', 'local_price', 'local_currency', 'fx_rate',
+          'delay_reported', 'delay_inferred', 'session_start', 'session_end') }
     end
 
     def self.reliable_book?(quote)

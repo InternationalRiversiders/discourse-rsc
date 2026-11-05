@@ -3,11 +3,19 @@ import tempfile
 from pathlib import Path
 from datetime import datetime, timezone
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 
 spec=importlib.util.spec_from_file_location('study',Path(__file__).resolve().parents[1]/'script/sample_sina_etf.py')
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
 
 class SamplingTest(unittest.TestCase):
+    def test_database_comparison_reads_multiline_json(self):
+        output = '[{"symbol":"588370.SS"},\n {"symbol":"588000.SS"}]\n'
+        with patch.object(s.subprocess, 'run', return_value=SimpleNamespace(stdout=output)) as run:
+            self.assertEqual([q['symbol'] for q in s.database_quotes()], ['588370.SS', '588000.SS'])
+            self.assertIn('-q', run.call_args.args[0])
+
     def quote(self, stamp='2026-11-05,09:31:00', price='1.373'):
         fields=['ETF','1.3','1.3',price,'1.4','1.2','1.372','1.374','100','137']+['0']*20+stamp.split(',')
         return 'var hq_str_sh588370="'+','.join(fields)+'";'

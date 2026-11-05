@@ -136,9 +136,5 @@ module DiscourseRsc
       apply(baseline, incoming.except('automatic_quote'), primary_only: true) || previous
     end
 
-    def self.execution_details(instrument, quote: instrument.quote)
-      return {} unless instrument.category == 'forex'
-      { 'executed_at' => Time.current.iso8601(6), 'execution_quote' => quote.slice(*FIELDS, 'verification') }
-    end
   end
 end

@@ -577,7 +577,11 @@ module DiscourseRsc
     end
 
     def self.observe_delay(previous, quote, category:)
-      return quote unless quote['source']=='yahoo' && !quote['delay_reported'] && category!='crypto'
+      # Yahoo sometimes explicitly reports zero for a delayed exchange. A
+      # positive declared delay is authoritative; zero still needs to agree
+      # with advancing source timestamps before discarding an observed delay.
+      return quote unless quote['source']=='yahoo' && category!='crypto'
+      return quote if quote['delay_reported'] && quote['delay_seconds'].to_i.positive?
       source=Time.iso8601(quote.fetch('source_time'));received=Time.iso8601(quote.fetch('received_at'))
       starts=quote['session_start'] && Time.iso8601(quote['session_start'])
       ends=quote['session_end'] && Time.iso8601(quote['session_end'])

@@ -154,7 +154,7 @@ class StockLatencyTest < NativeBusinessTest
     end
   end
 
-  def test_measured_delay_clears_for_live_reported_or_new_session_quotes
+  def test_measured_delay_survives_reported_zero_but_clears_for_live_or_new_session_quotes
     travel_to(Time.utc(2026, 11, 2, 3, 10)) do
       previous = cn.quote.merge('delay_inferred' => true)
       raw = previous.except('delay_inferred').merge('delay_seconds' => 0, 'delay_reported' => false)
@@ -162,7 +162,10 @@ class StockLatencyTest < NativeBusinessTest
       assert_equal 0, live['delay_seconds']
       refute live['delay_inferred']
       reported = R::MarketData.observe_delay(previous, raw.merge('delay_reported' => true), category: 'cn')
-      assert_equal 0, reported['delay_seconds']
+      assert_equal 900, reported['delay_seconds']
+      assert reported['delay_inferred']
+      positive = R::MarketData.observe_delay(previous, raw.merge('delay_reported' => true, 'delay_seconds' => 1200), category: 'cn')
+      assert_equal 1200, positive['delay_seconds']
       next_day = raw.merge('source_time' => (1.day.from_now - 900).iso8601,
         'received_at' => 1.day.from_now.iso8601,
         'session_start' => (Time.iso8601(raw['session_start']) + 1.day).iso8601,
@@ -179,6 +182,109 @@ class StockLatencyTest < NativeBusinessTest
       assert R::MarketData.refresh_due?(item, purpose: :execution)
       R::Exchange.cancel(actor: @alice, order_id: order.id, request_id: SecureRandom.uuid)
       refute R::MarketData.refresh_due?(item, purpose: :execution)
+    end
+  end
+
+  def test_explicit_zero_delay_learns_only_from_advancing_quotes_and_never_refreshes_frozen_time
+    travel_to(Time.utc(2026, 11, 2, 3, 10)) do
+      item = cn
+      raw = item.quote.merge('delay_reported' => true, 'delay_seconds' => 0)
+      first = R::MarketData.observe_delay({}, raw, category: 'cn')
+      assert_equal 0, first['delay_seconds']
+      travel 1.minute
+      repeated = R::MarketData.observe_delay(first, raw.merge('received_at' => Time.current.iso8601), category: 'cn')
+      assert_equal 0, repeated['delay_seconds']
+      advancing = raw.merge('source_time' => 15.minutes.ago.iso8601, 'received_at' => Time.current.iso8601)
+      learned = R::MarketData.observe_delay(repeated, advancing, category: 'cn')
+      assert_equal 900, learned['delay_seconds']
+      item.update!(quote: learned)
+      assert_equal R::Amount.parse('100'), R::Exchange.price!(item, trading: true)
+      travel 3.minutes
+      frozen = R::MarketData.observe_delay(learned, advancing.merge('received_at' => Time.current.iso8601), category: 'cn')
+      assert_equal 900, frozen['delay_seconds']
+      item.update!(quote: frozen)
+      assert_equal 'quote_stale', assert_raises(R::Error) { R::Exchange.price!(item, trading: true) }.code
+    end
+  end
+
+  def stock_position_with_stale_quote
+    fund; item = cn; opened = open_order(item)
+    travel 16.minutes
+    update_cn_quote(item)
+    R::Exchange.process(item.id)
+    assert_equal 'filled', opened.reload.status
+    assert_equal Time.current.iso8601(6), opened.details['executed_at']
+    assert_equal item.quote['source_time'], opened.details.dig('execution_quote', 'source_time')
+    item.update!(quote: item.quote.merge('received_at' => 3.minutes.ago.iso8601))
+    item
+  end
+
+  def submit_waiting_stock_close(item, request_id: SecureRandom.uuid)
+    R::Exchange.submit(actor: @alice, instrument_id: item.id, side: 'close', quantity: '1', leverage: 5, request_id: request_id)
+  end
+
+  def test_stale_stock_exit_waits_for_post_submission_quote_and_records_execution_provenance
+    travel_to(Time.utc(2026, 11, 2, 2)) do
+      item = stock_position_with_stale_quote
+      request_id = SecureRandom.uuid
+      result = submit_waiting_stock_close(item, request_id: request_id)
+      assert result['waiting_quote']
+      order = R::Order.find(result['order_id'])
+      assert_equal 'pending', order.status
+      replay = submit_waiting_stock_close(item, request_id: request_id)
+      assert replay['replayed']
+      assert_equal result.except('replayed'), replay.except('replayed')
+      R::Exchange.process(item.id)
+      assert_equal 'pending', order.reload.status
+      travel 1.minute
+      update_cn_quote(item)
+      R::Exchange.process(item.id)
+      assert_equal 'pending', order.reload.status
+      travel 15.minutes
+      update_cn_quote(item)
+      item.update!(quote: item.quote.merge('local_currency' => 'CNY', 'local_price' => '700', 'fx_rate' => '7'))
+      R::Exchange.process(item.id)
+      assert_equal 'filled', order.reload.status
+      assert_equal Time.current.iso8601(6), order.details['executed_at']
+      assert_equal item.quote['source_time'], order.details.dig('execution_quote', 'source_time')
+      assert_equal 'yahoo', order.details.dig('execution_quote', 'source')
+      assert_equal '700', order.details.dig('execution_quote', 'local_price')
+      assert_equal '7', order.details.dig('execution_quote', 'fx_rate')
+      assert_equal 0, R::Position.sum(:quantity_units)
+      assert_equal 0, R::Entry.sum(:units)
+    end
+  end
+
+  def test_waiting_stock_exit_is_cancellable_and_does_not_allow_stale_opening
+    travel_to(Time.utc(2026, 11, 2, 2)) do
+      item = stock_position_with_stale_quote
+      assert_equal 'quote_stale', assert_raises(R::Error) { open_order(item) }.code
+      wallet = R::Account.wallet(@alice.id).balance
+      order = R::Order.find(submit_waiting_stock_close(item)['order_id'])
+      R::Exchange.cancel(actor: @alice, order_id: order.id, request_id: SecureRandom.uuid)
+      assert_equal 'canceled', order.reload.status
+      assert_equal wallet, R::Account.wallet(@alice.id).reload.balance
+      assert_equal R::Amount.parse('1'), R::Position.sum(:quantity_units)
+      travel 2.hours
+      assert_equal 'market_closed', assert_raises(R::Error) { submit_waiting_stock_close(item) }.code
+    end
+  end
+
+  def test_automatic_stock_stop_records_quote_and_cancels_waiting_manual_exit
+    travel_to(Time.utc(2026, 11, 2, 2)) do
+      item = stock_position_with_stale_quote
+      R::Position.first.update!(stop_loss_units: R::Amount.parse('95'))
+      order = R::Order.find(submit_waiting_stock_close(item)['order_id'])
+      travel 1.minute
+      update_cn_quote(item)
+      item.update!(quote: item.quote.merge('price' => '94'))
+      R::Exchange.process(item.id)
+      assert_equal 'canceled', order.reload.status
+      automatic = R::Order.find_by!(side: 'close', status: 'filled')
+      assert automatic.details['executed_at']
+      assert_equal item.quote['source_time'], automatic.details.dig('execution_quote', 'source_time')
+      assert_equal 0, R::Position.sum(:quantity_units)
+      assert_equal 0, R::Entry.sum(:units)
     end
   end
 

@@ -156,7 +156,9 @@ class CompletionTest < NativeBusinessTest
     assert R::TradingRules.delayed?(stock)
     stopped=R::MarketData.observe_delay(second,base.merge('source_time'=>second['source_time'],'received_at'=>3.minutes.from_now.iso8601),category:'cn')
     assert_equal second['delay_seconds'],stopped['delay_seconds'], 'A frozen feed cannot grow its acceptable delay'
-    assert_equal 0,R::MarketData.observe_delay(first,base.merge('source_time'=>15.minutes.ago.iso8601,'delay_reported'=>true),category:'cn')['delay_seconds']
+    reported_zero=R::MarketData.observe_delay(first,base.merge('source_time'=>15.minutes.ago.iso8601,'delay_reported'=>true),category:'cn')
+    assert reported_zero['delay_inferred'], 'An explicit zero must not override observed advancing delayed timestamps'
+    assert_operator reported_zero['delay_seconds'],:>=,900
     assert_equal 0,R::MarketData.observe_delay(first,base.merge('source_time'=>2.days.ago.iso8601),category:'cn')['delay_seconds']
     assert_equal 0,R::MarketData.observe_delay(first,base.merge('session_end'=>1.minute.ago.iso8601),category:'cn')['delay_seconds']
   end

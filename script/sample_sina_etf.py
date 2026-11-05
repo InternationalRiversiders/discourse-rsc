@@ -68,10 +68,12 @@ def database_quotes():
            "quote->>'local_price' AS price, quote->>'source_time' AS source_time, "
            "quote->>'received_at' AS received_at, quote->>'delay_seconds' AS delay_seconds "
            f"FROM discourse_rsc_instruments WHERE symbol IN ({codes})) x; COMMIT;")
-    output = subprocess.run(['docker', 'exec', '-u', 'postgres', 'data', 'psql', '-X', '-A', '-t',
+    output = subprocess.run(['docker', 'exec', '-u', 'postgres', 'data', 'psql', '-X', '-A', '-t', '-q',
                              '-v', 'ON_ERROR_STOP=1', '-d', 'discourse', '-c', sql],
                             capture_output=True, text=True, timeout=6, check=True).stdout
-    return json.loads(next(line for line in output.splitlines() if line.startswith('[')))
+    # json_agg can span lines when more than one instrument is listed. Quiet
+    # psql suppresses transaction tags; parse the complete JSON document.
+    return json.loads(output.strip())
 
 
 def comparisons(sina, cached):
@@ -149,6 +151,8 @@ def report(folder):
               'cooldown_skips': sum(r.get('outcome') == 'cooldown' for r in live),
               'http_success_rate': len(success) / len(requested) if requested else None,
               'request_p95_ms': percentile([r['duration_ms'] for r in requested], .95),
+              'comparison_successes': sum('cached_yahoo' in r for r in success),
+              'comparison_errors': dict(Counter(r['comparison_error'] for r in success if r.get('comparison_error'))),
               'per_symbol': per_symbol, 'time_aligned_comparisons': len(matched),
               'retrospective_comparisons': len(historical_pairs),
               'retrospective_gap_p95_percent': percentile([abs(float(p['price_gap_percent'])) for p in historical_pairs], .95),
