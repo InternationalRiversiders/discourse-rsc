@@ -66,7 +66,6 @@
   .rg-slot-base {padding:15px 5px 0;}
   .rg-reels {display:grid;grid-template-columns:repeat(3,1fr);gap:6px;border:4px solid #191625;border-radius:12px;overflow:hidden;}
   .rg-reel {height:127px;background:linear-gradient(#ccc5d4,#fff9f2 42%,#fff9f2 60%,#c5bdcd);display:grid;place-items:center;font:bold italic 65px Georgia;color:#be4c61;text-shadow:2px 2px #fff;}
-  .is-busy .rg-reel {animation:rg-reel-spin .22s infinite alternate;}
   .rg-roulette-wheel {position:relative;width:220px;height:220px;flex-shrink:0;filter:drop-shadow(0 12px 15px #112a2566);}
   .rg-wheel-disc {position:absolute;inset:0;border:9px solid #b9a279;border-radius:50%;background:#243e39;transition:transform 1.5s cubic-bezier(.15,.7,.15,1);}
   .rg-wheel-number {position:absolute;inset:0;text-align:center;color:white;font-size:10px;padding-top:5px;}
@@ -102,11 +101,9 @@
   .rg-coin-scene {display:flex;align-items:center;flex-direction:column;gap:30px;perspective:600px;}
   .rg-big-coin {width:190px;height:190px;border:10px double #f6d99c;border-radius:50%;background:radial-gradient(at 35% 30%,#fbe4a8,#c49a58);color:#9d7537;box-shadow:5px 7px 0 #9e763f,inset 0 0 0 5px #d3ad67;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;transform:rotate(-12deg);span{font-size:9px;letter-spacing:3px;}strong{font-size:70px;font-family:serif;text-shadow:1px 2px #ffedb6;}}
   .rg-object-shadow {width:145px;height:14px;border-radius:50%;background:#221e3655;filter:blur(7px);}
-  .is-busy .rg-big-coin {animation:rg-coin-flip .65s infinite linear;}
   .rg-dice-scene {display:flex;flex-direction:column;align-items:center;gap:22px;}
   .rg-dice-tray {display:flex;gap:14px;justify-content:center;align-items:center;padding:28px;border:8px solid #8da2a33d;border-radius:35px;background:#153c4145;box-shadow:inset 0 5px 20px #142b3344,0 10px 20px #132f3733;}
   .rg-big-die {font:90px/1 sans-serif;color:#f4f1e6;filter:drop-shadow(2px 4px 3px #162e34aa);transform:rotate(-9deg);&:nth-child(2){transform:rotate(11deg);}&:nth-child(3){transform:rotate(-3deg);}}
-  .is-busy .rg-big-die {animation:rg-dice-roll .4s infinite alternate;}
   .rg-dice-total {font-size:16px;font-weight:500;letter-spacing:3px;color:#c9dcdc;}
   .rg-history {margin-top:24px;padding:20px;border:1px solid var(--rg-line);border-radius:18px;background:var(--rg-surface);}
   .rg-history-heading {display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;h2{font-size:16px;}}
@@ -121,6 +118,50 @@
 @keyframes rg-coin-flip {to{transform:rotateY(360deg) rotate(-12deg);}}
 @keyframes rg-dice-roll {to{transform:translateY(-8px) rotate(15deg);}}
 @media(max-width:950px){.rg-app{.rg-lobby{gap:14px;}.rg-art{height:165px;}.rg-card-bottom{padding:16px;h2{font-size:15px;}}.rg-play-layout{grid-template-columns:minmax(0,1fr) 245px;gap:14px;}.rg-controls{padding:17px;}.rg-stage{padding:28px 15px 65px;}.rg-reel{font-size:50px;height:110px;}.rg-big-die{font-size:65px;}.rg-dice-tray{gap:6px;padding:20px;}}}
-@media(max-width:720px){.rg-app{padding:12px 2px 30px;.rg-topbar{gap:10px;margin-bottom:18px;}h1{font-size:20px;}.rg-brand,.rg-top-actions{gap:7px;}.rg-brand-icon{width:34px;height:34px;border-radius:11px;font-size:18px;}.rg-balance{gap:5px;strong{font-size:14px;}small{font-size:9px;}}.rg-icon-button{width:30px;height:30px;}.rg-lobby{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}.rg-game-card{border-radius:17px;}.rg-art{height:150px;}.rg-card-number{top:12px;left:15px;font-size:9px;}.rg-card-bottom{padding:13px 14px;h2{font-size:14px;}}.rg-card-arrow{width:24px;height:24px;}.rg-mini-slots{transform:scale(.8) rotate(-7deg);}.rg-lever{margin-left:157px;}.rg-mini-wheel{width:112px;height:112px;}.rg-chip{right:15%;bottom:14px;}.rg-mini-ticket{width:140px;padding:12px;span{font-size:10px;}strong{padding:8px 0;font-size:22px;}}.rg-play-layout{grid-template-columns:1fr;gap:12px;}.rg-stage{min-height:320px;padding:24px 18px 60px;border-radius:17px;}.rg-stage--blackjack{min-height:420px;}.rg-stage--roulette{padding:22px 12px 62px;}.rg-controls{padding:16px;border-radius:16px;}.rg-controls-heading{margin-bottom:13px;}.rg-chips{margin:10px 0 15px;}.rg-choices{margin-bottom:15px;button{padding:10px;}}.rg-tabs button{padding:8px 12px;font-size:12px;}.rg-scratch-ticket{width:260px;}.rg-ticket-top{margin-bottom:15px;}.rg-dice-tray{padding:23px;gap:10px;}.rg-big-die{font-size:75px;}.rg-big-coin{width:155px;height:155px;strong{font-size:55px;}}.rg-slot-machine{max-width:310px;}.rg-blackjack-actions{grid-template-columns:1fr 1fr;button:last-child{grid-column:1/-1;}}.rg-hand-stake{margin-bottom:15px;strong{font-size:23px;}}.rg-history{padding:14px;}.rg-history-row,.rg-history-labels{grid-template-columns:minmax(0,1fr) 62px 82px;font-size:12px;}.rg-history-row small{font-size:9px;}.rg-roulette-wheel{width:190px;height:190px;}.rg-wheel-center{inset:38px;font-size:36px;}.rg-wheel-number{font-size:9px;}.rg-number-board{grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;}.rg-spot{font-size:12px;min-height:42px;}.rg-spot small{font-size:8px;min-width:16px;height:16px;line-height:14px;}.rg-top-actions{flex-wrap:nowrap;}}}
+@media(max-width:720px){.rg-app{padding:12px 2px 30px;.rg-topbar{gap:10px;margin-bottom:18px;}h1{font-size:20px;}.rg-brand,.rg-top-actions{gap:7px;}.rg-brand-icon{width:34px;height:34px;border-radius:11px;font-size:18px;}.rg-balance{gap:5px;strong{font-size:14px;}small{font-size:9px;}}.rg-icon-button{width:30px;height:30px;}.rg-lobby{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}.rg-game-card{border-radius:17px;}.rg-art{height:150px;}.rg-card-number{top:12px;left:15px;font-size:9px;}.rg-card-bottom{padding:13px 14px;h2{font-size:14px;}}.rg-card-arrow{width:24px;height:24px;}.rg-mini-slots{transform:scale(.8) rotate(-7deg);}.rg-lever{margin-left:157px;}.rg-mini-wheel{width:112px;height:112px;}.rg-chip{right:15%;bottom:14px;}.rg-mini-ticket{width:140px;padding:12px;span{font-size:10px;}strong{padding:8px 0;font-size:22px;}}.rg-play-layout{grid-template-columns:1fr;gap:12px;}.rg-stage{min-height:320px;padding:24px 18px 60px;border-radius:17px;}.rg-stage--blackjack{min-height:420px;}.rg-stage--roulette{padding:22px 12px 62px;}.rg-controls{padding:16px;border-radius:16px;}.rg-controls-heading{margin-bottom:13px;}.rg-chips{margin:10px 0 15px;}.rg-choices{margin-bottom:15px;button{padding:10px;}}.rg-tabs button{padding:8px 12px;font-size:12px;}.rg-scratch-ticket{width:260px;}.rg-ticket-top{margin-bottom:15px;}.rg-dice-tray{padding:23px;gap:10px;}.rg-big-die{font-size:75px;}.rg-big-coin{width:155px;height:155px;strong{font-size:55px;}}.rg-slot-machine{max-width:310px;}.rg-blackjack-actions{grid-template-columns:1fr 1fr;button:last-child{grid-column:1/-1;}}.rg-hand-stake{margin-bottom:15px;strong{font-size:23px;}}.rg-history{padding:14px;}.rg-history-row,.rg-history-labels{grid-template-columns:minmax(0,1fr) 62px 82px;font-size:12px;}.rg-history-row small{font-size:9px;}.rg-wheel-number{font-size:9px;}.rg-number-board{grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;}.rg-spot{font-size:12px;min-height:42px;}.rg-spot small{font-size:8px;min-width:16px;height:16px;line-height:14px;}.rg-top-actions{flex-wrap:nowrap;}}}
 @media(max-width:370px){.rg-app{.rg-art{height:133px;}.rg-card-bottom{padding:11px;h2{font-size:13px;}}.rg-card-arrow{display:none;}.rg-mini-slots{transform:scale(.65) rotate(-7deg);}.rg-lever{display:none;}.rg-mini-coin{width:85px;height:85px;font-size:48px;}.rg-mini-die{font-size:95px;}.rg-mini-die--second{font-size:80px;}.rg-mini-ticket{width:120px;}.rg-top-actions .rg-icon-button{width:25px;}.rg-brand{gap:5px;}.rg-balance small{display:none;}.rg-big-die{font-size:65px;}.rg-dice-tray{padding:18px;gap:7px;}}}
 @media(prefers-reduced-motion:reduce){.rg-app *{animation:none!important;transition:none!important;}}
+
+// Solid rims, a tilted table and a counter-rotating ball, without WebGL downloads.
+.rg-app {
+  .rg-roulette-scene {width:min(100%,340px);height:310px;perspective:850px;display:grid;place-items:center;flex-shrink:0;}
+  .rg-roulette-wheel {width:100%;height:auto;aspect-ratio:1;transform:rotateX(32deg);transform-style:preserve-3d;border:12px solid #c8a369;border-radius:50%;background:radial-gradient(#456e50,#162d26);box-shadow:0 3px 0 #f1d99b,0 8px 0 #805833,0 17px 0 #513a24,0 23px 30px #092720aa,inset 0 0 0 4px #785e37;filter:none;}
+  .rg-wheel-disc {inset:12px;border:7px solid #e3c590;transition:none;box-shadow:0 0 0 3px #735b37;isolation:isolate;}
+  .rg-wheel-number {font-size:11px;padding-top:5px;}
+  .rg-wheel-center {inset:24%;border:5px solid #d9b880;background:radial-gradient(at 35% 25%,#668969,#2d553f 60%,#1b382c);font:48px Georgia;box-shadow:0 8px 15px #0b221b99,inset 0 0 0 3px #183a2a;transform:translateZ(7px);}
+  .rg-wheel-center>span {position:relative;z-index:1;text-shadow:0 2px 2px #102b25;}
+  .rg-wheel-spindle {position:absolute;width:75%;height:7px;background:linear-gradient(#f9e4b1,#9e7a41);border-radius:5px;transform:rotate(-35deg);bottom:24%;box-shadow:0 3px 4px #0005;}
+  .rg-wheel-spindle::after {content:"";position:absolute;inset:0;border-radius:5px;background:inherit;transform:rotate(90deg);}
+  .rg-ball-orbit {position:absolute;inset:12px;transform:translateZ(12px);pointer-events:none;}
+  .rg-wheel-ball {position:absolute;top:9%;left:50%;width:12px;height:12px;border-radius:50%;transform:translateX(-50%);background:radial-gradient(at 30% 25%,#fff 0 15%,#eae6d9 35%,#a7a492 80%);box-shadow:1px 3px 3px #0009;}
+  .rg-wheel-pointer {top:-9px;width:12px;height:22px;left:calc(50% - 6px);background:#f4dca4;transform:translateZ(14px);}
+  .rg-reel {--rg-reel-h:127px;display:block;overflow:hidden;height:var(--rg-reel-h);}
+  .rg-reel-strip {width:100%;}
+  .rg-reel-strip>span {height:var(--rg-reel-h);display:grid;place-items:center;}
+  .rg-coin-flipper {position:relative;width:190px;height:190px;transform-style:preserve-3d;}
+  .rg-coin-flipper .rg-big-coin {position:absolute;inset:0;width:100%;height:100%;backface-visibility:hidden;box-shadow:0 0 0 2px #a67d40,inset 0 0 0 5px #d3ad67;}
+  .rg-coin-front {transform:translateZ(5px);}
+  .rg-coin-back {transform:rotateY(180deg) translateZ(5px);}
+  .rg-die-space {--die:64px;position:relative;width:var(--die);height:var(--die);perspective:450px;}
+  .rg-die-cube {width:100%;height:100%;transform-style:preserve-3d;}
+  .rg-die-face {position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:11%;border:1px solid #d3d0c4;border-radius:9px;background:linear-gradient(135deg,#fffef7,#ddd9cd);backface-visibility:hidden;box-shadow:inset 0 0 5px #b9b3a7;}
+  .rg-die-face i {border-radius:50%;aspect-ratio:1;}
+  .rg-die-face .is-pip {background:#263a3b;box-shadow:inset 0 1px 2px #0008;}
+  .rg-die-face--1 {transform:translateZ(calc(var(--die)/2));.is-pip{background:#a74e5c;}}
+  .rg-die-face--2 {transform:rotateX(90deg) translateZ(calc(var(--die)/2));}
+  .rg-die-face--3 {transform:rotateY(90deg) translateZ(calc(var(--die)/2));}
+  .rg-die-face--4 {transform:rotateY(-90deg) translateZ(calc(var(--die)/2));}
+  .rg-die-face--5 {transform:rotateX(-90deg) translateZ(calc(var(--die)/2));}
+  .rg-die-face--6 {transform:rotateY(180deg) translateZ(calc(var(--die)/2));}
+  .rg-column-rules {margin:14px 0;dt{font-weight:600;margin-top:8px;}dd{margin:4px 0;overflow-wrap:anywhere;line-height:1.7;}}
+}
+@media(max-width:950px){.rg-app .rg-reel{--rg-reel-h:110px;}}
+@media(max-width:720px){.rg-app{
+  .rg-roulette-scene{width:min(100%,270px);height:260px;}
+  .rg-wheel-number{font-size:9px;padding-top:4px;}
+  .rg-wheel-center{font-size:35px;}
+  .rg-wheel-ball{width:10px;height:10px;}
+  .rg-coin-flipper{width:155px;height:155px;}
+  .rg-die-space{--die:54px;}
+  .rg-dice-tray{padding:23px 16px;gap:14px;}
+}}

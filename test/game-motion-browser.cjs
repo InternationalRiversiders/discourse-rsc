@@ -1,0 +1,51 @@
+// Presentation regression test against an isolated forum only; fixed server responses
+// let us verify consecutive identical outcomes and all coin/dice orientations.
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const {chromium}=require(process.env.RSC_PLAYWRIGHT);
+(async()=>{
+ const c=JSON.parse(fs.readFileSync(process.env.RSC_BROWSER_CREDENTIALS));
+ const browser=await chromium.launch({executablePath:process.env.RSC_CHROMIUM,args:['--no-sandbox','--host-resolver-rules=MAP rsc.test 127.0.0.1','--unsafely-treat-insecure-origin-as-secure=http://rsc.test:3000']});
+ try{
+  const context=await browser.newContext({viewport:{width:1440,height:1050},locale:'zh-CN'}),page=await context.newPage(),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('http://rsc.test:3000/login',{waitUntil:'networkidle'});
+  assert.equal(await page.evaluate(async c=>{for(let i=0;i<2;i++){const {csrf}=await(await fetch('/session/csrf.json')).json();const r=await fetch('/session.json',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify({login:c.username,password:c.password})});if(r.status!==403||i===1)return r.status;}},c),200);
+  await page.goto('http://rsc.test:3000/rsc/games');await page.locator('.rg-game-card').first().waitFor();
+  let id=90000,coin=0;const results={roulette:{number:18},slots:{symbols:['cherry','bell','seven']},dice:{dice:[2,4,6],total:12}};
+  await page.route('**/rsc/games/play.json',async route=>{
+   const body=route.request().postDataJSON();const state=body.game==='coin'?{landed:coin++%2?'heads':'tails'}:results[body.game];
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({id:++id,game:body.game,name:body.game,status:'settled',version:1,stake:'10',payout:'20',net:'10',balance:'1000',state:{...state,result:'win'},created_at:new Date().toISOString()})});
+  });
+  for(const [game,index,selector] of [['roulette',1,'.rg-wheel-disc'],['slots',0,'.rg-reel-strip'],['dice',5,'.rg-die-cube'],['coin',4,'.rg-coin-flipper']]){
+   if(await page.locator('.rg-game-card').count())await page.locator('.rg-game-card').nth(index).click();else await page.locator('.rg-tabs button').nth(index).click();
+   if(game==='roulette')await page.locator('.rg-outside').getByRole('button',{name:'红',exact:true}).click();
+   for(let attempt=0;attempt<2;attempt++){
+    await page.locator('.rg-play').click();await page.waitForFunction(()=>document.querySelector('.rg-play')?.textContent.includes('开奖中'));
+    assert(await page.locator('.rg-play').isDisabled());assert.equal(await page.locator('.rg-result').count(),0);
+    const a=await page.locator(selector).first().evaluate(e=>getComputedStyle(e).transform);
+    await page.waitForTimeout(250);
+    const b=await page.locator(selector).first().evaluate(e=>getComputedStyle(e).transform);assert.notEqual(a,b,`${game} moves on round ${attempt+1}`);
+    assert(await page.locator('.rg-stage').evaluate(e=>e.getAnimations({subtree:true}).length>0));
+    if(!attempt)await page.locator('.rg-stage').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/${game}-moving.png`,animations:'allow'});
+    await page.locator('.rg-result').waitFor();assert(!(await page.locator('.rg-play').isDisabled()));
+    assert.equal(await page.locator('.rg-stage').evaluate(e=>e.getAnimations({subtree:true}).length),0);
+    if(game==='roulette')assert.equal(await page.locator('.rg-wheel-center>span').innerText(),'18');
+    if(game==='slots')assert.deepEqual(await page.locator('.rg-reel-strip').allTextContents(),['🍒','🔔','7']);
+    if(game==='dice')assert.deepEqual(await page.locator('.rg-die-space').evaluateAll(es=>es.map(e=>e.getAttribute('aria-label'))),['2 点','4 点','6 点']);
+    await page.locator('.rg-stage').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/${game}-settled.png`});
+   }
+   await page.setViewportSize({width:390,height:1000});await page.locator('.rg-app').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/${game}-mobile.png`});
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.setViewportSize({width:1440,height:1050});
+  }
+  for(let i=0;i<6;i++){
+   await page.locator('.rg-tabs button').nth(i).click();await page.getByRole('button',{name:'玩法与赔率',exact:true}).click();
+   const rules=await page.locator('.rg-rules').innerText();assert(!rules.includes('返还率'));if(i!==3){assert(!rules.includes('二十一点'));assert(!rules.includes('加倍'));}
+   if(i===1){assert(!await page.locator('.rg-column-bets').innerText().then(t=>t.includes('…')));assert(rules.includes('1、4、7、10、13、16、19、22、25、28、31、34'));}
+  }
+  // Reduced-motion preference finishes immediately instead of locking controls.
+  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.rg-tabs button').nth(4).click();await page.locator('.rg-play').click();await page.locator('.rg-result').waitFor({timeout:2000});assert(!(await page.locator('.rg-play').isDisabled()));
+  // Route changes during an animation must not leave a timer updating a destroyed component.
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.locator('.rg-play').click();await page.waitForFunction(()=>document.querySelector('.rg-play')?.textContent.includes('开奖中'));await page.goto('http://rsc.test:3000/rsc/games');await page.waitForTimeout(2200);
+  assert.deepEqual(errors,[]);console.log('PASS: four animations, repeated outcomes, final values, reduced motion, route cleanup, mobile layout and game-specific rules');
+ }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exit(1);});
