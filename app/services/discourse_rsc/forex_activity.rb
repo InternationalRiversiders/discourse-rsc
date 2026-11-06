@@ -4,7 +4,7 @@ module DiscourseRsc
     KEY = 'fx-kurumi-2026'
     TITLE = 'FX 战士久留美 · Riverside 联动'
     FEATURED = %w[FX:JPY FX:EUR FX:GBP FX:AUD FX:CAD FX:CHF].freeze
-    LEGACY_BADGES = { debut: 'FX战士 · 初入汇市', practice: 'FX战士 · 外汇修行者', survivor: 'FX战士 · 汇市幸存者' }.freeze
+    LEGACY_BADGES = { debut: 'FX战士 · 初入汇市', practice: 'FX战士 · 外汇修行者', survivor: 'FX战士 · 汇市幸存者', profit_1000: '离两千万还差一点' }.freeze
     BADGES = {
       debut: ['我已经完全理解了外汇', '首次完成一笔活动外汇仓位开仓。', 3],
       practice: ['今天也在盯盘', '在三个不同日期完成活动仓位开仓或加仓（UTC+8）。', 2],
@@ -12,7 +12,7 @@ module DiscourseRsc
       loss_100: ['只是技术性调整', '活动累计已实现净亏损曾达到 100 RSC（含手续费）。', 3],
       loss_1000: ['这集我看过', '活动累计已实现净亏损曾达到 1,000 RSC（含手续费）。', 2],
       profit_100: ['先把学费赚回来', '活动累计已实现净盈利曾达到 100 RSC（含手续费）。', 2],
-      profit_1000: ['离两千万还差一点', '活动累计已实现净盈利曾达到 1,000 RSC（含手续费）。', 1],
+      profit_1000: ['获利少年王', '活动累计已实现净盈利曾达到 1,000 RSC（含手续费）。', 1],
       survivor: ['活到完结', '活动结束时净盈亏不为负，且活动仓位没有被强平。', 1]
     }.freeze
 
@@ -183,7 +183,7 @@ module DiscourseRsc
     end
 
     # During A/B rollout keep the old names until the old workers have stopped;
-    # otherwise those workers would recreate the three legacy badges.
+    # otherwise those workers would recreate the legacy badges.
     def self.badges(rename_legacy: false)
       BADGES.to_h do |key, (name, description, tier)|
         badge = Badge.find_by(name: name) || (LEGACY_BADGES[key] && Badge.find_by(name: LEGACY_BADGES[key])) || Badge.new
