@@ -321,6 +321,8 @@ en:
         prediction_refund: "Prediction withdrawal refund"
         prediction_stake: Prediction stake
         prediction_settlement: Prediction settlement
+        game_stake: 游戏投入
+        game_settlement: 游戏结算
         stock_reserve: Order reservation
         stock_fill: Position opened
         stock_close: Position closed

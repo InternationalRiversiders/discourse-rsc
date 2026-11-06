@@ -1,4 +1,11 @@
 plugins:
+  rsc_games_enabled:
+    default: false
+    client: true
+  rsc_games_max_stake:
+    default: 500
+    min: 1
+    max: 10000
   rsc_forex_activity_enabled:
     default: false
   rsc_forex_activity_starts_at:

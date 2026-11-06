@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 DiscourseRsc::Engine.routes.draw do
+  get "/games" => "games#index"
+  get "/games/state" => "games#state"
+  post "/games/play" => "games#play"
+  post "/games/:id/action" => "games#act"
   get "/" => "dashboard#index"
   get "/admin" => "dashboard#index"
   get "/leaderboard" => "dashboard#index"

@@ -13,6 +13,7 @@ module DiscourseRsc
         reference = { 'current_price' => '当前有效报价', 'take_profit' => '止盈价', 'stop_loss' => '止损价', 'break_even' => '保本价', 'liquidation' => '强平价' }.fetch(details[:reference], '参考价')
         return "#{field}须#{relation}#{reference} #{details[:boundary]} RSC／单位。请输入触发价格，而不是预计盈亏金额。"
       end
+      return "每局投入须为 1–#{details[:max]} RSC。" if code == "game_stake_range"
       key = "discourse_rsc.errors.#{code}"
       fallback = code.to_s.start_with?("provider_") ? "provider_unavailable" : "request_failed"
       I18n.t(key, locale: :zh_CN, default: I18n.t("discourse_rsc.errors.#{fallback}", locale: :zh_CN))

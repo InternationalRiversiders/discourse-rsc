@@ -10,10 +10,12 @@ gem 'websocket-driver', '0.8.2', require_name: 'websocket/driver'
 
 enabled_site_setting :rsc_enabled
 register_svg_icon "coins"
+register_svg_icon "dice"
 register_svg_icon "chart-line"
 register_svg_icon "award"
 register_svg_icon "triangle-exclamation"
 register_asset "stylesheets/rsc.scss"
+register_asset "stylesheets/rsc-games.scss"
 register_asset "stylesheets/rsc-forecast.scss"
 
 module ::DiscourseRsc
@@ -26,6 +28,7 @@ require_relative "lib/discourse_rsc/engine"
 
 after_initialize do
   %w[
+    app/models/discourse_rsc/game_round
     app/models/discourse_rsc/account
     app/models/discourse_rsc/journal
     app/models/discourse_rsc/entry
@@ -56,6 +59,7 @@ after_initialize do
     app/services/discourse_rsc/access
     app/services/discourse_rsc/wallet
     app/services/discourse_rsc/commands
+    app/services/discourse_rsc/games
     app/services/discourse_rsc/red_packets
     app/services/discourse_rsc/packet_sharing
     app/services/discourse_rsc/sports
@@ -103,6 +107,7 @@ after_initialize do
     app/services/discourse_rsc/rewards
     app/services/discourse_rsc/notification_delivery
     app/controllers/discourse_rsc/wallet_controller
+    app/controllers/discourse_rsc/games_controller
     app/controllers/discourse_rsc/forecast_controller
     app/controllers/discourse_rsc/dashboard_controller
     app/controllers/discourse_rsc/features_controller

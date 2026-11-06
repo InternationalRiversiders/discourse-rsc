@@ -1,5 +1,7 @@
 en:
   site_settings:
+    rsc_games_enabled: "启用校园生活中的 RSC 游戏"
+    rsc_games_max_stake: "每局游戏最大基础投入（RSC）；二十一点加倍可追加同额投入"
     rsc_forex_activity_enabled: "Enable the Kurumi forex activity"
     rsc_forex_activity_starts_at: "Activity start (ISO 8601, including timezone)"
     rsc_forex_activity_ends_at: "Activity end (ISO 8601, including timezone); set before finalization"
@@ -83,6 +85,15 @@ en:
       stock_refunded: 'Order reservation refunded: %{amount} RSC'
       red_packet_claimed_by: claimed %{amount} RSC from your packet
     errors:
+      games_disabled: 游戏暂未开放。
+      invalid_game: 请选择有效的游戏。
+      game_stake_range: '每局投入须为 1–%{max} RSC。'
+      game_invalid_bet: 请检查投注位置和金额。
+      game_invalid_action: 当前不能执行这个操作。
+      game_resume: 请先完成未结束的二十一点牌局。
+      game_finished: 本局已结束，请查看结算结果。
+      game_changed: 牌局已更新，请刷新后继续。
+      game_accounting_error: 结算暂未完成，请重试同一请求。
       forecast_ai_unconfigured: "Configure an available Discourse AI translation model for prediction markets first."
       forecast_ai_invalid: "AI review did not return a valid result. The request remains pending."
       forecast_ai_stale: "Automatic review was disabled or the request or rules changed. Review again."

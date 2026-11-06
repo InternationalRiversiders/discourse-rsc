@@ -315,6 +315,8 @@ zh_CN:
         prediction_refund: "预测撤销退款"
         prediction_stake: 赛事预测
         prediction_settlement: 预测结算
+        game_stake: 游戏投入
+        game_settlement: 游戏结算
         stock_reserve: 委托预留
         stock_fill: 开仓成交
         stock_close: 平仓结算

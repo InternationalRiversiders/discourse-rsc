@@ -1,4 +1,5 @@
 export default function () {
+  this.route("rsc-games", { path: "/rsc/games" });
   this.route("rsc", { path: "/rsc" }, function () {
     this.route("market");
     this.route("wallet", { path: "/account" });
