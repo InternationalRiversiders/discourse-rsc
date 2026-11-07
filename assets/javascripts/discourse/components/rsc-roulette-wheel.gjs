@@ -5,7 +5,7 @@ export default class extends Component {
   get numbers() { return ORDER.map((n,i) => ({n,style:`transform: rotate(${i*360/37}deg)`,color:n===0?'zero':RED.includes(n)?'red':'black'})); }
   get angle() { return this.args.number === undefined ? 0 : -ORDER.indexOf(this.args.number)*360/37; }
   get discStyle() { return `transform: rotate(${this.angle}deg)`; }
-  get label() { return this.args.spinning ? '轮盘转动中' : this.args.number === undefined ? '欧式轮盘' : `开奖号码 ${this.args.number}`; }
+  get label() { return this.args.spinning ? '轮盘转动中' : this.args.number === undefined ? '数字转盘' : `开奖号码 ${this.args.number}`; }
   <template>
     <div class="rg-roulette-scene" role="img" aria-label={{this.label}}>
       <div class="rg-roulette-wheel">

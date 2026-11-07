@@ -120,7 +120,7 @@
 @media(max-width:950px){.rg-app{.rg-lobby{gap:14px;}.rg-art{height:165px;}.rg-card-bottom{padding:16px;h2{font-size:15px;}}.rg-play-layout{grid-template-columns:minmax(0,1fr) 245px;gap:14px;}.rg-controls{padding:17px;}.rg-stage{padding:28px 15px 65px;}.rg-reel{font-size:50px;height:110px;}.rg-big-die{font-size:65px;}.rg-dice-tray{gap:6px;padding:20px;}}}
 @media(max-width:720px){.rg-app{padding:12px 2px 30px;.rg-topbar{gap:10px;margin-bottom:18px;}h1{font-size:20px;}.rg-brand,.rg-top-actions{gap:7px;}.rg-brand-icon{width:34px;height:34px;border-radius:11px;font-size:18px;}.rg-balance{gap:5px;strong{font-size:14px;}small{font-size:9px;}}.rg-icon-button{width:30px;height:30px;}.rg-lobby{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}.rg-game-card{border-radius:17px;}.rg-art{height:150px;}.rg-card-number{top:12px;left:15px;font-size:9px;}.rg-card-bottom{padding:13px 14px;h2{font-size:14px;}}.rg-card-arrow{width:24px;height:24px;}.rg-mini-slots{transform:scale(.8) rotate(-7deg);}.rg-lever{margin-left:157px;}.rg-mini-wheel{width:112px;height:112px;}.rg-chip{right:15%;bottom:14px;}.rg-mini-ticket{width:140px;padding:12px;span{font-size:10px;}strong{padding:8px 0;font-size:22px;}}.rg-play-layout{grid-template-columns:1fr;gap:12px;}.rg-stage{min-height:320px;padding:24px 18px 60px;border-radius:17px;}.rg-stage--blackjack{min-height:420px;}.rg-stage--roulette{padding:22px 12px 62px;}.rg-controls{padding:16px;border-radius:16px;}.rg-controls-heading{margin-bottom:13px;}.rg-chips{margin:10px 0 15px;}.rg-choices{margin-bottom:15px;button{padding:10px;}}.rg-tabs button{padding:8px 12px;font-size:12px;}.rg-scratch-ticket{width:260px;}.rg-ticket-top{margin-bottom:15px;}.rg-dice-tray{padding:23px;gap:10px;}.rg-big-die{font-size:75px;}.rg-big-coin{width:155px;height:155px;strong{font-size:55px;}}.rg-slot-machine{max-width:310px;}.rg-blackjack-actions{grid-template-columns:1fr 1fr;button:last-child{grid-column:1/-1;}}.rg-hand-stake{margin-bottom:15px;strong{font-size:23px;}}.rg-history{padding:14px;}.rg-history-row,.rg-history-labels{grid-template-columns:minmax(0,1fr) 62px 82px;font-size:12px;}.rg-history-row small{font-size:9px;}.rg-wheel-number{font-size:9px;}.rg-number-board{grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;}.rg-spot{font-size:12px;min-height:42px;}.rg-spot small{font-size:8px;min-width:16px;height:16px;line-height:14px;}.rg-top-actions{flex-wrap:nowrap;}}}
 @media(max-width:370px){.rg-app{.rg-art{height:133px;}.rg-card-bottom{padding:11px;h2{font-size:13px;}}.rg-card-arrow{display:none;}.rg-mini-slots{transform:scale(.65) rotate(-7deg);}.rg-lever{display:none;}.rg-mini-coin{width:85px;height:85px;font-size:48px;}.rg-mini-die{font-size:95px;}.rg-mini-die--second{font-size:80px;}.rg-mini-ticket{width:120px;}.rg-top-actions .rg-icon-button{width:25px;}.rg-brand{gap:5px;}.rg-balance small{display:none;}.rg-big-die{font-size:65px;}.rg-dice-tray{padding:18px;gap:7px;}}}
-@media(prefers-reduced-motion:reduce){.rg-app *{animation:none!important;transition:none!important;}}
+@media(prefers-reduced-motion:reduce){.rg-app *{transition-duration:.01s!important;}.rg-app .rg-scratch-grid span.is-lucky{animation-iteration-count:1!important;}}
 
 // Solid rims, a tilted table and a counter-rotating ball, without WebGL downloads.
 .rg-app {
@@ -233,3 +233,37 @@
   .rg-3d--dice{height:230px;}
   .rg-3d-badge{min-width:38px;height:38px;font-size:17px;}
 }}
+
+// Blackjack table and scratch ticket in WebGL.
+.rg-app {
+  .rg-3d--blackjack { height:380px; max-width:680px; margin:6px auto; }
+  .rg-stage.is-3d {
+    .rg-hand, .rg-felt-mark { display:none; }
+    .rg-felt { transform:none; }
+  }
+  .rg-large-ticket .rg-3d--scratch { display:none; }
+  .rg-large-ticket.is-3d {
+    width:min(100%,500px); padding:0; border:0; background:none; box-shadow:none;
+    .rg-3d--scratch { display:block; aspect-ratio:1080 / 1500; touch-action:none; cursor:crosshair; }
+    .rg-large-ticket-heading, .rg-large-ticket-title, .rg-large-ticket-meta, .rg-large-ticket-grid { display:none; }
+    .rg-large-ticket-footer { margin-top:6px; padding:10px 16px; border:1px solid #f9edce; border-radius:14px; background:#f3e6c0f2; box-shadow:0 10px 24px #352b2640; }
+  }
+  .rg-stage--slots .rg-slot-top span:last-child { animation:rg-twinkle 1.6s steps(2,jump-none) infinite; }
+  .rg-stage--slots.is-animating .rg-slot-top span:last-child { animation-duration:.35s; }
+}
+@keyframes rg-twinkle { 50% { color:#fff4c2; text-shadow:0 0 8px #ffd56b; } }
+@media(max-width:720px){.rg-app{
+  .rg-3d--blackjack{height:300px;}
+}}
+
+// Lobby covers rendered from the 3D scenes.
+.rg-app {
+  .rg-art-cover { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; opacity:0; }
+  .rg-art.has-cover .rg-art-cover { animation:rg-cover-in .6s ease both; }
+  .rg-art.has-cover > :not(.rg-art-cover):not(.rg-art-live) { visibility:hidden; }
+  .rg-art-live { position:absolute; inset:0; z-index:2; opacity:0; transition:opacity .3s ease; }
+  .rg-art-live.is-ready { opacity:1; }
+  .rg-game-card:hover .rg-art > .rg-art-cover, .rg-game-card:hover .rg-art > .rg-art-live { transform:none; }
+}
+@keyframes rg-cover-in { from { opacity:0; transform:scale(1.04); } to { opacity:1; transform:none; } }
+.rg-app .rg-coin-emblem { width:46%; height:46%; fill:#e9c47a; stroke:#8a5d22; stroke-width:12; stroke-linejoin:round; stroke-linecap:round; filter:drop-shadow(1px 2px 0 #ffedb6); }

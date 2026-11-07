@@ -26,9 +26,10 @@ function animateCss(stage, round, done, reduced) {
   const animations = [];
   let cancelled = false;
   const animate = (element, frames, duration, easing = 'cubic-bezier(.16,.65,.12,1)') => {
-    if (element) animations.push(element.animate(frames, { duration, easing, fill: 'both' }));
+    // Reduced motion plays the same motion, shorter, rather than skipping to the result.
+    if (element) animations.push(element.animate(frames, { duration: reduced ? duration * 0.55 : duration, easing, fill: 'both' }));
   };
-  if (!reduced) {
+  {
     if (round.game === 'roulette') {
       const disc = stage.querySelector('.rg-wheel-disc');
       const orbit = stage.querySelector('.rg-ball-orbit');

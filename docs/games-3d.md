@@ -1,15 +1,28 @@
 # 游戏 3D 动画
 
-2026-11-07。老虎机、欧式轮盘、抛硬币、骰子大小改为 WebGL 实时渲染；二十一点、刮刮乐保留 DOM，增强为 3D 发牌翻牌和中奖高亮。
+2026-11-07。六个游戏全部使用 WebGL（three.js）实时渲染；大厅封面同样由 3D 场景生成。
+
+| 内部 id | 显示名称 | 3D 表现 |
+| --- | --- | --- |
+| slots | 水果转转乐 | 三个弧形转轴，高速运动模糊，逐个回弹停下 |
+| roulette | 数字转盘 | 木质转盘与金属品格，球沿轨道下落、跳格、入袋，开奖格发光 |
+| scratch | 刮卡寻宝 | 浮动倾斜的票面，金属涂层可直接用鼠标/手指刮开，碎屑掉落，中奖格发光 |
+| blackjack | 凑 21 | 牌桌、发牌器和筹码；牌从发牌器飞出并翻面，庄家暗牌翻开 |
+| coin | 银杏纸船 | 正面银杏叶、反面纸船浮雕金币，抛起、落地、摇摆停稳 |
+| dice | 骰子猜点 | 三颗圆角骰子掷入毛毡盘，弹跳翻滚后停在结果点数 |
+
+显示名称只在前端（`GAMES` 与历史记录映射）修改；服务器 `Games::NAMES` 与已写入的流水说明保持原样。规则、赔付和结算均未改变。
 
 ## 结构
 
-- `lib/game-3d-scenes.js`：四个场景（不直接 import three，由调用方注入）。所有终态只由回合 `id` 与服务器 `state` 推导，动画结束画面与之后查看历史记录的静态画面一致。
-- `lib/game-3d.js`：检测 WebGL 2，运行时从 `/plugins/discourse-rsc/javascripts/rsc-three-0.186.1.js` 动态加载 three.js（tree-shaken，约 136 KB gzip），大厅空闲时预取。
-- `lib/game-motion.js`：有场景时播放 3D；场景 2.5 秒内未就绪、加载失败或浏览器不支持 WebGL 2 时，退回原 CSS 动画。系统开启“减少动态效果”时直接显示结果。
+- `lib/game-3d-scenes.js`：所有场景（three 由调用方注入）。终态只由回合 `id`、`version` 与服务器 `state` 推导，动画结束画面与之后查看历史的静态画面一致。
+  - 公共 `Stage`：按需渲染；空闲时镜头缓慢漂移、鼠标视差，转盘慢转、硬币高光移动（约 30 fps，页面隐藏或不在视口内时停止）。
+  - 获胜后抛出金币粒子；首次显示前用 `compileAsync` 预编译着色器并渲染一帧预热，避免第一次开奖卡顿。
+- `lib/game-3d.js`：检测 WebGL 2，运行时从 `/plugins/discourse-rsc/javascripts/rsc-three-0.186.1-b2.js` 动态加载（约 138 KB gzip），大厅空闲时预取。生产对 `/plugins` 缓存一年，重新打包必须改文件名后缀。
+- 大厅封面：`public/images/games/cover-*-v1.webp`，由 `script/render-game-covers.cjs` 用同样的 3D 场景离线渲染（硬币、骰子定格在动作瞬间），访客端不再实时生成，进入大厅无额外 GPU 开销。`lib/game-covers.js` 保存封面姿态，桌面鼠标悬停时挂载实时场景播放演示循环。重新渲染须同时提升 `COVER_VERSION` 和文件名版本。
+- `lib/game-motion.js`：有场景时播放 3D；场景 2.5 秒内未就绪、加载失败或不支持 WebGL 2 时退回 CSS 动画。
+- 系统开启“减少动态效果”时仍播放同样的过程，时长约缩短一半，并取消镜头漂移和金币粒子，不再直接跳到结果。
 - 结果只用于展示：金额、开奖号码与结算都在请求返回时由服务器确定，动画不影响结算。
-
-渲染按需进行，只在动画期间和尺寸变化时绘制；离开游戏会释放 WebGL 上下文。
 
 ## 验证
 
@@ -19,6 +32,6 @@ RSC_BROWSER_OUTPUT=/tmp/rsc-browser-artifacts RSC_BROWSER_SCRIPT=game-motion-bro
 bash test/run-browser-isolated.sh
 ```
 
-`game-motion-browser.cjs` 分别以 WebGL 和隐藏 WebGL 2 的方式运行：检查画布在动画中变化、连续相同结果也会重新播放、终态标签与服务器结果一致、减少动态效果、路由切换清理和手机布局；CSS 模式不下载 three.js。
+`game-motion-browser.cjs` 分别以 WebGL 和隐藏 WebGL 2 的方式运行：画布在动画中变化、连续相同结果也会重新播放、终态与服务器结果一致；凑 21 发牌期间按钮锁定、停牌后翻开暗牌；刮卡可用鼠标刮开单格并全部刮开；减少动态效果、路由切换清理和手机布局；CSS 模式不下载 three.js。测试环境没有 GPU（SwiftShader），帧率远低于真实设备，因此等待时间较长。
 
 更新 three.js 的方法见 `public/javascripts/README.md`。

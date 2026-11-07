@@ -16,12 +16,12 @@ import { createGameScene, prefetchThree, supports3d } from "../lib/game-3d";
 import { formatDateTime } from "../lib/campus-time";
 
 const GAMES=[
-  {id:"slots",name:"三轴老虎机",mark:"01",color:"violet"},
-  {id:"roulette",name:"欧式轮盘",mark:"02",color:"green"},
-  {id:"scratch",name:"刮刮乐",mark:"03",color:"gold"},
-  {id:"blackjack",name:"二十一点",mark:"04",color:"blue"},
-  {id:"coin",name:"抛硬币",mark:"05",color:"rose"},
-  {id:"dice",name:"骰子大小",mark:"06",color:"teal"},
+  {id:"slots",name:"水果转转乐",mark:"01",color:"violet"},
+  {id:"roulette",name:"数字转盘",mark:"02",color:"green"},
+  {id:"scratch",name:"刮卡寻宝",mark:"03",color:"gold"},
+  {id:"blackjack",name:"凑 21",mark:"04",color:"blue"},
+  {id:"coin",name:"银杏纸船",mark:"05",color:"rose"},
+  {id:"dice",name:"骰子猜点",mark:"06",color:"teal"},
 ];
 const SYMBOLS={cherry:"🍒",lemon:"🍋",bell:"🔔",clover:"🍀",diamond:"💎",seven:"7"};
 const SYMBOL_NAMES={cherry:"樱桃",lemon:"柠檬",bell:"铃铛",clover:"四叶草",diamond:"钻石",seven:"7"};
@@ -31,7 +31,7 @@ const RULES={
   roulette:["单零轮盘，0–36 共 37 个数字等概率。点击投注格放入当前金额，可同时选多个位置。","单号 36 倍；每列为间隔 3 的 12 个数字，三个区间各含 12 个数字，均返还 3 倍；红黑、单双、大小 2 倍。开出 0 时，只有单号 0 获奖。"],
   scratch:["一张大卡含 10 个独立开奖位。输入金额为整张价格，每个位点按总价的 1/10 计算返还，奖金累加。购票即结算，刮开与刷新不改变结果。","0 倍 57% · 1 倍 19% · 2 倍 18% · 5 倍 5% · 10 倍 0.9% · 50 倍 0.09% · 250 倍 0.01%"],
   blackjack:["每局重新洗入 6 副牌。A 算 1 或 11，J/Q/K 算 10。比庄家更接近 21 点获胜，超过 21 点即输。","庄家软 17 点停牌，并在开局检查天然 21 点。天然 21 点返还 2.5 倍，普通胜利返还 2 倍，平局退还本金。","前两张牌可加倍：追加同额投入，只再取一张牌。不设分牌、保险和投降。断线后可继续原牌局。"],
-  coin:["正面与反面各 50% 概率。猜中返还 1.96 倍。"],
+  coin:["正面银杏叶、反面纸船，各 50% 概率。猜中返还 1.96 倍。"],
   dice:["三颗公平六面骰。小为 4–10 点，大为 11–17 点。三个相同为豹子，大小都不获奖。","猜中返还 2 倍。"],
 };
 const money=(n)=>Number(n||0).toLocaleString("zh-CN",{maximumFractionDigits:2});
@@ -72,7 +72,6 @@ export default class extends Component {
   chips=[5,10,25,50];
   get name(){return GAMES.find(g=>g.id===this.game)?.name;}
   get rulesLines(){return RULES[this.game]||[];}
-  get scratchCards(){return [{key:this.round?.id||"preview"}];}
   get largeScratch(){return !this.round||Array.isArray(this.round.state.spots);}
   get maxStake(){return this.args.model.max_stake;}
   get balanceLabel(){return money(this.balance);}
@@ -85,7 +84,7 @@ export default class extends Component {
   get doubleDisabled(){return this.blocked||!!this.pending||!this.round?.state.can_double||Number(this.balance)<Number(this.round?.stake);}
   get netLabel(){const n=Number(this.round?.net);return `${n>0?"+":""}${money(n)} RSC`;}
   get tone(){return Number(this.round?.net)>0?"win":Number(this.round?.net)<0?"loss":"push";}
-  get outcomeTitle(){return {win:"获胜",lose:"未中奖",push:"平局",bust:"爆牌",blackjack:"Blackjack"}[this.round?.state.result]||"";}
+  get outcomeTitle(){return {win:"获胜",lose:"未中奖",push:"平局",bust:"爆牌",blackjack:"天生 21"}[this.round?.state.result]||"";}
   get showResult(){return !this.animating&&!this.pending&&this.round?.status==="settled"&&(this.game!=="scratch"||(this.revealed&&!this.largeScratch));}
   get reels(){return (this.round?.state.symbols||["seven","seven","seven"]).map((x,i)=>({key:i,strip:this.animating ? [...Array.from({length:18+i*6},(_,j)=>SYMBOLS[Object.keys(SYMBOLS)[(j+i)%6]]),SYMBOLS[x]] : [SYMBOLS[x]]}));}
   get dice(){return (this.round?.state.dice||[1,3,5]).map((value,i)=>{const [x,y]=[[0,0],[-90,0],[0,-90],[0,90],[90,0],[0,180]][value-1];return {key:i,value,x,y,style:`transform: rotateX(${x}deg) rotateY(${y}deg)`};});}
@@ -95,7 +94,7 @@ export default class extends Component {
     const state=this.round?.state;
     if(this.animating){return "开奖中";}
     if(!state){return this.name;}
-    return {slots:()=>state.symbols?.map(x=>SYMBOL_NAMES[x]).join("、"),roulette:()=>`开奖号码 ${state.number}`,coin:()=>state.landed==="tails"?"反面":"正面",dice:()=>`${state.dice?.join("、")} 点，合计 ${state.total} 点`}[this.game]?.()||this.name;
+    return {slots:()=>state.symbols?.map(x=>SYMBOL_NAMES[x]).join("、"),roulette:()=>`开奖号码 ${state.number}`,blackjack:()=>`庄家 ${state.dealer_score} 点，你的手牌 ${state.player_score} 点`,coin:()=>state.landed==="tails"?"反面（纸船）":"正面（银杏）",dice:()=>`${state.dice?.join("、")} 点，合计 ${state.total} 点`}[this.game]?.()||this.name;
   }
   get rouletteBadge(){const n=this.round?.state?.number;if(this.animating||n===undefined||n===null){return null;}return {n,color:n===0?"zero":RED.includes(n)?"red":"black"};}
   view3d = modifier((host,[game])=>{
@@ -135,7 +134,7 @@ export default class extends Component {
   get outside(){return [["low","1–18"],["even","双"],["red","红"],["black","黑"],["odd","单"],["high","19–36"]].map(([key,label])=>this.spot(key,label,key));}
   get dozens(){return [["dozen1","1–12"],["dozen2","13–24"],["dozen3","25–36"]].map(([key,label])=>this.spot(key,label));}
   get columns(){return [1,2,3].map(n=>({...this.spot(`column${n}`,`第 ${n} 列`),numbers:Array.from({length:12},(_,i)=>n+i*3).join("、")}));}
-  get rows(){return this.history.map(r=>({...r,time:formatDateTime(r.created_at),netLabel:r.net===null?"进行中":`${Number(r.net)>0?"+":""}${money(r.net)}`,tone:Number(r.net)>0?"win":Number(r.net)<0?"loss":"push"}));}
+  get rows(){return this.history.map(r=>({...r,name:GAMES.find(g=>g.id===r.game)?.name||r.name,time:formatDateTime(r.created_at),netLabel:r.net===null?"进行中":`${Number(r.net)>0?"+":""}${money(r.net)}`,tone:Number(r.net)>0?"win":Number(r.net)<0?"loss":"push"}));}
   spot(key,label,color=""){return {key,label,color,amount:this.bets[key]?money(this.bets[key]):null,selected:!!this.bets[key]};}
   @action open(id){if(this.busy||this.animating||this.pending){return;} this.game=id;this.round=id==="blackjack"?this.active:null;this.choice=id==="dice"?"small":"heads";this.rules=false;this.error="";this.revealed=false;}
   @action back(){if(!this.busy&&!this.animating&&!this.pending){this.game=null;this.rules=false;this.error="";}}
@@ -163,7 +162,7 @@ export default class extends Component {
     try{
       const result=await ajax(request.url,{type:"POST",contentType:"application/json",data:JSON.stringify(request.data)});
       if(this.isDestroying||this.isDestroyed){return;}
-      this.animating=["roulette","slots","coin","dice"].includes(result.game);this.round=result;this.balance=result.balance;this.pending=null;this.revealed=false;
+      this.animating=["roulette","slots","coin","dice","blackjack"].includes(result.game);this.round=result;this.balance=result.balance;this.pending=null;this.revealed=false;
       if(result.game==="blackjack"){this.active=result.status==="playing"?result:null;}
       this.history=[result,...this.history.filter(r=>r.id!==result.id)].slice(0,Math.max(20,this.history.length));
     }catch(e){
@@ -193,7 +192,7 @@ export default class extends Component {
       {{#if this.error}}<div class="rg-error" role="alert">{{this.error}}{{#if this.pending}}<button type="button" disabled={{this.busy}} {{on "click" this.retry}}>重试同一请求</button>{{else}}<button type="button" disabled={{this.busy}} {{on "click" this.refresh}}>刷新</button>{{/if}}</div>{{/if}}
       {{#if this.readOnly}}<div class="rg-notice">游戏暂时维护中</div>{{else if (not (eq this.walletStatus "active"))}}<div class="rg-notice">钱包已冻结，暂不能参与游戏</div>{{/if}}
       {{#unless this.game}}
-        {{#if this.active}}<button type="button" class="rg-resume" {{on "click" (fn this.open "blackjack")}}><span>♠</span>继续二十一点<strong>返回牌局 →</strong></button>{{/if}}
+        {{#if this.active}}<button type="button" class="rg-resume" {{on "click" (fn this.open "blackjack")}}><span>♠</span>继续凑 21<strong>返回牌局 →</strong></button>{{/if}}
         <div class="rg-lobby">{{#each this.games as |game|}}<button type="button" class="rg-game-card rg-game-card--{{game.color}}" {{on "click" (fn this.open game.id)}}><span class="rg-card-number">{{game.mark}}</span><RscGameArt @game={{game.id}} /><div class="rg-card-bottom"><h2>{{game.name}}</h2><span class="rg-card-arrow">↗</span></div></button>{{/each}}</div>
       {{else}}
         <nav class="rg-tabs" aria-label="选择游戏">{{#each this.games as |game|}}<button type="button" class={{if (eq this.game game.id) "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.game game.id}} {{on "click" (fn this.open game.id)}}>{{game.name}}</button>{{/each}}</nav>
@@ -212,13 +211,13 @@ export default class extends Component {
                 <div class="rg-outside">{{#each this.outside as |spot|}}<button type="button" class="rg-spot {{spot.color}} {{if spot.selected 'is-selected'}}" disabled={{this.locked}} {{on "click" (fn this.bet spot.key)}}>{{spot.label}}{{#if spot.amount}}<small>{{spot.amount}}</small>{{/if}}</button>{{/each}}</div>
               </div>
             {{else if (eq this.game "scratch")}}
-              {{#if this.largeScratch}}{{#each this.scratchCards key="key" as |card|}}<RscScratchCard @round={{this.round}} @price={{this.stake}} @onReveal={{this.reveal}} @revealed={{this.revealed}} />{{/each}}{{else}}
-              <div class="rg-scratch-ticket"><div class="rg-ticket-top"><span>RIVERSIDE</span><strong>幸运刮刮乐</strong><small>最高 250 倍</small></div><div class="rg-scratch-area"><div class="rg-scratch-grid">{{#each this.tiles as |tile|}}<span class={{if tile.lucky "is-lucky"}} style={{tile.style}}>{{tile.value}}<small>倍</small></span>{{/each}}</div>{{#if (and this.round (not this.revealed))}}<canvas class="rg-scratch-cover" aria-label="刮开票面，或使用下方全部刮开按钮" {{this.scratch this.round.id}}></canvas>{{else unless this.round}}<div class="rg-scratch-placeholder">✦</div>{{/if}}</div><div class="rg-ticket-bottom">{{#if (and this.round (not this.revealed))}}<button type="button" {{on "click" this.reveal}}>全部刮开</button>{{else}}<span>三个相同即中奖</span>{{/if}}</div></div>
+              {{#if this.largeScratch}}<RscScratchCard @round={{this.round}} @price={{this.stake}} @onReveal={{this.reveal}} @revealed={{this.revealed}} />{{else}}
+              <div class="rg-scratch-ticket"><div class="rg-ticket-top"><span>RIVERSIDE</span><strong>刮卡寻宝</strong><small>最高 250 倍</small></div><div class="rg-scratch-area"><div class="rg-scratch-grid">{{#each this.tiles as |tile|}}<span class={{if tile.lucky "is-lucky"}} style={{tile.style}}>{{tile.value}}<small>倍</small></span>{{/each}}</div>{{#if (and this.round (not this.revealed))}}<canvas class="rg-scratch-cover" aria-label="刮开票面，或使用下方全部刮开按钮" {{this.scratch this.round.id}}></canvas>{{else unless this.round}}<div class="rg-scratch-placeholder">✦</div>{{/if}}</div><div class="rg-ticket-bottom">{{#if (and this.round (not this.revealed))}}<button type="button" {{on "click" this.reveal}}>全部刮开</button>{{else}}<span>三个相同即中奖</span>{{/if}}</div></div>
               {{/if}}
             {{else if (eq this.game "blackjack")}}
-              <div class="rg-felt"><div class="rg-hand-label">庄家 {{#if this.round}}<span>{{this.round.state.dealer_score}}</span>{{/if}}</div><div class="rg-hand rg-hand--dealer">{{#each this.dealer key="key" as |card|}}<div class="rg-playing-card {{if card.hidden 'is-hidden'}} {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face">{{#unless card.hidden}}<b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b>{{/unless}}</div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-felt-mark"><strong>BLACKJACK</strong><span>3 : 2</span></div><div class="rg-hand rg-hand--player">{{#each this.player key="key" as |card|}}<div class="rg-playing-card {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face"><b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b></div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-hand-label">你的手牌 {{#if this.round}}<span>{{this.round.state.player_score}}</span>{{/if}}</div></div>
+              <div class="rg-felt"><div class="rg-hand-label">庄家 {{#if this.round}}<span>{{this.round.state.dealer_score}}</span>{{/if}}</div><div class="rg-3d rg-3d--blackjack" role="img" aria-label={{this.sceneLabel}} {{this.view3d "blackjack"}}></div><div class="rg-hand rg-hand--dealer">{{#each this.dealer key="key" as |card|}}<div class="rg-playing-card {{if card.hidden 'is-hidden'}} {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face">{{#unless card.hidden}}<b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b>{{/unless}}</div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-felt-mark"><strong>TWENTY-ONE</strong><span>凑 21</span></div><div class="rg-hand rg-hand--player">{{#each this.player key="key" as |card|}}<div class="rg-playing-card {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face"><b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b></div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-hand-label">你的手牌 {{#if this.round}}<span>{{this.round.state.player_score}}</span>{{/if}}</div></div>
             {{else if (eq this.game "coin")}}
-              <div class="rg-3d rg-3d--coin" role="img" aria-label={{this.sceneLabel}} {{this.view3d "coin"}}></div><div class="rg-coin-scene"><div class="rg-coin-flipper" style={{this.coinStyle}}><div class="rg-big-coin rg-coin-front"><span>RIVERSIDE</span><strong>正</strong><span>RSC</span></div><div class="rg-big-coin rg-coin-back"><span>RIVERSIDE</span><strong>反</strong><span>RSC</span></div></div><div class="rg-object-shadow"></div></div>
+              <div class="rg-3d rg-3d--coin" role="img" aria-label={{this.sceneLabel}} {{this.view3d "coin"}}></div><div class="rg-coin-scene"><div class="rg-coin-flipper" style={{this.coinStyle}}><div class="rg-big-coin rg-coin-front"><span>RIVERSIDE</span><svg class="rg-coin-emblem" viewBox="-300 -300 600 600" aria-hidden="true"><path d="M0 95C-120 40-265-40-270-130C-215-205-120-250-40-235Q-12-185 0-150Q12-185 40-235C120-250 215-205 270-130C265-40 120 40 0 95ZM0 90C4 170 30 230 70 270" /></svg><span>RSC</span></div><div class="rg-big-coin rg-coin-back"><span>RIVERSIDE</span><svg class="rg-coin-emblem" viewBox="-320 -300 640 620" aria-hidden="true"><path d="M-300 40H300L200 175H-200ZM-150 40L10-275L150 40ZM-300 40L-205-55L-150 40M300 40L205-55L150 40M10-275L0 40M-260 240Q-170 210-80 240T100 240T280 240" /></svg><span>RSC</span></div></div><div class="rg-object-shadow"></div></div>
             {{else if (eq this.game "dice")}}
               <div class="rg-dice-scene"><div class="rg-3d rg-3d--dice" role="img" aria-label={{this.sceneLabel}} {{this.view3d "dice"}}></div><div class="rg-dice-tray">{{#each this.dice as |die|}}<div class="rg-die-space" role="img" aria-label={{if this.animating "骰子翻滚中" (concat die.value " 点")}}><div class="rg-die-cube" style={{die.style}} data-x={{die.x}} data-y={{die.y}}>{{#each this.dieFaces as |face|}}<div class="rg-die-face rg-die-face--{{face.n}}">{{#each face.pips as |pip|}}<i class={{if pip.visible "is-pip"}}></i>{{/each}}</div>{{/each}}</div></div>{{/each}}</div>{{#if (and this.round (not this.animating))}}<strong class="rg-dice-total">{{this.round.state.total}} 点</strong>{{/if}}</div>
             {{/if}}
@@ -231,7 +230,7 @@ export default class extends Component {
             {{else}}
               <label class="rg-amount-label" for="rg-stake">{{if (eq this.game "roulette") "每次放入" (if (eq this.game "scratch") "整张价格" "金额")}}</label><div class="rg-amount"><input id="rg-stake" type="number" inputmode="decimal" min="1" max={{this.maxStake}} step="0.01" value={{this.stake}} disabled={{this.locked}} {{on "input" this.editStake}} /><span>RSC</span></div>
               <div class="rg-chips">{{#each this.chips as |n|}}<button type="button" disabled={{this.locked}} class={{if (eq this.stake (concat n)) "is-selected"}} {{on "click" (fn this.chip n)}}>{{n}}</button>{{/each}}</div>
-              {{#if (eq this.game "coin")}}<div class="rg-choices"><button type="button" class={{if (eq this.choice "heads") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "heads"}} {{on "click" (fn this.pick "heads")}}>正面</button><button type="button" class={{if (eq this.choice "tails") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "tails"}} {{on "click" (fn this.pick "tails")}}>反面</button></div>{{/if}}
+              {{#if (eq this.game "coin")}}<div class="rg-choices"><button type="button" class={{if (eq this.choice "heads") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "heads"}} {{on "click" (fn this.pick "heads")}}>正面<small>银杏</small></button><button type="button" class={{if (eq this.choice "tails") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "tails"}} {{on "click" (fn this.pick "tails")}}>反面<small>纸船</small></button></div>{{/if}}
               {{#if (eq this.game "dice")}}<div class="rg-choices"><button type="button" class={{if (eq this.choice "small") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "small"}} {{on "click" (fn this.pick "small")}}>小<small>4–10</small></button><button type="button" class={{if (eq this.choice "big") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "big"}} {{on "click" (fn this.pick "big")}}>大<small>11–17</small></button></div>{{/if}}
               {{#if (eq this.game "roulette")}}<div class="rg-bet-total"><span>合计 {{this.totalLabel}} RSC</span><button type="button" disabled={{this.locked}} {{on "click" this.clearBets}}>清空</button></div>{{/if}}
               <button type="button" class="rg-primary rg-play" disabled={{this.startDisabled}} {{on "click" this.play}}>{{#if this.busy}}处理中…{{else if this.animating}}开奖中…{{else if this.pending}}重试同一请求{{else}}{{if (eq this.game "scratch") "购买" "开始"}} · {{this.totalLabel}} RSC{{/if}}</button>
