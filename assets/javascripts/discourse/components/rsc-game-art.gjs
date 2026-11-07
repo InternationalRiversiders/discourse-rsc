@@ -6,20 +6,26 @@ import { action } from "@ember/object";
 import { on } from "@ember/modifier";
 import getURL from "discourse/lib/get-url";
 import { createGameScene, supports3d } from "../lib/game-3d";
-import { applyCover, attract, COVER_VERSION } from "../lib/game-covers";
+import { applyCover, attract, COVER_VERSIONS } from "../lib/game-covers";
 
 // Covers are stills pre-rendered from the 3D scenes (script/render-game-covers.cjs);
 // the drawn art underneath shows until the image loads. Hovering with a mouse mounts
 // the live scene running a short demo loop.
 export default class extends Component {
   @tracked loaded = false;
-  get src() { const version = this.args.game === "scratch" ? "v2" : COVER_VERSION; return getURL(`/plugins/discourse-rsc/images/games/cover-${this.args.game}-${version}.webp`); }
+  get src() { return getURL(`/plugins/discourse-rsc/images/games/cover-${this.args.game}-${COVER_VERSIONS[this.args.game] || "v1"}.webp`); }
   @action onLoad() { this.loaded = true; }
   cover = modifier((el, [game]) => {
-    let alive = true, ctl = null, stop = null, host = null, token = 0;
+    let alive = true, ctl = null, stop = null, host = null, token = 0, wait = 0;
     const card = el.closest(".rg-game-card") || el;
     const hover = window.matchMedia?.("(hover: hover) and (pointer: fine)").matches;
-    const enter = async () => {
+    // Only a pointer that rests on the card starts the live scene; passing over or
+    // clicking straight through never pays for creating a WebGL context.
+    const enter = () => {
+      clearTimeout(wait);
+      wait = setTimeout(mount, 450);
+    };
+    const mount = async () => {
       const mine = ++token;
       host = document.createElement("div");
       host.className = "rg-art-live";
@@ -34,6 +40,7 @@ export default class extends Component {
       } catch { /* the still cover remains */ }
     };
     const leave = () => {
+      clearTimeout(wait);
       token++;
       stop?.();
       stop = null;
@@ -45,11 +52,13 @@ export default class extends Component {
     if (hover && supports3d(game)) {
       card.addEventListener("pointerenter", enter);
       card.addEventListener("pointerleave", leave);
+      card.addEventListener("pointerdown", leave);
     }
     return () => {
       alive = false;
       card.removeEventListener("pointerenter", enter);
       card.removeEventListener("pointerleave", leave);
+      card.removeEventListener("pointerdown", leave);
       leave();
     };
   });

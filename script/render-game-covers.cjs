@@ -1,12 +1,15 @@
 // Renders the lobby covers from the real 3D scenes into public/images/games/.
-// Usage: RSC_PLAYWRIGHT=/abs/node_modules/playwright node script/render-game-covers.cjs [version]
-// Bump the version (file suffix) whenever covers change: production caches /plugins for a year.
+// Usage: RSC_PLAYWRIGHT=/abs/node_modules/playwright node script/render-game-covers.cjs coin=v2 dice=v2 ...
+// Use a new version for each re-rendered game and set it in COVER_VERSIONS (lib/game-covers.js):
+// production caches /plugins for a year. Existing files are never overwritten.
 const fs = require("node:fs"), path = require("node:path");
 const { chromium } = require(process.env.RSC_PLAYWRIGHT || "playwright");
 const repo = path.resolve(__dirname, "..");
-const version = process.argv[2] || "v1";
+const jobs = process.argv.slice(2).map((arg) => arg.split("="));
+if (!jobs.length || jobs.some(([g, v]) => !g || !/^v\d+$/.test(v || ""))) throw new Error("usage: render-game-covers.cjs game=vN ...");
 const lib = path.join(repo, "assets/javascripts/discourse/lib");
-const three = fs.readdirSync(path.join(repo, "public/javascripts")).filter((f) => /^rsc-three-.*\.js$/.test(f)).sort().pop();
+// Same bundle the forum loads (older builds stay in public/ for pages already open).
+const three = path.basename(fs.readFileSync(path.join(lib, "game-3d.js"), "utf8").match(/THREE_PATH = "([^"]+)"/)[1]);
 const files = {
   "/three.js": path.join(repo, "public/javascripts", three),
   "/scenes.js": path.join(lib, "game-3d-scenes.js"),
@@ -39,10 +42,11 @@ window.ready = true;
   await tab.waitForFunction(() => window.ready);
   const out = path.join(repo, "public/images/games");
   fs.mkdirSync(out, { recursive: true });
-  for (const game of ["slots", "roulette", "scratch", "blackjack", "coin", "dice"]) {
+  for (const [game, version] of jobs) {
     // 534x267 CSS px at the scene's 1.5x pixel-ratio cap = 801x400 image (2x of 400x200 card art).
     const url = await tab.evaluate(([g]) => window.render(g, 534, 267), [game]);
     const file = path.join(out, `cover-${game}-${version}.webp`);
+    if (fs.existsSync(file)) throw new Error(`${file} exists; choose a new version`);
     fs.writeFileSync(file, Buffer.from(url.split(",")[1], "base64"));
     console.log(path.relative(repo, file), fs.statSync(file).size, "bytes");
   }

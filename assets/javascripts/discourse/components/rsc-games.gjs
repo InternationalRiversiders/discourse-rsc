@@ -169,9 +169,11 @@ export default class extends Component {
   get viewingLinkedHistory(){return !!this.args.model.selected_round&&this.showHistory;}
   get previousDisabled(){return this.loading||this.historyPage<=1;}
   get nextDisabled(){return this.loading||this.historyPage>=this.historyPages;}
-  get recordName(){return GAMES.find(g=>g.id===this.record?.game)?.name;}
-  get recordTime(){return formatDateTime(this.record?.created_at);}
-  get recordNet(){const n=Number(this.record?.net);return this.record?.status==="playing"?"进行中":`${n>0?"+":""}${money(n)} RSC`;}
+  get recordHands(){
+    const r=this.record,s=r?.state;
+    if(r?.game!=="blackjack"||!s){return [];}
+    return [{label:"你的手牌",cards:s.player,score:s.player_score},{label:"庄家",cards:s.dealer,score:s.dealer_score}].map(h=>({...h,cards:(h.cards||[]).map((n,i)=>card(n,i,r.id,false)),scoreLabel:h.cards?.includes(null)?`明牌 ${h.score} 点`:`${h.score} 点`}));
+  }
   get recordResult(){
     const r=this.record,s=r?.state;if(!s){return "";}
     if(r.status==="playing"){return "牌局进行中，可返回游戏继续";}
@@ -188,10 +190,9 @@ export default class extends Component {
   get recordBets(){
     const s=this.record?.state;if(!s){return "";}
     const labels={heads:"正面",tails:"反面",small:"小",big:"大",red:"红",black:"黑",odd:"单",even:"双",low:"1–18",high:"19–36",dozen1:"1–12",dozen2:"13–24",dozen3:"25–36",column1:"第 1 列",column2:"第 2 列",column3:"第 3 列"};
-    if(s.bets){return s.bets.map(b=>`${labels[b.choice]||b.choice.replace(/^n/,"")}：${b.stake} RSC`).join(" · ");}
+    if(s.bets?.length){return s.bets.map(b=>`${labels[b.choice]||b.choice.replace(/^n/,"")}：${b.stake} RSC`).join(" · ");}
     return labels[s.choice]||"";
   }
-  @action closeRecord(){this.inspected=null;}
   @action toggleRules(){this.rules=!this.rules;}
   @action toggleHistory(){this.showHistory=!this.showHistory;if(this.showHistory){this.loadHistoryPage(this.historyPage);}}
   @action reveal(){this.revealed=true;}
@@ -307,7 +308,7 @@ export default class extends Component {
         </div>
       {{/unless}}
       {{/unless}}
-      {{#if this.showHistory}}<section class="rg-history"><div class="rg-history-heading"><h2>我的记录</h2><button type="button" class="rg-icon-button" aria-label="关闭记录" {{on "click" this.toggleHistory}}>{{dIcon "xmark"}}</button></div>{{#if this.history.length}}<div class="rg-history-table"><div class="rg-history-labels"><span>游戏 / 时间</span><span>投入</span><span>净收益</span></div>{{#each this.rows key="id" as |row|}}<button type="button" class="rg-history-row" aria-expanded={{if row.expanded "true" "false"}} aria-controls="rg-record-{{row.id}}" disabled={{this.locked}} {{on "click" (fn this.inspect row)}}><span><strong>{{row.name}}</strong><small>{{row.time}}</small></span><span>{{row.stake}}</span><strong class="rg-{{row.tone}}">{{row.netLabel}}</strong></button>{{#if row.expanded}}<div id="rg-record-{{row.id}}">{{#if this.record}}<section class="rg-record" aria-label="游戏记录"><header><div><h2>{{this.recordName}} · 游戏记录</h2><small>{{this.recordTime}}</small></div><button type="button" class="rg-icon-button" aria-label="关闭这条记录" {{on "click" this.closeRecord}}>{{dIcon "xmark"}}</button></header><dl><div><dt>投入</dt><dd>{{this.record.stake}} RSC</dd></div><div><dt>返还（含本金）</dt><dd>{{this.record.payout}} RSC</dd></div><div><dt>净收益</dt><dd>{{this.recordNet}}</dd></div></dl>{{#if this.recordBets}}<p>投注：{{this.recordBets}}</p>{{/if}}<p>{{this.recordResult}}</p></section>{{/if}}</div>{{/if}}{{/each}}</div>{{else}}<div class="rg-empty">还没有游戏记录</div>{{/if}}
+      {{#if this.showHistory}}<section class="rg-history"><div class="rg-history-heading"><h2>我的记录</h2><button type="button" class="rg-icon-button" aria-label="关闭记录" {{on "click" this.toggleHistory}}>{{dIcon "xmark"}}</button></div>{{#if this.history.length}}<div class="rg-history-table"><div class="rg-history-labels"><span>游戏 / 时间</span><span>投入</span><span>净收益</span></div>{{#each this.rows key="id" as |row|}}<button type="button" class="rg-history-row" aria-expanded={{if row.expanded "true" "false"}} aria-controls="rg-record-{{row.id}}" disabled={{this.locked}} {{on "click" (fn this.inspect row)}}><span><strong>{{row.name}}</strong><small>{{row.time}}</small></span><span>{{row.stake}}</span><strong class="rg-{{row.tone}}">{{row.netLabel}}</strong></button>{{#if row.expanded}}<div id="rg-record-{{row.id}}">{{#if this.record}}<section class="rg-record" aria-label="游戏详情">{{#if this.recordHands.length}}{{#each this.recordHands as |hand|}}<div class="rg-record-hand"><span class="rg-record-label">{{hand.label}}</span><span class="rg-record-cards">{{#each hand.cards key="key" as |c|}}<span class="rg-record-card {{if c.red 'is-red'}} {{if c.hidden 'is-hidden'}}">{{#if c.hidden}}<span aria-label="暗牌">?</span>{{else}}{{c.rank}}{{c.suit}}{{/if}}</span>{{/each}}</span><span>{{hand.scoreLabel}}</span></div>{{/each}}{{else}}{{#if this.recordBets}}<p>投注：{{this.recordBets}}</p>{{/if}}<p>{{this.recordResult}}</p>{{/if}}</section>{{/if}}</div>{{/if}}{{/each}}</div>{{else}}<div class="rg-empty">还没有游戏记录</div>{{/if}}
         {{#if this.historyError}}<p class="rg-history-error" role="alert">{{this.historyError}}</p>{{/if}}
         <form class="rg-history-pagination" aria-label="记录分页" {{on "submit" this.jumpPage}}><span>共 {{this.historyTotal}} 条 · {{this.historyPage}} / {{this.historyPages}}</span><button type="button" disabled={{this.previousDisabled}} {{on "click" this.previousPage}}>上一页</button><button type="button" disabled={{this.nextDisabled}} {{on "click" this.nextPage}}>下一页</button>{{#if (not (eq this.historyPages 1))}}<label>第 <input type="number" aria-label="记录页码" inputmode="numeric" min="1" max={{this.historyPages}} value={{this.pageInput}} disabled={{this.loading}} {{on "input" this.editPage}} /> 页</label><button type="submit" disabled={{this.loading}}>跳转</button>{{/if}}</form>
       </section>{{/if}}

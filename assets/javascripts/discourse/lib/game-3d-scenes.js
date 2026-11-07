@@ -302,57 +302,77 @@ function roundedBox(T, size, radius) {
   return geo;
 }
 
-function feltTexture(stage, base, speck) {
-  const [c, g] = makeCanvas(256, 256);
-  g.fillStyle = base;
-  g.fillRect(0, 0, 256, 256);
-  const rng = seeded(11);
-  for (let i = 0; i < 5000; i++) {
-    g.fillStyle = rng() > 0.5 ? speck : "#00000018";
-    g.fillRect(rng() * 256, rng() * 256, 1, 1 + rng());
-  }
-  return stage.texture(c, { repeat: [5, 3] });
-}
-
 /* ------------------------------------------------------------------ dice */
 const DIE_FACES = [3, 4, 1, 6, 2, 5]; // BoxGeometry groups: +x -x +y -y +z -z
 const DIE_NORMALS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
 const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
 
-function dieFace(stage, value, bump) {
-  const S = 256, [c, g] = makeCanvas(S, S);
-  if (bump) {
-    g.fillStyle = "#fff";
-  } else {
-    const grad = g.createLinearGradient(0, 0, S, S);
+// mode: "color" | "bump" | "rough". Pips are recessed: dark well, lit lower rim.
+function dieFace(stage, value, mode = "color") {
+  const S = 512, [c, g] = makeCanvas(S, S);
+  if (mode === "color") {
+    const grad = g.createRadialGradient(S * 0.42, S * 0.38, S * 0.05, S / 2, S / 2, S * 0.75);
     grad.addColorStop(0, "#fffdf6");
-    grad.addColorStop(1, "#ece5d3");
+    grad.addColorStop(0.7, "#f4eddc");
+    grad.addColorStop(1, "#e2d8c0");
     g.fillStyle = grad;
+  } else {
+    g.fillStyle = mode === "bump" ? "#fff" : "#5a5a5a";
   }
   g.fillRect(0, 0, S, S);
   for (const i of PIPS[value]) {
-    const x = S * (0.25 + (i % 3) * 0.25), y = S * (0.25 + Math.floor(i / 3) * 0.25);
-    const rad = S * (value === 1 ? 0.12 : 0.082);
-    const pip = g.createRadialGradient(x - rad * 0.25, y - rad * 0.3, rad * 0.1, x, y, rad);
-    if (bump) {
-      pip.addColorStop(0, "#000");
-      pip.addColorStop(0.75, "#333");
-      pip.addColorStop(1, "#fff");
-    } else if (value === 1) {
-      pip.addColorStop(0, "#6e1424");
-      pip.addColorStop(0.8, "#b8323f");
-      pip.addColorStop(1, "#d9a39b");
-    } else {
-      pip.addColorStop(0, "#0d1718");
-      pip.addColorStop(0.8, "#26393a");
-      pip.addColorStop(1, "#8b928d");
-    }
-    g.fillStyle = pip;
+    // Pips sit well inside the flat area so the rounded edges keep a clean margin.
+    const x = S * (0.3 + (i % 3) * 0.2), y = S * (0.3 + Math.floor(i / 3) * 0.2);
+    const rad = S * (value === 1 ? 0.11 : 0.066);
     g.beginPath();
     g.arc(x, y, rad, 0, TAU);
-    g.fill();
+    if (mode === "bump") {
+      const well = g.createRadialGradient(x, y, 0, x, y, rad);
+      well.addColorStop(0, "#000");
+      well.addColorStop(0.7, "#262626");
+      well.addColorStop(1, "#d8d8d8");
+      g.fillStyle = well;
+      g.fill();
+    } else if (mode === "rough") {
+      g.fillStyle = "#262626";
+      g.fill();
+    } else {
+      const red = value === 1;
+      const well = g.createRadialGradient(x - rad * 0.2, y - rad * 0.25, rad * 0.1, x, y, rad);
+      well.addColorStop(0, red ? "#5e0f1b" : "#0b1213");
+      well.addColorStop(0.75, red ? "#a5222f" : "#1d2a2b");
+      well.addColorStop(1, red ? "#c9656b" : "#55605e");
+      g.fillStyle = well;
+      g.fill();
+      g.beginPath();
+      g.arc(x, y, rad * 0.92, 0.15 * Math.PI, 0.85 * Math.PI);
+      g.strokeStyle = red ? "#f2b3b0aa" : "#ffffff55";
+      g.lineWidth = S * 0.008;
+      g.stroke();
+    }
   }
-  return stage.texture(c, { color: !bump });
+  return stage.texture(c, { color: mode === "color" });
+}
+
+function trayFelt(stage) {
+  const S = 1024, [c, g] = makeCanvas(S, S);
+  const grad = g.createRadialGradient(S / 2, S * 0.45, S * 0.05, S / 2, S / 2, S / 2);
+  grad.addColorStop(0, "#2b7a6c");
+  grad.addColorStop(0.75, "#1b584e");
+  grad.addColorStop(1, "#0f3a33");
+  g.fillStyle = grad;
+  g.fillRect(0, 0, S, S);
+  const rng = seeded(17);
+  for (let i = 0; i < 60000; i++) {
+    g.fillStyle = rng() > 0.5 ? "#ffffff0e" : "#00000016";
+    g.fillRect(rng() * S, rng() * S, 1.5, 1.5 + rng() * 2);
+  }
+  g.strokeStyle = "#e3c27f55";
+  g.lineWidth = 6;
+  g.beginPath();
+  g.arc(S / 2, S / 2, S * 0.44, 0, TAU);
+  g.stroke();
+  return stage.texture(c);
 }
 
 function bounceHeight(u, h0) {
@@ -373,21 +393,26 @@ function bounceHeight(u, h0) {
 function diceScene(T, host) {
   const stage = new Stage(T, host, { fov: 30, exposure: 1.05 });
   const { scene } = stage;
-  stage.light({ x: -2.5, y: 9, z: 4.5, size: 4.5 });
-  // Felt tray with lacquered wooden rails.
-  const felt = new T.Mesh(new T.PlaneGeometry(7.4, 4.4), new T.MeshStandardMaterial({ map: feltTexture(stage, "#1d554f", "#2c6f66"), roughness: 0.95 }));
+  stage.light({ x: -3, y: 9, z: 4, size: 4.2, mapSize: 2048 });
+  // Round tray: felt bed inside a lacquered wooden rim.
+  const felt = new T.Mesh(new T.CircleGeometry(3.12, 96), new T.MeshStandardMaterial({ map: trayFelt(stage), roughness: 0.96 }));
   felt.rotation.x = -Math.PI / 2;
   felt.receiveShadow = true;
   scene.add(felt);
-  const wood = new T.MeshPhysicalMaterial({ color: 0x5b3420, roughness: 0.38, clearcoat: 0.8, clearcoatRoughness: 0.18 });
-  for (const [w, d, x, z] of [[7.9, 0.25, 0, -2.32], [7.9, 0.25, 0, 2.32], [0.25, 4.9, -3.82, 0], [0.25, 4.9, 3.82, 0]]) {
-    const rail = new T.Mesh(new T.BoxGeometry(w, 0.32, d), wood);
-    rail.position.set(x, 0.16, z);
-    rail.castShadow = rail.receiveShadow = true;
-    scene.add(rail);
-  }
-  const geo = roundedBox(T, 1, 0.14);
-  const mats = DIE_FACES.map((v) => new T.MeshPhysicalMaterial({ map: dieFace(stage, v), bumpMap: dieFace(stage, v, true), bumpScale: 2.2, roughness: 0.32, clearcoat: 0.55, clearcoatRoughness: 0.25 }));
+  const rim = new T.Mesh(new T.LatheGeometry([[3.08, 0], [3.1, 0.08], [3.14, 0.4], [3.26, 0.52], [3.44, 0.5], [3.56, 0.36], [3.6, 0]].map(([r, y]) => new T.Vector2(r, y)), 128),
+    new T.MeshPhysicalMaterial({ color: 0x5a2f1b, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.1 }));
+  rim.castShadow = rim.receiveShadow = true;
+  scene.add(rim);
+  const inlay = new T.Mesh(new T.TorusGeometry(3.35, 0.022, 8, 160), new T.MeshStandardMaterial({ color: 0xe0b96b, metalness: 1, roughness: 0.25 }));
+  inlay.rotation.x = Math.PI / 2;
+  inlay.position.y = 0.515;
+  scene.add(inlay);
+  stage.shadowCatcher(14, 0.3, 0.001);
+  const geo = roundedBox(T, 1, 0.2);
+  const mats = DIE_FACES.map((v) => new T.MeshPhysicalMaterial({
+    map: dieFace(stage, v), bumpMap: dieFace(stage, v, "bump"), bumpScale: 3.5, roughnessMap: dieFace(stage, v, "rough"),
+    roughness: 1, clearcoat: 0.9, clearcoatRoughness: 0.12, specularIntensity: 0.6,
+  }));
   const dice = [0, 1, 2].map(() => {
     const m = new T.Mesh(geo, mats);
     m.castShadow = m.receiveShadow = true;
@@ -400,12 +425,12 @@ function diceScene(T, host) {
     return (round?.state?.dice || [1, 3, 5]).map((value, i) => {
       const q = new T.Quaternion().setFromUnitVectors(new T.Vector3(...DIE_NORMALS[DIE_FACES.indexOf(value)]), up);
       q.premultiply(new T.Quaternion().setFromAxisAngle(up, (rng() - 0.5) * 1.1));
-      return { q, p: new T.Vector3((i - 1) * 1.55 + (rng() - 0.5) * 0.3, 0.5, (rng() - 0.5) * 0.7 + (i === 1 ? -0.25 : 0.2)), rng };
+      return { q, p: new T.Vector3((i - 1) * 1.45 + (rng() - 0.5) * 0.25, 0.5, (rng() - 0.5) * 0.6 + (i === 1 ? -0.35 : 0.25)), rng };
     });
   };
   stage.fit = (aspect) => {
-    const k = Math.max(1, 1.45 / aspect);
-    stage.setView([0, 5.4 * k, 4.3 * k], [0, 0, 0.2]);
+    const k = Math.max(1, 1.5 / aspect);
+    stage.setView([0, 5.7 * k, 5.6 * k], [0, 0, 0.15]);
   };
   const place = (round) => poses(round).forEach(({ q, p }, i) => {
     dice[i].quaternion.copy(q);
@@ -439,8 +464,10 @@ function diceScene(T, host) {
 }
 
 /* ------------------------------------------------------------------ coin */
-function coinFace(stage, label, bump) {
-  const S = 1024, [c, g] = makeCanvas(S, S), m = S / 2;
+// Gold coin face; the emblem is stamped relief (heads: upright ginkgo leaf, tails: the
+// faceted paper boat traced from the Riverside badge). mode "color" or "bump".
+function coinFace(stage, kind, mode = "color") {
+  const S = 1024, [c, g] = makeCanvas(S, S), m = S / 2, bump = mode === "bump";
   const tone = (col, b) => (bump ? b : col);
   if (!bump) {
     const grad = g.createRadialGradient(m * 0.7, m * 0.6, 40, m, m, m);
@@ -469,116 +496,117 @@ function coinFace(stage, label, bump) {
     g.arc(m + Math.cos(a) * (m - 118), m + Math.sin(a) * (m - 118), 5, 0, TAU);
     g.fill();
   }
-  const arcText = (text, radius, start, step, flip) => {
-    g.save();
-    g.translate(m, m);
-    [...text].forEach((ch, i) => {
-      const a = start + i * step;
-      g.save();
-      g.rotate(a);
-      g.translate(0, flip ? radius : -radius);
-      g.fillText(ch, 0, 0);
-      g.restore();
-    });
-    g.restore();
-  };
   g.font = "bold 62px Georgia, 'Times New Roman', serif";
   g.textAlign = "center";
   g.textBaseline = "middle";
   g.fillStyle = tone("#8f6127", "#fff");
+  const arcText = (text, radius, start, step, bottom) => {
+    [...text].forEach((ch, i) => {
+      g.save();
+      g.translate(m, m);
+      g.rotate(start + i * step);
+      g.translate(0, bottom ? radius : -radius);
+      g.fillText(ch, 0, 0);
+      g.restore();
+    });
+  };
   arcText("RIVERSIDE", m - 180, -0.82, 0.205, false);
   arcText("RSC", m - 180, 0.205, -0.205, true);
-  g.shadowColor = bump ? "transparent" : "#fff3c466";
-  g.shadowOffsetX = -5;
-  g.shadowOffsetY = -5;
-  drawEmblem(g, label, m, tone("#b8863a", "#fff"), tone("#6b4514", "#ccc"));
+  g.save();
+  g.translate(m, m + (kind === "heads" ? -4 : 10));
+  g.scale(kind === "heads" ? 0.9 : 0.98, kind === "heads" ? 0.9 : 0.98);
+  if (!bump) {
+    g.shadowColor = "#fff3c466";
+    g.shadowOffsetX = -4;
+    g.shadowOffsetY = -4;
+  }
+  if (kind === "heads") drawGinkgo(g, bump);
+  else drawBoat(g, bump);
+  g.restore();
   return stage.texture(c, { color: !bump });
 }
 
-// Heads: ginkgo leaf. Tails: paper boat on waves. Drawn as raised relief.
-function drawEmblem(g, kind, m, fill, line) {
-  g.save();
-  g.translate(m, m + 6);
-  g.scale(0.8, 0.8);
+function drawGinkgo(g, bump) {
   g.lineJoin = "round";
   g.lineCap = "round";
-  if (kind === "heads") {
-    g.rotate(-0.18);
-    const fan = new Path2D();
-    fan.moveTo(0, 95);
-    fan.bezierCurveTo(-120, 40, -265, -40, -270, -130);
-    fan.bezierCurveTo(-215, -205, -120, -250, -40, -235);
-    fan.quadraticCurveTo(-12, -185, 0, -150);
-    fan.quadraticCurveTo(12, -185, 40, -235);
-    fan.bezierCurveTo(120, -250, 215, -205, 270, -130);
-    fan.bezierCurveTo(265, -40, 120, 40, 0, 95);
-    fan.closePath();
-    g.fillStyle = fill;
-    g.fill(fan);
-    g.save();
-    g.clip(fan);
-    g.strokeStyle = line;
-    g.globalAlpha = 0.55;
-    g.lineWidth = 7;
-    for (let a = -1.05; a <= 1.05; a += 0.15) {
-      g.beginPath();
-      g.moveTo(0, 95);
-      g.lineTo(Math.sin(a) * 360, 95 - Math.cos(a) * 360);
-      g.stroke();
-    }
-    g.restore();
-    g.strokeStyle = line;
-    g.lineWidth = 10;
-    g.stroke(fan);
-    g.beginPath();
-    g.moveTo(0, 90);
-    g.bezierCurveTo(4, 170, 30, 230, 70, 270);
-    g.lineWidth = 22;
-    g.strokeStyle = fill;
-    g.stroke();
-    g.lineWidth = 6;
-    g.strokeStyle = line;
-    g.stroke();
+  // Two fan lobes joined at a small notch: sides flare out from the stem, the outer
+  // edge of each lobe bulges outward along an arc around the base.
+  const B = [0, 80], R = 300, deg = Math.PI / 180;
+  const at = (a, r = R) => [B[0] + Math.cos(a * deg) * r, B[1] + Math.sin(a * deg) * r];
+  const leaf = new Path2D();
+  leaf.moveTo(...B);
+  leaf.quadraticCurveTo(-92, -8, ...at(-163));
+  leaf.arc(B[0], B[1], R, -163 * deg, -95 * deg);
+  leaf.lineTo(...at(-90, R - 52));
+  leaf.lineTo(...at(-85));
+  leaf.arc(B[0], B[1], R, -85 * deg, -17 * deg);
+  leaf.quadraticCurveTo(92, -8, ...B);
+  leaf.closePath();
+  g.beginPath();
+  g.moveTo(0, 70);
+  g.bezierCurveTo(4, 150, -6, 215, 22, 285);
+  g.strokeStyle = bump ? "#fff" : "#c9953f";
+  g.lineWidth = 20;
+  g.stroke();
+  if (bump) {
+    g.fillStyle = "#fff";
   } else {
-    const poly = (pts) => {
-      const path = new Path2D();
-      pts.forEach(([x, y], i) => (i ? path.lineTo(x, y) : path.moveTo(x, y)));
-      path.closePath();
-      return path;
-    };
-    const hull = poly([[-300, 40], [300, 40], [200, 175], [-200, 175]]);
-    const sail = poly([[-150, 40], [10, -275], [150, 40]]);
-    const left = poly([[-300, 40], [-150, 40], [-205, -55]]);
-    const right = poly([[300, 40], [150, 40], [205, -55]]);
-    for (const [path, alpha] of [[left, 0.8], [right, 0.8], [sail, 1], [hull, 1]]) {
-      g.globalAlpha = alpha;
-      g.fillStyle = fill;
-      g.fill(path);
-      g.globalAlpha = 1;
-      g.lineWidth = 9;
-      g.strokeStyle = line;
-      g.stroke(path);
-    }
-    g.lineWidth = 6;
+    const fill = g.createLinearGradient(-280, -250, 280, 70);
+    fill.addColorStop(0, "#f8dc96");
+    fill.addColorStop(1, "#c08a3a");
+    g.fillStyle = fill;
+  }
+  g.fill(leaf);
+  g.save();
+  g.clip(leaf);
+  g.shadowColor = "transparent";
+  g.strokeStyle = bump ? "#c4c4c4" : "#a0722f";
+  g.lineWidth = 4;
+  for (let a = -1.32; a <= 1.32; a += 0.075) {
     g.beginPath();
-    g.moveTo(10, -275);
-    g.lineTo(0, 40);
-    g.moveTo(-200, 175);
-    g.lineTo(-150, 40);
-    g.moveTo(200, 175);
-    g.lineTo(150, 40);
+    g.moveTo(0, 78);
+    g.lineTo(Math.sin(a) * 360, 78 - Math.cos(a) * 360);
     g.stroke();
-    g.lineWidth = 12;
-    for (const [y, w] of [[230, 330], [285, 230]]) {
-      g.beginPath();
-      for (let x = -w; x <= w; x += 4) {
-        const yy = y + Math.sin((x / w) * Math.PI * 3) * 14;
-        x === -w ? g.moveTo(x, yy) : g.lineTo(x, yy);
-      }
-      g.stroke();
-    }
   }
   g.restore();
+  g.lineWidth = 7;
+  g.strokeStyle = bump ? "#999" : "#7d5320";
+  g.stroke(leaf);
+}
+
+// Front view of the badge's paper boat, traced from the logo: two ridges run from the
+// wing tips to one low centre point, the sail rises behind them split on its crease,
+// the wings' upper surfaces show as thin shaded slivers, and the lower middle is a V.
+// Shade = gold tone (lit facets light, folds dark); height = relief level.
+const BOAT = (() => {
+  const A = [0, -162], TL = [-332, -54], TR = [326, -56], SL = [-102, -25], SR = [105, -25];
+  // KL/KR: where the straight sail edges (A→SL, A→SR) dive under the wing ridges.
+  const KL = [-137, 21], KR = [139, 18], X = [0, 73], BL = [-183, 163], BR = [177, 163], BC = [0, 163];
+  return [
+    [[TL, SL, KL], "#b9893f", 150],
+    [[TR, SR, KR], "#ad7d37", 145],
+    [[A, SL, KL, X], "#fbe7b2", 250],
+    [[A, X, KR, SR], "#ddb05e", 235],
+    [[TL, X, BL], "#f4d692", 215],
+    [[TR, BR, X], "#e7c075", 205],
+    [[BL, X, BC], "#d2a252", 180],
+    [[X, BR, BC], "#bf8e40", 170],
+  ];
+})();
+
+function drawBoat(g, bump) {
+  g.lineJoin = "round";
+  for (const [pts, shade, height] of BOAT) {
+    const path = new Path2D();
+    pts.forEach(([x, y], i) => (i ? path.lineTo(x, y) : path.moveTo(x, y)));
+    path.closePath();
+    g.fillStyle = bump ? `rgb(${height},${height},${height})` : shade;
+    g.fill(path);
+    g.shadowColor = "transparent";
+    g.strokeStyle = bump ? "#6a6a6a" : "#6f4818";
+    g.lineWidth = 7;
+    g.stroke(path);
+  }
 }
 
 function coinScene(T, host) {
@@ -604,7 +632,7 @@ function coinScene(T, host) {
   reeded.repeat.set(1, 1);
   reeded.rotation = Math.PI / 2;
   const R = 1.25, H = 0.13;
-  const face = (label) => new T.MeshPhysicalMaterial({ map: coinFace(stage, label), bumpMap: coinFace(stage, label, true), bumpScale: 3, metalness: 0.88, roughness: 0.28, clearcoat: 0.35, envMapIntensity: 1.5 });
+  const face = (kind) => new T.MeshPhysicalMaterial({ map: coinFace(stage, kind), bumpMap: coinFace(stage, kind, "bump"), bumpScale: 3, metalness: 0.88, roughness: 0.28, clearcoat: 0.35, envMapIntensity: 1.5 });
   const coin = new T.Mesh(new T.CylinderGeometry(R, R, H, 128, 1), [
     new T.MeshStandardMaterial({ color: 0xe2b765, metalness: 0.9, roughness: 0.3, bumpMap: reeded, bumpScale: 2, envMapIntensity: 1.5 }),
     face("heads"),
@@ -691,7 +719,7 @@ export const WHEEL = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30
 const REDS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 const POCKET = TAU / 37;
 const pocketAngle = (i) => i * POCKET - Math.PI / 2;
-const RING_IN = 1.32, RING_MID = 1.78, RING_OUT = 2.18, BALL = 0.085, POCKET_R = 1.56, TRACK_R = 2.62;
+const RING_IN = 1.3, RING_MID = 1.66, RING_OUT = 2.22, BALL = 0.085, POCKET_R = 1.48, TRACK_R = 2.64;
 
 function numberRing(stage) {
   const S = 2048, [c, g] = makeCanvas(S, S), m = S / 2, px = m / RING_OUT;
@@ -707,10 +735,10 @@ function numberRing(stage) {
       g.fill();
     }
     g.save();
-    g.translate(m + Math.cos(a) * 1.98 * px, m + Math.sin(a) * 1.98 * px);
+    g.translate(m + Math.cos(a) * ((RING_MID + RING_OUT) / 2) * px, m + Math.sin(a) * ((RING_MID + RING_OUT) / 2) * px);
     g.rotate(a + Math.PI / 2);
-    g.fillStyle = "#f7efdc";
-    g.font = "bold 74px Georgia, 'Times New Roman', serif";
+    g.fillStyle = "#fffaf0";
+    g.font = `800 ${n > 9 ? 96 : 112}px 'Helvetica Neue', Arial, 'Noto Sans', sans-serif`;
     g.textAlign = "center";
     g.textBaseline = "middle";
     g.fillText(String(n), 0, 0);
@@ -807,8 +835,8 @@ function rouletteScene(T, host) {
   ball.castShadow = true;
   scene.add(ball);
   stage.fit = (aspect) => {
-    const k = Math.max(1, 1.05 / aspect);
-    stage.setView([0, 8.6 * k, 6.4 * k], [0, 0, 0.18]);
+    const k = Math.max(1, 1.02 / aspect);
+    stage.setView([0, 10.5 * k, 5.4 * k], [0, 0, 0.12]);
   };
   let psi = 0, ballIndex = null;
   // Idle: the rotor keeps turning slowly; a settled ball rides in its pocket.
@@ -1719,6 +1747,9 @@ function scratchScene(T, host, { onSpot = () => {} } = {}) {
       const k = clamp01((ms / (stage.speed || 1) - delay) / 420);
       if (k <= 0) return;
       coat.save();
+      // Clip to this spot so the growing circle never uncovers its neighbours.
+      roundRect(coat, f.x - 3, f.y - 3, f.w + 6, f.h + 6, 14);
+      coat.clip();
       coat.globalCompositeOperation = "destination-out";
       coat.beginPath();
       coat.arc(cx, cy, R * easeOutCubic(k), 0, TAU);

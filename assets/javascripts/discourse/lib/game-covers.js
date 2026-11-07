@@ -1,7 +1,8 @@
 // Lobby covers: stills rendered offline from these exact poses by
-// script/render-game-covers.cjs, plus the hover attract loop. Bump COVER_VERSION
-// with every re-render (production caches /plugins for a year).
-export const COVER_VERSION = "v1";
+// script/render-game-covers.cjs, plus the hover attract loop. Bump COVER_VERSIONS
+// for every re-rendered game (production caches /plugins for a year).
+// Per-game cover file version; bump a game when its cover is re-rendered.
+export const COVER_VERSIONS = { slots: "v1", roulette: "v2", scratch: "v2", blackjack: "v1", coin: "v2", dice: "v2" };
 export const COVER_STATES = {
   slots: { id: 101, version: 1, state: { symbols: ["seven", "seven", "seven"] } },
   roulette: { id: 102, version: 1, state: { number: 0 } },

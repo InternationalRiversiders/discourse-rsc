@@ -1,12 +1,16 @@
 .rg-app {
   .rg-bet-toolbar { position:relative; z-index:5; display:flex; flex-wrap:wrap; align-items:center; gap:8px; width:100%; margin:0 0 14px; button{min-height:36px;padding:6px 12px;border:1px solid #ffffff50;border-radius:9px;background:#ffffff12;color:#fff;} button.is-selected{background:#e7d49b;color:#243e35;border-color:#e7d49b;font-weight:700;} span{margin-left:auto;font-size:12px;color:#ffffffc9;} }
-  .rg-record { margin:0 0 24px;padding:20px;border:1px solid var(--rg-line);border-radius:16px;background:var(--rg-soft);header{display:flex;align-items:center;justify-content:space-between;gap:12px;}h2{font-size:18px;}small,dt{color:var(--rg-muted);}dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0;}dd{margin:6px 0 0;font-weight:700;overflow-wrap:anywhere;}p{margin-top:8px;overflow-wrap:anywhere;}}
+  .rg-record {background:var(--rg-soft);font-size:14px;p{margin:0;overflow-wrap:anywhere;}p+p{margin-top:6px;}}
+  .rg-record-hand {display:flex;flex-wrap:wrap;align-items:center;gap:8px;&+&{margin-top:8px;}}
+  .rg-record-label {min-width:4em;color:var(--rg-muted);}
+  .rg-record-cards {display:flex;flex-wrap:wrap;gap:4px;}
+  .rg-record-card {display:inline-flex;align-items:center;justify-content:center;min-width:30px;min-height:34px;padding:2px 5px;border:1px solid var(--rg-line);border-radius:5px;background:var(--rg-surface);font-weight:600;&.is-red{color:var(--danger);}&.is-hidden{color:var(--rg-muted);}}
 }
-@media(max-width:480px){.rg-app .rg-record{padding:14px;dl{gap:8px;font-size:12px;}}.rg-app .rg-bet-toolbar{gap:6px;button{padding:6px 9px;}span{width:100%;}}}
+@media(max-width:480px){.rg-app .rg-bet-toolbar{gap:6px;button{padding:6px 9px;}span{width:100%;}}}
 
 .rg-app {
   .rg-history-row[aria-expanded="true"] {background:var(--rg-soft);}
-  .rg-history .rg-record {margin:0;padding:16px;border:0;border-radius:0;border-bottom:1px solid var(--rg-line);h2{font-size:15px;}}
+  .rg-history .rg-record {margin:0;padding:16px;border:0;border-radius:0;border-bottom:1px solid var(--rg-line);}
   .rg-history-pagination {display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:16px;font-size:13px;span{margin-right:auto;color:var(--rg-muted);}button{border:1px solid var(--rg-line);border-radius:8px;background:var(--rg-surface);color:var(--rg-ink);padding:7px 10px;min-height:36px;}label{display:flex;align-items:center;gap:5px;margin:0;}input{width:64px;margin:0;padding:6px;min-height:36px;}}
   .rg-history-error {color:var(--danger);margin-top:12px;}
 }

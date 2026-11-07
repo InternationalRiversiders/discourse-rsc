@@ -19,6 +19,11 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   assert(await row.evaluate(el=>el.nextElementSibling.querySelector('.rg-record')!==null),'Details are immediately below clicked row');
   assert(Math.abs((await page.evaluate(()=>scrollY))-before)<3,'Opening does not scroll to top');
   assert.equal(page.url(),url);assert.equal(await page.locator('.rg-brand h1').innerText(),'抛硬币','Does not change selected game');
+  const detail=page.locator('.rg-record');
+  assert.equal(await detail.locator('button,header,dl').count(),0);
+  const detailText=await detail.innerText();
+  for(const duplicate of ['抛硬币','游戏记录','投入','返还','净收益'])assert(!detailText.includes(duplicate));
+  assert(detailText.includes('投注：正面'));
   await page.locator('.rg-record').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/inline-record.png`});
   await row.click();assert.equal(await page.locator('.rg-record').count(),0);
   const first=await rows.first().getAttribute("aria-controls");
@@ -35,6 +40,22 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   assert.equal(await page.locator(`#rg-record-${c.record_id} .rg-record`).count(),1);
   for(const width of [390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.locator('.rg-history').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/history-${width}.png`});}
   await page.reload({waitUntil:'domcontentloaded'});await page.locator(`#rg-record-${c.record_id} .rg-record`).waitFor();
+  // Fixed public views check the extra details without creating random hands.
+  const base=await page.evaluate(async()=>await(await fetch('/rsc/games/state.json')).json());
+  for(const playing of [false,true]){
+   const hand={id:90001,game:'blackjack',created_at:'2026-11-06T22:06:21Z',status:playing?'playing':'settled',stake:'5',net:playing?null:'-5',payout:playing?null:'0',state:{player:[9,22,5],dealer:playing?[4,null]:[4,9],player_score:26,dealer_score:playing?5:15}};
+   await page.route('**/rsc/games/state.json*',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({...base,history:[hand],selected_round:hand,history_page:1,history_pages:1,history_total:1})}));
+   await page.reload({waitUntil:'domcontentloaded'});await page.locator('.rg-record-hand').first().waitFor();
+   assert.equal(await page.locator('.rg-record-card').count(),5);
+   const details=await page.locator('.rg-record').innerText();
+   assert(details.includes('10♠'));assert(details.includes('10♥'));assert(details.includes('6♠'));assert(details.includes('26 点'));
+   assert.equal(await page.locator('.rg-record [aria-label="暗牌"]').count(),playing?1:0);
+   assert(details.includes(playing?'明牌 5 点':'15 点'));
+   for(const duplicate of ['游戏记录','投入','返还','净收益','2026/'])assert(!details.includes(duplicate));
+   assert.equal(await page.locator('.rg-record button').count(),0);
+   for(const width of [1360,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.locator('.rg-history').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/blackjack-history-${playing?'active':'settled'}-${width}.png`});}
+   await page.unroute('**/rsc/games/state.json*');
+  }
   assert.equal(errors.length,0,errors.join('\n'));
   console.log('PASS: inline expand/collapse without scroll or navigation, 20/20/5 pages, previous/next/jump, page validation, wallet link to older page, reload, 390/320px layout');
  }catch(e){console.error(e.message,errors);throw e;}finally{await browser.close();}
