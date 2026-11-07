@@ -29,3 +29,9 @@ const e=new Effects();e.observe({game:'2048',tick:0,score:0,board:[2,2,...Array(
 e.observe({game:'2048',tick:1,score:4,board:[4,...Array(15).fill(0)]},{board:[2,2,...Array(14).fill(0)],direction:'l'},10);
 assert.equal(e.motion.tracks.length,2);assert.equal(e.scoreGain.amount,4);assert(e.pop(0,180)>1);
 console.log('PASS SDK/server fixtures, animation tracks, reduced motion and seven immutable renderers');
+let requests=0,fail=false;
+context.Image=class{set src(url){requests++;this.complete=true;this.naturalWidth=52;queueMicrotask(()=>fail?this.onerror():this.onload());}};
+const sprites=await SDK.loadMergeSprites('/test/');assert.equal(sprites.length,11);assert.equal(requests,11);await SDK.loadMergeSprites('/test/');assert.equal(requests,11,'reuse loaded originals');
+fail=true;assert((await SDK.loadMergeSprites('/retry/')).every(i=>!i));fail=false;assert((await SDK.loadMergeSprites('/retry/')).every(Boolean),'failed images can retry on next open');
+for(const asset of manifest.assets){const data=fs.readFileSync(new URL('public/arcade/merge/'+asset.url.split('/').pop(),root));assert.equal(crypto.createHash('sha256').update(data).digest('hex'),asset.sha256);}
+console.log('PASS all eleven asset hashes, loader cache and failed-image retry');

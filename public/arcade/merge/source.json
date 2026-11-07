@@ -1,0 +1,127 @@
+{
+  "source": "https://bbs.uestc.edu.cn/merge_qshp/",
+  "provenance": "Original community artwork supplied for reuse by the Riverside maintainers via Co-admin. PNGs preserved byte-for-byte; this is not a general third-party asset license.",
+  "assets": [
+    {
+      "level": 0,
+      "file": "00-973df787c094.png",
+      "source": "https://bbs.uestc.edu.cn/merge_qshp/res/raw-assets/ad/ad16ccdc-975e-4393-ae7b-8ac79c3795f2.png",
+      "sha256": "973df787c094976c82b20642ec46a5c651759e90a78bb49062a201181502e2a7",
+      "original_name": "葡萄",
+      "original_size": [
+        52,
+        52
+      ]
+    },
+    {
+      "level": 1,
+      "file": "01-22a658c02581.png",
+      "source": "https://bbs.uestc.edu.cn/merge_qshp/res/raw-assets/0c/0cbb3dbb-2a85-42a5-be21-9839611e5af7.png",
+      "sha256": "22a658c02581ccff4eeb41cbb37d9b48920da9ecc3b1ff1a53d264a519a44eb4",
+      "original_name": "樱桃",
+      "original_size": [
+        80,
+        80
+      ]
+    },
+    {
+      "level": 2,
+      "file": "02-690977014d67.png",
+      "source": "https://bbs.uestc.edu.cn/merge_qshp/res/raw-assets/d0/d0c676e4-0956-4a03-90af-fee028cfabe4.png",
+      "sha256": "690977014d6730ca1b4dd098a21fe8b7d26bb1fbc2a181781afe2d2046dabe77",
+      "original_name": "橘子",
+      "original_size": [
+        108,
+        108
+      ]
+    },
+    {
+      "level": 3,
+      "file": "03-3f62e392f2c9.png",
+      "source": "https://bbs.uestc.edu.cn/merge_qshp/res/raw-assets/74/74237057-2880-4e1f-8a78-6d8ef00a1f5f.png",
+      "sha256": "3f62e392f2c9e98fde6bc52570c18748f2810215d96f34829e2d8a0f7f2d63fb",
+      "original_name": "柠檬",
+      "original_size": [
+        119,
+        119
+      ]
+    },
+    {
+      "level": 4,
+      "file": "04-799a4a503725.png",
+      "source": "https://bbs.uestc.edu.cn/merge_qshp/res/raw-assets/13/132ded82-3e39-4e2e-bc34-fc934870f84c.png",
+      "sha256": "799a4a5037255e9dcae726fbfc6a8ab734a0c93b055f5cf4d23ac998d9589846",
+      "original_name": "猕猴桃",
+      "original_size": [
+        153,
+        152
+      ]
+    },
+    {
+      "level": 5,
+      "file": "05-977c9c41d76b.png",
+      "source": "https://bbs.uestc.edu.cn/merge_qshp/res/raw-assets/03/03c33f55-5932-4ff7-896b-814ba3a8edb8.png",
+      "sha256": "977c9c41d76b7fa68ddc8622d38c04704bcf85e9cc67994bd99fd65a0c0fd48b",
+      "original_name": "西红柿",
+      "original_size": [
+        183,
+        183
+      ]
+    },
+    {
+      "level": 6,
+      "file": "06-906829a14b81.png",
+      "source": "https://bbs.uestc.edu.cn/merge_qshp/res/raw-assets/66/665a0ec9-6c43-4858-974c-025514f2a0e7.png",
+      "sha256": "906829a14b814d191360546c2670b3d5a2dc62af8e2b90a53a59cdc5dfa9bfc0",
+      "original_name": "桃",
+      "original_size": [
+        193,
+        193
+      ]
+    },
+    {
+      "level": 7,
+      "file": "07-544ca786e264.png",
+      "source": "https://bbs.uestc.edu.cn/merge_qshp/res/raw-assets/84/84bc9d40-83d0-480c-b46a-3ef59e603e14.png",
+      "sha256": "544ca786e264a9a9978e819d8956bd555903272334d35987e2497d5636b3b190",
+      "original_name": "菠萝",
+      "original_size": [
+        258,
+        258
+      ]
+    },
+    {
+      "level": 8,
+      "file": "08-336ebbcf460a.png",
+      "source": "https://bbs.uestc.edu.cn/merge_qshp/res/raw-assets/5f/5fa0264d-acbf-4a7b-8923-c106ec3b9215.png",
+      "sha256": "336ebbcf460acaf3b7994a33c81f0d20a4fa82fc9bec1240742d12df393be63b",
+      "original_name": "椰子",
+      "original_size": [
+        308,
+        308
+      ]
+    },
+    {
+      "level": 9,
+      "file": "09-bb68a2bb9cd6.png",
+      "source": "https://bbs.uestc.edu.cn/merge_qshp/res/raw-assets/56/564ba620-6a55-4cbe-a5a6-6fa3edd80151.png",
+      "sha256": "bb68a2bb9cd6d1fcfd46d3c0e25b6fb7c3e013e16fc98e609025de4d59650da3",
+      "original_name": "西瓜",
+      "original_size": [
+        308,
+        309
+      ]
+    },
+    {
+      "level": 10,
+      "file": "10-bce7f4a63be4.png",
+      "source": "https://bbs.uestc.edu.cn/merge_qshp/res/raw-assets/50/5035266c-8df3-4236-8d82-a375e97a0d9c.png",
+      "sha256": "bce7f4a63be46fa5e4064bb910d29d79ccde4444a8153ecf7ded07a6526216de",
+      "original_name": "西瓜1",
+      "original_size": [
+        408,
+        408
+      ]
+    }
+  ]
+}

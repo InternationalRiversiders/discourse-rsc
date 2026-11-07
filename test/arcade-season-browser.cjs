@@ -10,7 +10,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   assert.equal(await page.evaluate(async c=>{for(let i=0;i<2;i++){const {csrf}=await(await fetch('/session/csrf.json')).json();const r=await fetch('/session.json',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf,'X-Requested-With':'XMLHttpRequest'},body:JSON.stringify({login:c.username,password:c.password})});if(r.status!==403||i===1)return r.status;}},c),200);
   await page.goto(base+'/rsc/games',{waitUntil:'networkidle'});await page.locator('.ra-season-banner').waitFor();
   assert((await page.locator('.ra-season-banner').innerText()).includes('100 / 60 / 40 / 25 / 15'));
-  assert.equal(await page.locator('.ra-featured-tag').count(),1);
+  assert.equal(await page.locator('.ra-intro').count(),0);assert.equal(await page.getByText('玩一局，刷新自己',{exact:true}).count(),0);assert.equal(await page.locator('.ra-featured-tag').count(),1);assert.equal(await page.locator('.ra-card-label p').count(),0,'cards have no subtitles');
   for(const width of [1360,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.locator('.ra-app').screenshot({path:`${out}/season-lobby-${width}.png`});}
   await page.locator('.ra-season-banner').click();await page.locator('.ra-rank-tabs button').nth(1).waitFor();
   assert.equal(await page.locator('.ra-rank-tabs .is-active').innerText(),'赛季排行');
@@ -30,7 +30,13 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
    for(const game of Core.games){const state=Core.create(game,q),before=JSON.stringify(state),fx=new Effects();fx.observe(state);draw(canvas,state,fx);if(before!==JSON.stringify(state))throw new Error('mutated '+game);}
    return {animations,version:RiversideArcade.rulesVersion};
   });
+  const loaded=await page.evaluate(async()=>{
+   const images=await RiversideArcade.loadMergeSprites();
+   return images.map(i=>!!(i&&i.complete&&i.naturalWidth));
+  });assert.equal(loaded.length,11);assert(loaded.every(Boolean),'all original merge artwork loads');
+  await page.getByRole('button',{name:'返回挑战',exact:false}).click();await page.locator('.ra-card').filter({hasText:'合成大河畔'}).click();
+  await page.waitForTimeout(400);await page.locator('.ra-play').screenshot({path:`${out}/merge-original-artwork.png`});
   assert(result.animations,'2048 actually moves between display frames');assert.equal(result.version,1);
-  assert.deepEqual(errors,[]);console.log('PASS responsive season banner, separate lifetime/season ranks, real SDK URL, seven renderers and animated 2048 frames');
+  assert.deepEqual(errors,[]);console.log('PASS responsive season banner, separate lifetime/season ranks, real SDK URL, seven renderers, animated 2048 frames and all eleven original merge sprites');
  }catch(e){await page.screenshot({path:out+'/season-failure.png',fullPage:true}).catch(()=>{});throw e;}finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1);});

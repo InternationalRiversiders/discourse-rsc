@@ -16,6 +16,6 @@ export default class extends Component {
  {{else if (eq @game 'bricks')}}
   <g fill="#c58966"><rect x="40" y="20" width="47" height="22" rx="5"/><rect x="96" y="20" width="47" height="22" rx="5"/><rect x="152" y="20" width="47" height="22" rx="5"/></g><g fill="#e4ae79"><rect x="40" y="51" width="47" height="22" rx="5"/><rect x="96" y="51" width="47" height="22" rx="5"/></g><path d="M163 76L132 109" fill="none" stroke="#fff7e8" stroke-width="4" stroke-linecap="round"/><circle cx="126" cy="116" r="8" fill="#9d7259"/><rect x="78" y="137" width="85" height="9" rx="4" fill="#9d7259"/>
  {{else}}
-  <path d="M51 49H189A69 69 0 0 1 51 49" fill="#639575"/><path d="M61 49H179A59 59 0 0 1 61 49" fill="#e3e8ae"/><path d="M68 49H172A52 52 0 0 1 68 49" fill="#eb8d81"/><g fill="#785655"><ellipse cx="95" cy="68" rx="3" ry="5" transform="rotate(-25 95 68)"/><ellipse cx="120" cy="89" rx="3" ry="5"/><ellipse cx="144" cy="68" rx="3" ry="5" transform="rotate(25 144 68)"/></g><circle cx="59" cy="127" r="13" fill="#c97c80"/><circle cx="194" cy="110" r="21" fill="#ebbb6f"/>
+  <image href="/plugins/discourse-rsc/arcade/merge/09-bb68a2bb9cd6.png" x="58" y="6" width="137" height="137"/><image href="/plugins/discourse-rsc/arcade/merge/01-22a658c02581.png" x="20" y="99" width="49" height="49"/><image href="/plugins/discourse-rsc/arcade/merge/06-906829a14b81.png" x="182" y="100" width="45" height="45"/>
  {{/if}}</svg></template>
 }

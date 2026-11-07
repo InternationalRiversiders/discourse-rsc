@@ -13,15 +13,16 @@ import Core from "../lib/arcade-core";
 import Playback from "../lib/arcade-playback";
 import draw from "../lib/arcade-draw";
 import Effects from "../lib/arcade-effects";
+import { loadMergeSprites } from "../lib/arcade-sprites";
 import { formatDateTime } from "../lib/campus-time";
 const GAMES=[
- {id:'2048',name:'2048',caption:'滑动 · 合并 · 再大一点',mark:'2048',color:'sand',rules:'方向键或滑动合并相同数字，每次合并累加分数。最多 2,000 步，棋盘无法移动时结束。'},
- {id:'blocks',name:'方块堆叠',caption:'旋转落下，消去整行',mark:'▟',color:'lavender',rules:'左右移动，上键旋转，下键加速，空格落下。单次消除 1／2／3／4 行分别获得 100／300／500／800 分。最多 200 个方块或 5 分钟。'},
- {id:'snake',name:'贪吃蛇',caption:'沿着空隙，一口一口长大',mark:'⌁',color:'mint',rules:'方向键或滑动转向，吃到食物获得 100 分。不能直接掉头，撞墙、障碍或身体结束。最多 5 分钟。'},
- {id:'bird',name:'河畔飞鸟',caption:'轻点起飞，穿过下一道门',mark:'➤',color:'sky',rules:'轻点画面或空格拍动翅膀。每穿过一道障碍获得 1 分，碰撞即结束。最多 3 分钟。'},
- {id:'hex',name:'六角消除',caption:'转动六边，让同色相遇',mark:'⬡',color:'rose',rules:'左右旋转中心六边形，每条边堆叠的末尾三个同色块消除并获得 100 分。任一边达到 10 块时结束。最多 3 分钟。'},
- {id:'bricks',name:'打砖块',caption:'接住弹球，清空色块',mark:'▤',color:'peach',rules:'按住左右键移动挡板，手机按住屏幕下方方向按钮。每块砖 100 分，共 3 条生命，清空砖块或达到 5 分钟结束。'},
- {id:'merge',name:'合成大河畔',caption:'从小樱桃，到大西瓜',mark:'🍉',color:'green',rules:'移动指针选择落点，轻点投放；也可左右移动、空格投放。同级水果相碰合成，奖励随等级增加。越过虚线持续 3 秒则结束，最多 100 次投放或 5 分钟。'}
+ {id:'2048',name:'2048',mark:'2048',color:'sand',rules:'方向键或滑动合并相同数字，每次合并累加分数。最多 2,000 步，棋盘无法移动时结束。'},
+ {id:'blocks',name:'方块堆叠',mark:'▟',color:'lavender',rules:'左右移动，上键旋转，下键加速，空格落下。单次消除 1／2／3／4 行分别获得 100／300／500／800 分。最多 200 个方块或 5 分钟。'},
+ {id:'snake',name:'贪吃蛇',mark:'⌁',color:'mint',rules:'方向键或滑动转向，吃到食物获得 100 分。不能直接掉头，撞墙、障碍或身体结束。最多 5 分钟。'},
+ {id:'bird',name:'河畔飞鸟',mark:'➤',color:'sky',rules:'轻点画面或空格拍动翅膀。每穿过一道障碍获得 1 分，碰撞即结束。最多 3 分钟。'},
+ {id:'hex',name:'六角消除',mark:'⬡',color:'rose',rules:'左右旋转中心六边形，每条边堆叠的末尾三个同色块消除并获得 100 分。任一边达到 10 块时结束。最多 3 分钟。'},
+ {id:'bricks',name:'打砖块',mark:'▤',color:'peach',rules:'按住左右键移动挡板，手机按住屏幕下方方向按钮。每块砖 100 分，共 3 条生命，清空砖块或达到 5 分钟结束。'},
+ {id:'merge',name:'合成大河畔',mark:'🍉',color:'green',rules:'移动指针选择落点，轻点投放；也可左右移动、空格投放。同级图案相碰合成，得分随等级增加。越过虚线持续 3 秒则结束，最多 100 次投放或 5 分钟。'}
 ];
 export default class extends Component {
  games=GAMES;
@@ -42,7 +43,7 @@ export default class extends Component {
  @tracked finishing=false;
  @tracked waiting=false;
  @tracked localOver=false;
- effects=new Effects();repaint=true;
+ effects=new Effects();repaint=true;mergeSprites=null;
  playback=null;state=null;canvas=null;raf=null;last=0;accumulator=0;generation=0;
  syncPromise=null;saveRequested=false;
  get selected(){return GAMES.find(g=>g.id===this.game);}
@@ -74,6 +75,7 @@ export default class extends Component {
   this.generation++;this.rankScope='all';this.game=game;this.run=null;this.playback=null;this.pending=null;this.error='';
   this.paused=true;this.finishing=false;this.waiting=false;this.localOver=false;this.saveRequested=false;this.ranking=null;
   this.effects=new Effects({reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});this.state=Core.create(game,Array(24).fill(3733));this.effects.observe(this.state);this.score=0;this.progress=0;this.loadRanking();
+  if(game==='merge'){loadMergeSprites().then(images=>{if(!this.isDestroying){this.mergeSprites=images;this.effects.sprites=images;this.repaint=true;}});}
  }
  @action async back(){
   if(this.busy){return;}this.paused=true;this.playback?.release();await this.flush();
@@ -87,7 +89,7 @@ export default class extends Component {
   try{
    const r=await ajax('/rsc/arcade/start.json',{ignoreUnsent:false,timeout:15000,type:'POST',contentType:'application/json',data:JSON.stringify({game:this.game,request_id:crypto.randomUUID()})});
    if(this.isDestroying||generation!==this.generation){return;}
-   this.effects=new Effects({reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});this.playback=new Playback(r);this.finishing=false;this.saveRequested=false;this.updateView();
+   this.effects=new Effects({reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});this.effects.sprites=this.mergeSprites;this.playback=new Playback(r);this.finishing=false;this.saveRequested=false;this.updateView();
    this.paused=r.status!=='playing';this.canvas?.focus({preventScroll:true});
   }catch(e){if(!this.isDestroying){this.error=extractError(e,"网络连接中断，请重试或读取已保存进度。");}}
   finally{if(!this.isDestroying){this.busy=false;}}
@@ -199,9 +201,8 @@ export default class extends Component {
  <template>
   <section class="ra-app" aria-label="休闲挑战" {{this.boot}}>
    {{#unless this.game}}
-    <div class="ra-intro"><div><h2>玩一局，刷新自己</h2><p>免费游玩 · 永久总排行</p></div></div>
     {{#if this.featured}}<button type="button" class="ra-season-banner" {{on "click" this.openSeason}}><div><span class="ra-season-eyebrow">第 {{this.featured.number}} 赛季 · {{if (eq this.featured.cadence "daily") "每日轮替" "每周轮替"}}</span><h3>{{this.featured.name}} <span aria-hidden="true">↗</span></h3><small>截止 {{this.featuredEnd}}</small></div><div class="ra-season-reward">{{#if this.featuredPrizes}}<small>前五名奖励 · RSC</small><strong>{{this.featuredPrizes}}</strong>{{else}}<small>本期仅排名，不发放 RSC</small>{{/if}}</div></button>{{else}}{{#if this.catalogError}}<p class="ra-rank-note">{{this.catalogError}} <button type="button" class="btn btn-flat" {{on "click" this.loadCatalog}}>重试</button></p>{{/if}}{{/if}}
-    <div class="ra-catalog">{{#each this.games as |game|}}<button type="button" class="ra-card ra-card--{{game.color}}" {{on "click" (fn this.open game.id)}}><div class="ra-card-art" aria-hidden="true"><ArcadeArt @game={{game.id}} />{{#if (eq game.id this.featured.game)}}<span class="ra-featured-tag">本期挑战</span>{{/if}}<i></i><i></i><i></i></div><div class="ra-card-label"><div><h3>{{game.name}}</h3><p>{{game.caption}}</p></div><span aria-hidden="true">↗</span></div></button>{{/each}}</div>
+    <div class="ra-catalog">{{#each this.games as |game|}}<button type="button" class="ra-card ra-card--{{game.color}}" {{on "click" (fn this.open game.id)}}><div class="ra-card-art" aria-hidden="true"><ArcadeArt @game={{game.id}} />{{#if (eq game.id this.featured.game)}}<span class="ra-featured-tag">本期挑战</span>{{/if}}<i></i><i></i><i></i></div><div class="ra-card-label"><div><h3>{{game.name}}</h3></div><span aria-hidden="true">↗</span></div></button>{{/each}}</div>
    {{else}}
     <header class="ra-heading"><button type="button" class="btn btn-flat" disabled={{or this.busy this.finishing}} {{on "click" this.back}}>← 返回挑战</button><h2>{{this.selected.name}}</h2><span class="ra-free">免费游玩</span></header>{{#if this.nonSeasonRun}}<p class="ra-rank-note">本局计入总排行；新开一局可参加当前赛季。</p>{{/if}}
     {{#if this.error}}<div class="rg-error" role="alert">{{this.error}}<button type="button" class="btn" disabled={{or this.busy this.syncing}} {{on "click" this.retry}}>重试并恢复进度</button><button type="button" class="btn btn-flat" disabled={{or this.busy this.syncing}} {{on "click" this.recover}}>读取已保存进度</button></div>{{/if}}

@@ -49,8 +49,7 @@ export default function draw(canvas,s,fx=null,now=performance.now()) {
  }
  if(s.game==='merge'){
   ctx.strokeStyle=s.danger?'#ff8497':'#496774';ctx.setLineDash([5,6]);ctx.beginPath();ctx.moveTo(8,40);ctx.lineTo(392,40);ctx.stroke();ctx.setLineDash([]);
-  const fruits=['🍒','🍓','🍇','🍊','🍎','🍐','🍑','🍍','🥥','🍈','🍉'];
-  const fruit=(x,y,level,ghost=false,pop=1)=>{const r=Core.radii[level]/10*pop;ctx.globalAlpha=ghost?.55:1;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fillStyle=PALETTE[level%7];ctx.fill();text(fruits[level],x,y,r*1.3);ctx.globalAlpha=1;};
+  const fruit=(x,y,level,ghost=false,pop=1)=>{const r=Core.radii[level]/10*pop,img=fx?.sprites?.[level];ctx.save();ctx.globalAlpha=ghost?.7:1;ctx.beginPath();ctx.arc(x,y,r,0,7);if(img?.complete&&img.naturalWidth){ctx.clip();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,x-r,y-r,r*2,r*2);}else{ctx.fillStyle=PALETTE[level%7];ctx.fill();text(level+1,x,y,r);}ctx.restore();};
   if(s.drops<100){const aim=s.aim/10;const first=s.balls.filter(b=>Math.abs(b.x-s.aim)<Core.radii[b.level]).reduce((v,b)=>Math.min(v,(b.y-Core.radii[b.level])/10),550);ctx.save();ctx.strokeStyle='#8bb5ad66';ctx.setLineDash([3,7]);ctx.beginPath();ctx.moveTo(aim,50);ctx.lineTo(aim,Math.max(50,first));ctx.stroke();ctx.restore();}
   s.balls.forEach(b=>fruit(b.x/10,b.y/10,b.level,false,fx?.pop(b.id,now)||1));if(s.drops<100){fruit(s.aim/10,25,s.next,true);if(s.cooldown){box(s.aim/10-18,48,36*(1-s.cooldown/45),2,'#b3ead8',1);}}
 

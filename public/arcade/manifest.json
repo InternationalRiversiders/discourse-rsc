@@ -1,12 +1,59 @@
 {
   "protocol": 1,
   "rules_version": 1,
-  "script": "/plugins/discourse-rsc/arcade/rsc-arcade-sdk-aa8861933cca72d9.js",
-  "sha256": "aa8861933cca72d994e88d8b5bf5debd3b9f00682da92f80ca66a58ef61c45ff",
+  "script": "/plugins/discourse-rsc/arcade/rsc-arcade-sdk-4e1d305c4a0dce85.js",
+  "sha256": "4e1d305c4a0dce8512cdb19119e0d07ec04436444511008a54f102e7e391afd3",
+  "assets": [
+    {
+      "url": "/plugins/discourse-rsc/arcade/merge/00-973df787c094.png",
+      "sha256": "973df787c094976c82b20642ec46a5c651759e90a78bb49062a201181502e2a7"
+    },
+    {
+      "url": "/plugins/discourse-rsc/arcade/merge/01-22a658c02581.png",
+      "sha256": "22a658c02581ccff4eeb41cbb37d9b48920da9ecc3b1ff1a53d264a519a44eb4"
+    },
+    {
+      "url": "/plugins/discourse-rsc/arcade/merge/02-690977014d67.png",
+      "sha256": "690977014d6730ca1b4dd098a21fe8b7d26bb1fbc2a181781afe2d2046dabe77"
+    },
+    {
+      "url": "/plugins/discourse-rsc/arcade/merge/03-3f62e392f2c9.png",
+      "sha256": "3f62e392f2c9e98fde6bc52570c18748f2810215d96f34829e2d8a0f7f2d63fb"
+    },
+    {
+      "url": "/plugins/discourse-rsc/arcade/merge/04-799a4a503725.png",
+      "sha256": "799a4a5037255e9dcae726fbfc6a8ab734a0c93b055f5cf4d23ac998d9589846"
+    },
+    {
+      "url": "/plugins/discourse-rsc/arcade/merge/05-977c9c41d76b.png",
+      "sha256": "977c9c41d76b7fa68ddc8622d38c04704bcf85e9cc67994bd99fd65a0c0fd48b"
+    },
+    {
+      "url": "/plugins/discourse-rsc/arcade/merge/06-906829a14b81.png",
+      "sha256": "906829a14b814d191360546c2670b3d5a2dc62af8e2b90a53a59cdc5dfa9bfc0"
+    },
+    {
+      "url": "/plugins/discourse-rsc/arcade/merge/07-544ca786e264.png",
+      "sha256": "544ca786e264a9a9978e819d8956bd555903272334d35987e2497d5636b3b190"
+    },
+    {
+      "url": "/plugins/discourse-rsc/arcade/merge/08-336ebbcf460a.png",
+      "sha256": "336ebbcf460acaf3b7994a33c81f0d20a4fa82fc9bec1240742d12df393be63b"
+    },
+    {
+      "url": "/plugins/discourse-rsc/arcade/merge/09-bb68a2bb9cd6.png",
+      "sha256": "bb68a2bb9cd6d1fcfd46d3c0e25b6fb7c3e013e16fc98e609025de4d59650da3"
+    },
+    {
+      "url": "/plugins/discourse-rsc/arcade/merge/10-bce7f4a63be4.png",
+      "sha256": "bce7f4a63be46fa5e4064bb910d29d79ccde4444a8153ecf7ded07a6526216de"
+    }
+  ],
   "sources": {
     "core": "4d51fb43fabcafdf7fd4b988217ada46e44c9c84b1c017627345369918fa81de",
     "playback": "0a11b9c5ebeb4be094ce28b7b8289b9e8586d45e87482372268049fc2e006dbe",
     "effects": "e90457a019710a0b6275154350cc0ff1a3579ba299ca9f9d094a36a62768c8ab",
-    "draw": "3690bd7c602fc83441c6522bea11e54cc34da3a2130b0aa676cc0101b7d96d6f"
+    "draw": "7c09848cfde567e8dd54d005ab29ecc0127ebffacdbafeb61f888d43db75b9b9",
+    "sprites": "1f906d4fba7947a510373388e5ffa052af954c30ca221225b88afab3b43dabcc"
   }
 }
