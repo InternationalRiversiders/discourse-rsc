@@ -1,12 +1,34 @@
+import { SCENE_GAMES } from "./game-3d-scenes";
+
 // Presentation only: the server has already committed this round and its payout.
 // A fresh round ID starts a fresh animation, even when the outcome repeats.
-export function animateGame(stage, round, done) {
+// `scene` resolves to a WebGL controller or null; CSS motion is the fallback.
+export function animateGame(stage, round, done, { scene = null, onScene = null } = {}) {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!scene || !SCENE_GAMES.has(round.game)) return animateCss(stage, round, done, reduced);
+  let cancelled = false, run = null, fallback = null, timer;
+  const timeout = new Promise((resolve) => (timer = setTimeout(() => resolve(null), 2500)));
+  Promise.race([scene, timeout]).then((ctl) => {
+    clearTimeout(timer);
+    if (cancelled) return;
+    if (!ctl) {
+      fallback = animateCss(stage, round, done, reduced);
+      return;
+    }
+    onScene?.();
+    run = ctl.play(round, { reduced });
+    run.finished.then(() => { if (!cancelled) done(); });
+  });
+  return () => { cancelled = true; clearTimeout(timer); run?.cancel(); fallback?.(); };
+}
+
+function animateCss(stage, round, done, reduced) {
   const animations = [];
   let cancelled = false;
   const animate = (element, frames, duration, easing = 'cubic-bezier(.16,.65,.12,1)') => {
     if (element) animations.push(element.animate(frames, { duration, easing, fill: 'both' }));
   };
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (!reduced) {
     if (round.game === 'roulette') {
       const disc = stage.querySelector('.rg-wheel-disc');
       const orbit = stage.querySelector('.rg-ball-orbit');

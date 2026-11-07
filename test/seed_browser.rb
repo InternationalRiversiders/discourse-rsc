@@ -9,6 +9,7 @@ SiteSetting.rsc_market_data_enabled = ENV['RSC_BROWSER_REFRESH_QUOTES'] == '1'
 SiteSetting.rsc_sports_data_enabled = false
 SiteSetting.rsc_high_risk_enabled = false
 SiteSetting.rsc_read_only = false
+SiteSetting.rsc_games_enabled = true
     SiteSetting.rsc_enabled = true
 SiteSetting.rsc_native_trial_enabled = true
 SiteSetting.force_https = false

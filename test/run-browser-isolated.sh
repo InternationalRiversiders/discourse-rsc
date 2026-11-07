@@ -54,5 +54,5 @@ sudo -n nsenter -t "$pid" -n env \
   RSC_PLAYWRIGHT="$RSC_PLAYWRIGHT" RSC_CHROMIUM="$RSC_CHROMIUM" \
   RSC_BROWSER_REFRESH_QUOTES="${RSC_BROWSER_REFRESH_QUOTES:-0}" \
   RSC_BROWSER_CREDENTIALS="$work/credentials.json" RSC_BROWSER_OUTPUT="$output" \
-  "$node_bin" "$repo/test/browser.cjs"
+  "$node_bin" "$repo/test/${RSC_BROWSER_SCRIPT:-browser.cjs}"
 printf 'Browser artifacts: %s\n' "$output"

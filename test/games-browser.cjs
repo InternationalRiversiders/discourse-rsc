@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 const {chromium}=require(process.env.RSC_PLAYWRIGHT);
 (async()=>{
  const c=JSON.parse(fs.readFileSync(process.env.RSC_BROWSER_CREDENTIALS));
- const browser=await chromium.launch({executablePath:process.env.RSC_CHROMIUM,args:['--no-sandbox','--host-resolver-rules=MAP rsc.test 127.0.0.1','--unsafely-treat-insecure-origin-as-secure=http://rsc.test:3000']});
+ const browser=await chromium.launch({executablePath:process.env.RSC_CHROMIUM,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist','--in-process-gpu','--host-resolver-rules=MAP rsc.test 127.0.0.1','--unsafely-treat-insecure-origin-as-secure=http://rsc.test:3000']});
  try{
   for(const scheme of ['light','dark']){
    const context=await browser.newContext({viewport:{width:1440,height:1100},locale:'zh-CN',colorScheme:scheme});const page=await context.newPage(),errors=[];
