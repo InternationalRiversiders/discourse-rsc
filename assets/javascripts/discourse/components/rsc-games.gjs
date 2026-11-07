@@ -57,6 +57,10 @@ export default class extends Component {
   @tracked stake="10";
   @tracked choice="heads";
   @tracked bets={};
+  @tracked betMode="add";
+  @tracked betUndo=[];
+  @tracked inspected=null;
+  @tracked dismissedRound=null;
   @tracked busy=false;
   @tracked animating=false;
   @tracked loading=false;
@@ -144,12 +148,48 @@ export default class extends Component {
   @action editStake(e){this.stake=e.target.value;}
   @action chip(n){if(!this.locked){this.stake=String(n);}}
   @action pick(choice){if(!this.locked){this.choice=choice;}}
-  @action bet(key){if(this.locked){return;} const amount=Number(this.stake); if(!Number.isFinite(amount)||amount<1||Math.abs(amount*100-Math.round(amount*100))>1e-8||this.total+amount>Math.min(this.maxStake,Number(this.balance))){this.error="请检查投入金额和可用余额。";return;}this.error="";this.bets={...this.bets,[key]:Math.round(((this.bets[key]||0)+amount)*100)/100};}
-  @action clearBets(){this.bets={};}
+  @action setBetMode(mode){if(!this.locked){this.betMode=mode;this.error="";}}
+  @action bet(key){
+    if(this.locked){return;}
+    const amount=Number(this.stake),subtract=this.betMode==="subtract";
+    if(!Number.isFinite(amount)||amount<1||Math.abs(amount*100-Math.round(amount*100))>1e-8||(!subtract&&this.total+amount>Math.min(this.maxStake,Number(this.balance)))){this.error="请检查投入金额和可用余额。";return;}
+    this.error="";
+    if(subtract&&!this.bets[key]){return;}
+    this.betUndo=[...this.betUndo,this.bets];
+    const next={...this.bets},value=Math.max(0,Math.round(((next[key]||0)+(subtract?-amount:amount))*100)/100);
+    if(value){next[key]=value;}else{delete next[key];}
+    this.bets=next;
+  }
+  @action undoBet(){if(!this.locked&&this.betUndo.length){this.bets=this.betUndo.at(-1);this.betUndo=this.betUndo.slice(0,-1);this.error="";}}
+  @action clearBets(){if(!this.locked&&this.total){this.betUndo=[...this.betUndo,this.bets];this.bets={};this.error="";}}
+  get record(){return this.inspected||(this.args.model.selected_round?.id!==this.dismissedRound?this.args.model.selected_round:null);}
+  get recordName(){return GAMES.find(g=>g.id===this.record?.game)?.name;}
+  get recordTime(){return formatDateTime(this.record?.created_at);}
+  get recordNet(){const n=Number(this.record?.net);return this.record?.status==="playing"?"进行中":`${n>0?"+":""}${money(n)} RSC`;}
+  get recordResult(){
+    const r=this.record,s=r?.state;if(!s){return "";}
+    if(r.status==="playing"){return "牌局进行中，可返回游戏继续";}
+    switch(r.game){
+      case "roulette": return `开奖号码 ${s.number}`;
+      case "slots": return (s.symbols||[]).map(x=>SYMBOL_NAMES[x]).join(" · ");
+      case "coin": return s.landed==="tails"?"反面（纸船）":"正面（银杏）";
+      case "dice": return `${s.dice?.join("、")} 点，合计 ${s.total} 点`;
+      case "blackjack": return `你的手牌 ${s.player_score} 点 · 庄家 ${s.dealer_score} 点`;
+      case "scratch": return s.spots?`各位点倍数：${s.spots.map(x=>typeof x==="object"?x.multiplier:x).join("、")}`:`票面：${s.tiles?.join("、")}`;
+    }
+    return "";
+  }
+  get recordBets(){
+    const s=this.record?.state;if(!s){return "";}
+    const labels={heads:"正面",tails:"反面",small:"小",big:"大",red:"红",black:"黑",odd:"单",even:"双",low:"1–18",high:"19–36",dozen1:"1–12",dozen2:"13–24",dozen3:"25–36",column1:"第 1 列",column2:"第 2 列",column3:"第 3 列"};
+    if(s.bets){return s.bets.map(b=>`${labels[b.choice]||b.choice.replace(/^n/,"")}：${b.stake} RSC`).join(" · ");}
+    return labels[s.choice]||"";
+  }
+  @action closeRecord(){this.dismissedRound=this.args.model.selected_round?.id;this.inspected=null;}
   @action toggleRules(){this.rules=!this.rules;}
   @action toggleHistory(){this.showHistory=!this.showHistory;}
   @action reveal(){this.revealed=true;}
-  @action inspect(r){if(this.busy||this.animating||this.pending){return;}this.game=r.game;this.round=r;this.revealed=true;this.showHistory=false;this.rules=false;this.error="";}
+  @action inspect(r){if(this.busy||this.animating||this.pending){return;}this.inspected=r;this.showHistory=false;this.error="";window.scrollTo({top:0,behavior:"smooth"});}
   @action async refresh(){
     if(this.loading||this.busy||this.animating){return;} this.loading=true;
     try{const data=await ajax("/rsc/games/state.json");if(this.isDestroying||this.isDestroyed){return;}this.lottery=data.lottery;this.balance=data.balance;this.history=data.history;this.cursor=data.next_cursor;this.active=data.active;this.walletStatus=data.wallet_status;this.readOnly=data.read_only;if(this.game==="blackjack"){this.round=data.active||data.history.find(r=>r.id===this.round?.id)||null;}}
@@ -165,7 +205,7 @@ export default class extends Component {
     try{
       const result=await ajax(request.url,{type:"POST",contentType:"application/json",data:JSON.stringify(request.data)});
       if(this.isDestroying||this.isDestroyed){return;}
-      this.animating=["roulette","slots","coin","dice","blackjack"].includes(result.game);this.round=result;this.balance=result.balance;this.pending=null;this.revealed=false;
+      this.animating=["roulette","slots","coin","dice","blackjack"].includes(result.game);this.round=result;this.balance=result.balance;this.pending=null;this.revealed=false;this.betUndo=[];
       if(result.game==="blackjack"){this.active=result.status==="playing"?result:null;}
       this.history=[result,...this.history.filter(r=>r.id!==result.id)].slice(0,Math.max(20,this.history.length));
     }catch(e){
@@ -194,6 +234,7 @@ export default class extends Component {
       </header>
       {{#if this.error}}<div class="rg-error" role="alert">{{this.error}}{{#if this.pending}}<button type="button" disabled={{this.busy}} {{on "click" this.retry}}>重试同一请求</button>{{else}}<button type="button" disabled={{this.busy}} {{on "click" this.refresh}}>刷新</button>{{/if}}</div>{{/if}}
       {{#if this.readOnly}}<div class="rg-notice">游戏暂时维护中</div>{{else if (not (eq this.walletStatus "active"))}}<div class="rg-notice">钱包已冻结，暂不能参与游戏</div>{{/if}}
+      {{#if this.record}}<section class="rg-record" aria-label="游戏记录"><header><div><h2>{{this.recordName}} · 游戏记录</h2><small>{{this.recordTime}}</small></div><button type="button" class="rg-icon-button" aria-label="关闭这条记录" {{on "click" this.closeRecord}}>{{dIcon "xmark"}}</button></header><dl><div><dt>投入</dt><dd>{{this.record.stake}} RSC</dd></div><div><dt>返还（含本金）</dt><dd>{{this.record.payout}} RSC</dd></div><div><dt>净收益</dt><dd>{{this.recordNet}}</dd></div></dl>{{#if this.recordBets}}<p>投注：{{this.recordBets}}</p>{{/if}}<p>{{this.recordResult}}</p></section>{{/if}}
       {{#unless this.game}}
         {{#if this.active}}<button type="button" class="rg-resume" {{on "click" (fn this.open "blackjack")}}><span>♠</span>继续21点<strong>返回牌局 →</strong></button>{{/if}}
         {{#if this.lottery}}<LinkTo @route="rsc-lottery" class="rl-banner"><span class="rl-banner-title"><small>RIVERSIDE</small><strong>大乐透</strong><span>每日 20:00 开奖 · 北京时间</span></span><span class="rl-banner-pool"><small>当前奖池</small><strong>{{this.lotteryPool}} <small>RSC</small></strong></span><span class="rl-banner-cta">去选号 →</span></LinkTo>{{/if}}
@@ -207,6 +248,7 @@ export default class extends Component {
             {{else if (eq this.game "roulette")}}
               <RscRouletteWheel @number={{this.round.state.number}} @hasRound={{this.round}} @spinning={{this.animating}} />
               <div class="rg-3d-wrap rg-3d-wrap--roulette"><div class="rg-3d rg-3d--roulette" role="img" aria-label={{this.sceneLabel}} {{this.view3d "roulette"}}></div>{{#if this.rouletteBadge}}<span class="rg-3d-badge rg-3d-badge--{{this.rouletteBadge.color}}">{{this.rouletteBadge.n}}</span>{{/if}}</div>
+              <div class="rg-bet-toolbar" aria-label="调整投注"><button type="button" class={{if (eq this.betMode "add") "is-selected"}} aria-pressed={{eq this.betMode "add"}} disabled={{this.locked}} {{on "click" (fn this.setBetMode "add")}}>＋ 加注</button><button type="button" class={{if (eq this.betMode "subtract") "is-selected"}} aria-pressed={{eq this.betMode "subtract"}} disabled={{this.locked}} {{on "click" (fn this.setBetMode "subtract")}}>− 减注</button><button type="button" disabled={{or this.locked (not this.betUndo.length)}} {{on "click" this.undoBet}}>撤销</button><button type="button" disabled={{or this.locked (not this.total)}} {{on "click" this.clearBets}}>清空</button><span>每次 {{if (eq this.betMode "subtract") "−" "+"}}{{this.stake}} RSC</span></div>
               <div class="rg-betting-board">
                 <button type="button" class="rg-spot zero {{if this.zero.selected 'is-selected'}}" disabled={{this.locked}} {{on "click" (fn this.bet "n0")}}>0{{#if this.zero.amount}}<small>{{this.zero.amount}}</small>{{/if}}</button>
                 <div class="rg-number-board">{{#each this.numberRows as |row|}}{{#each row as |spot|}}<button type="button" class="rg-spot {{spot.color}} {{if spot.selected 'is-selected'}}" disabled={{this.locked}} {{on "click" (fn this.bet spot.key)}}>{{spot.label}}{{#if spot.amount}}<small>{{spot.amount}}</small>{{/if}}</button>{{/each}}{{/each}}</div>
@@ -232,7 +274,7 @@ export default class extends Component {
             {{#if this.playing}}
               <div class="rg-hand-stake"><strong>{{this.round.stake}}</strong><span>RSC</span></div><div class="rg-blackjack-actions"><button type="button" class="rg-primary" disabled={{this.locked}} {{on "click" (fn this.move "hit")}}>要牌</button><button type="button" class="rg-secondary" disabled={{this.locked}} {{on "click" (fn this.move "stand")}}>停牌</button><button type="button" class="rg-secondary" disabled={{this.doubleDisabled}} {{on "click" (fn this.move "double")}}>加倍 · +{{this.round.stake}} RSC</button></div>
             {{else}}
-              <label class="rg-amount-label" for="rg-stake">{{if (eq this.game "roulette") "每次放入" (if (eq this.game "scratch") "整张价格" "金额")}}</label><div class="rg-amount"><input id="rg-stake" type="number" inputmode="decimal" min="1" max={{this.maxStake}} step="0.01" value={{this.stake}} disabled={{this.locked}} {{on "input" this.editStake}} /><span>RSC</span></div>
+              <label class="rg-amount-label" for="rg-stake">{{if (eq this.game "roulette") "每次加减" (if (eq this.game "scratch") "整张价格" "金额")}}</label><div class="rg-amount"><input id="rg-stake" type="number" inputmode="decimal" min="1" max={{this.maxStake}} step="0.01" value={{this.stake}} disabled={{this.locked}} {{on "input" this.editStake}} /><span>RSC</span></div>
               <div class="rg-chips">{{#each this.chips as |n|}}<button type="button" disabled={{this.locked}} class={{if (eq this.stake (concat n)) "is-selected"}} {{on "click" (fn this.chip n)}}>{{n}}</button>{{/each}}</div>
               {{#if (eq this.game "coin")}}<div class="rg-choices"><button type="button" class={{if (eq this.choice "heads") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "heads"}} {{on "click" (fn this.pick "heads")}}>正面<small>银杏</small></button><button type="button" class={{if (eq this.choice "tails") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "tails"}} {{on "click" (fn this.pick "tails")}}>反面<small>纸船</small></button></div>{{/if}}
               {{#if (eq this.game "dice")}}<div class="rg-choices"><button type="button" class={{if (eq this.choice "small") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "small"}} {{on "click" (fn this.pick "small")}}>小<small>4–10</small></button><button type="button" class={{if (eq this.choice "big") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "big"}} {{on "click" (fn this.pick "big")}}>大<small>11–17</small></button></div>{{/if}}

@@ -1,0 +1,50 @@
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const {chromium}=require(process.env.RSC_PLAYWRIGHT);
+(async()=>{
+ const c=JSON.parse(fs.readFileSync(process.env.RSC_BROWSER_CREDENTIALS));
+ const browser=await chromium.launch({executablePath:process.env.RSC_CHROMIUM,args:['--no-sandbox','--host-resolver-rules=MAP rsc.test 127.0.0.1','--unsafely-treat-insecure-origin-as-secure=http://rsc.test:3000','--disable-webgl']});
+ const page=await browser.newPage({viewport:{width:1360,height:1100},locale:'zh-CN'}),errors=[];
+ page.setDefaultTimeout(20000);
+ page.on('pageerror',e=>errors.push(e.message));
+ try {
+  await page.goto('http://rsc.test:3000/login',{waitUntil:'networkidle'});
+  assert.equal(await page.evaluate(async c=>{for(let i=0;i<2;i++){const {csrf}=await(await fetch('/session/csrf.json')).json();const r=await fetch('/session.json',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf,'X-Requested-With':'XMLHttpRequest'},body:JSON.stringify({login:c.username,password:c.password})});if(r.status!==403||i===1)return r.status;}},c),200);
+  await page.goto('http://rsc.test:3000/rsc/games',{waitUntil:'domcontentloaded'});
+  console.log('Loaded games');
+  await page.locator('.rg-game-card').filter({hasText:'幸运转盘'}).click();
+  const tool=page.locator('.rg-bet-toolbar'), red=page.locator('.rg-outside > .rg-spot.red'),black=page.locator('.rg-outside > .rg-spot.black');
+  console.log('Opened roulette');
+  await page.locator('#rg-stake').fill('1');
+  await red.click();await red.click();await black.click();
+  assert.equal(await red.locator('small').innerText(),'2');
+  await tool.getByRole('button',{name:'− 减注',exact:true}).click();
+  await red.click();assert.equal(await red.locator('small').innerText(),'1');
+  await tool.getByRole('button',{name:'撤销',exact:true}).click();assert.equal(await red.locator('small').innerText(),'2');
+  await tool.getByRole('button',{name:'清空',exact:true}).click();assert.equal(await page.locator('.rg-spot small').count(),0);
+  await tool.getByRole('button',{name:'撤销',exact:true}).click();assert.equal(await red.locator('small').innerText(),'2');
+  await page.locator('#rg-stake').fill('10');await black.click();assert.equal(await black.locator('small').count(),0,'Subtract clamps at zero');
+  await black.click();await tool.getByRole('button',{name:'撤销',exact:true}).click();assert.equal(await black.locator('small').innerText(),'1','Empty spot is not an undo operation');
+  await page.locator('#rg-stake').fill('0');await red.click();assert.equal(await red.locator('small').innerText(),'2','Invalid amount has no effect');
+  await page.locator('#rg-stake').fill('1.25');await tool.getByRole('button',{name:'＋ 加注',exact:true}).click();await red.click();assert.equal(await red.locator('small').innerText(),'3.25');
+  console.log('Bet editing passed');
+  for(const width of [1360,390,320]){await page.setViewportSize({width,height:1100});await tool.scrollIntoViewIfNeeded();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.locator('.rg-app').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/roulette-${width}.png`});}
+  await page.setViewportSize({width:1360,height:1100});
+  const response=page.waitForResponse(r=>r.url().includes('/rsc/games/play.json'));
+  await page.locator('.rg-play').click();const round=await(await response).json();
+  assert.equal(round.stake,'4.25');
+  assert(await tool.getByRole('button',{name:'− 减注',exact:true}).isDisabled(),'Locked during animation');
+  await page.waitForFunction(()=>!document.querySelector('.rg-stage.is-animating'),{},{timeout:30000});
+  assert(await tool.getByRole('button',{name:'撤销',exact:true}).isDisabled(),'Cannot undo settled money');
+  await page.goto(`http://rsc.test:3000/rsc/games?round_id=${round.id}`,{waitUntil:"domcontentloaded"});
+  await page.locator('.rg-record').waitFor();
+  const text=await page.locator('.rg-record').innerText();assert(text.includes('4.25 RSC'));assert(text.includes(`${round.payout} RSC`));assert(text.includes(`开奖号码 ${round.state.number}`));assert(text.includes('红：3.25 RSC'));
+  assert.equal(await page.locator('.rg-stage.is-animating').count(),0,'Viewing a record does not replay');
+  await page.reload({waitUntil:"domcontentloaded"});await page.locator('.rg-record').waitFor();
+  const status=await page.evaluate(async()=>({invalid:(await fetch('/rsc/games/state.json?round_id=bad')).status,missing:(await fetch('/rsc/games/state.json?round_id=999999999')).status}));assert.equal(status.invalid,400);assert.equal(status.missing,404);
+  await page.setViewportSize({width:320,height:950});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.locator('.rg-record').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/record-mobile.png`});
+  await page.getByRole('button',{name:'关闭这条记录',exact:true}).click();assert.equal(await page.locator('.rg-record').count(),0);
+  await page.getByRole('button',{name:'我的记录',exact:true}).click();await page.locator('.rg-history-row').first().click();await page.locator('.rg-record').waitFor();
+  assert.equal(errors.length,0,errors.join('\n'));
+  console.log('PASS: add/subtract/undo/clear, decimal bets, no negative bets, settled lock, exact record deep link and reload, history detail, invalid IDs, desktop/mobile layout');
+ } catch(e){console.log('Page errors:',errors,e.message);throw e;} finally {await browser.close();}
+})().catch(e=>{console.error(e.message);process.exit(1);});

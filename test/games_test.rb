@@ -32,6 +32,26 @@ class GamesTest < NativeBusinessTest
     end
     R::Journal.find_each { |j| assert_equal 0,R::Entry.where(journal_id:j.id).sum(:units).to_i }
   end
+  def test_games_record_lookup_is_owner_only_and_independent_of_history_page
+    r=play
+    21.times { play }
+    state=R::Games.state(@alice,round_id:r[:id])
+    assert_equal r[:id],state[:selected_round][:id]
+    refute_includes state[:history].map { |row| row[:id] },r[:id]
+    assert_equal r[:stake],state[:selected_round][:stake]
+    assert_equal r[:payout],state[:selected_round][:payout]
+    assert_raises(Discourse::NotFound) { R::Games.state(@bob,round_id:r[:id]) }
+    assert_raises(Discourse::NotFound) { R::Games.state(@alice,round_id:-1) }
+    assert_nil R::Games.state(@alice)[:selected_round]
+    assert_equal "/rsc/games?round_id=#{r[:id]}",R::WalletHistory.context({'game_round_id'=>r[:id]},@alice)[:path]
+    consistent
+  end
+  def test_games_record_lookup_hides_active_blackjack_deck_and_hole_card
+    r=deck([9,7,5,9,1]) { play('blackjack',choice:nil) }
+    state=R::Games.state(@alice,round_id:r[:id])[:selected_round][:state]
+    refute state.key?('deck')
+    assert_nil state['dealer'][1]
+  end
   def test_games_coin_replay_and_conflicting_input
     key=SecureRandom.uuid
     result=stub_method(SecureRandom,:random_number,0) { play(request_id:key) }
