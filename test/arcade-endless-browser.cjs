@@ -11,9 +11,11 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   async function open(name){await p.locator('.ra-card').filter({hasText:name}).click();await p.getByRole('button',{name:'开始挑战',exact:true}).click();await p.waitForFunction(()=>window.arcadeUnderTest?.run?.status==='playing'&&!window.arcadeUnderTest.busy);}
   async function finish(){if(await p.getByRole('button',{name:'结束并保存',exact:true}).count())await p.getByRole('button',{name:'结束并保存',exact:true}).click();await p.getByRole('button',{name:'再来一局',exact:true}).waitFor();await p.getByRole('button',{name:'返回挑战',exact:false}).click();}
   for(const name of ['打砖块','六角消除']){
-   await open(name);await p.locator('.ra-controls').scrollIntoViewIfNeeded();
+   await open(name);
+   if(name==='六角消除'){await p.locator('.ra-controls').scrollIntoViewIfNeeded();
    const left=await p.getByRole('button',{name:'←',exact:true}).boundingBox(),right=await p.getByRole('button',{name:'→',exact:true}).boundingBox();
-   assert(right.x-(left.x+left.width)>=60,'thumb controls must be separated');assert(left.height>=60&&right.height>=60);
+   assert(right.x-(left.x+left.width)>=60,'thumb controls must be separated');assert(left.height>=60&&right.height>=60);const stage=await p.locator('.ra-stage').boundingBox(),board=await p.locator('canvas.ra-canvas').boundingBox();assert(left.y>=board.y+board.height,'controls do not cover the playfield');assert(left.y+left.height<=stage.y+stage.height,'controls stay inside stage');}
+   else{assert.equal(await p.locator('.ra-controls').count(),0);}
    if(name==='打砖块'){
     await p.locator('canvas.ra-canvas').scrollIntoViewIfNeeded();const rect=await p.locator('canvas.ra-canvas').boundingBox();
     const cdp=await p.context().newCDPSession(p);
@@ -30,11 +32,21 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   const before=await p.evaluate(()=>JSON.parse(JSON.stringify(window.arcadeUnderTest.run)));
   assert.equal(before.rules_version,2);assert(before.state.balls[0].x<500,'drop reaches the actual wall');
   await p.locator('.ra-play').screenshot({path:out+'/endless-merge.png'});
-  await p.reload({waitUntil:'networkidle'});await p.locator('.ra-card').filter({hasText:'合成大河畔'}).click();
+  await p.reload({waitUntil:'networkidle'});await p.evaluate(()=>{const id=Object.keys(requirejs.entries).find(k=>k.endsWith('/components/rsc-arcade'));const proto=require(id).default.prototype,update=proto.updateView;proto.updateView=function(...args){window.arcadeUnderTest=this;return update.apply(this,args);};});await p.locator('.ra-card').filter({hasText:'合成大河畔'}).click();
   const start=p.waitForResponse(r=>r.url().includes('/arcade/start')&&r.status()===200);await p.getByRole('button',{name:'开始挑战',exact:true}).click();const resumed=await(await start).json();
   assert.equal(resumed.id,before.id);assert.deepEqual(resumed.state,before.state);
   // Return to the server checkpoint, not a fresh random game.
   await p.getByRole('button',{name:'结束并保存',exact:true}).click();await p.getByRole('button',{name:'再来一局',exact:true}).waitFor();
-  assert.deepEqual(errors,[]);console.log('PASS spaced thumb controls, real touch paddle, no timer, wall-adjacent drops, exact saved-state reload');
+  await p.getByRole('button',{name:'返回挑战',exact:false}).click();
+  for(const name of ['2048','方块堆叠','贪吃蛇','河畔飞鸟','六角消除','打砖块','合成大河畔']){
+   await p.setViewportSize({width:390,height:667});await open(name);
+   const stage=await p.locator('.ra-stage').boundingBox(),toolbar=await p.locator('.ra-toolbar').boundingBox();
+   assert(stage.x>=0&&stage.x+stage.width<=390,name+' fits screen width');
+   assert(toolbar.y+toolbar.height<=667,name+' controls and save fit a short phone screen');
+   if(!['方块堆叠','六角消除'].includes(name))assert.equal(await p.locator('.ra-controls').count(),0,name+' uses direct gesture input');
+   if(name==='方块堆叠')await p.screenshot({path:out+'/stage-short-phone.png'});
+   await finish();
+  }
+  assert.deepEqual(errors,[]);console.log('PASS in-stage thumb controls, gesture-only paddle, no timer, wall-adjacent drops, exact saved-state reload');
  }catch(e){await p.screenshot({path:out+'/endless-failure.png',fullPage:true});throw e;}finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1);});

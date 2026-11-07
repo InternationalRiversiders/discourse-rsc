@@ -59,14 +59,13 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
     const pipe=s.pipes.find(p=>p.x+400>750),target=pipe?pipe.gap:2800;
     if(s.vy>=0&&s.y>target+180){
      if(c.syncing)window.tapDuringSync++;
-     const b=document.querySelector('.ra-controls button');
-     b.click();
+     document.querySelector('.ra-play').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerType:'touch'}));
     }
    },16);
   });
   await page.waitForFunction(()=>window.tapDuringSync>=1&&window.arcadeUnderTest.run.version>=1,{},{timeout:20000});
   assert(await page.evaluate(()=>window.ticksDuringSync.size>30),'simulation keeps advancing during delayed requests');
-  assert.equal(await page.getByRole('button',{name:'起飞',exact:true}).isEnabled(),true);
+  assert.equal(await page.locator('.ra-controls').count(),0,'bird needs no external controls');
   assert(requests.some(r=>r.events.some(e=>e[1]==='tap')));
   await page.evaluate(()=>clearInterval(window.pilot));
   // Click while the response is held, then finish before it returns. All tail

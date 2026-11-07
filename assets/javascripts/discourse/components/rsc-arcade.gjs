@@ -31,7 +31,7 @@ const ENDLESS_RULES={
  snake:'方向键或滑动转向，吃到食物获得 100 分。不能直接掉头，撞墙、障碍或身体结束，填满可用格子通关。',
  bird:'轻点画面或空格拍动翅膀。每穿过一道障碍获得 1 分，速度和难度随进度逐步增加，碰撞结束。',
  hex:'左右旋转中心六边形，堆叠末尾三个同色块消除并获得 100 分。速度随得分增加，任一边堆到 10 块结束。',
- bricks:'按住左右键或拖动画面移动挡板，每消除一块砖获得 100 分。清屏进入下一关，后续有更耐打的砖块、不同布局和更快球速，3 条生命耗尽结束。',
+ bricks:'拖动画面或按住键盘左右键移动挡板，每消除一块砖获得 100 分。清屏进入下一关，后续有更耐打的砖块、不同布局和更快球速，3 条生命耗尽结束。',
  merge:'移动指针选择落点，轻点投放；也可左右移动、空格投放。同级图案相碰合成，得分随等级增加。可贴墙投放，越过虚线持续 3 秒结束。'
 };
 export default class extends Component {
@@ -76,7 +76,9 @@ export default class extends Component {
  get status(){return this.finished?'成绩已保存':this.error?'连接中断':this.finishing||this.localOver?'保存成绩':this.paused?'已暂停':this.waiting?'等待同步':'挑战中';}
  get startLabel(){return this.finished?'再来一局':this.run?'继续挑战':'开始挑战';}
  get progressLabel(){if(!this.state){return '';}if(this.grid){return `${this.progress} 步`;}if(this.game==='blocks'){return `${this.state.lines} 行`;}if(this.game==='merge'){return `${this.state.drops} 次投放`;}if(this.game==='bricks'){return `第 ${this.state.wave||1} 关`;}if(this.game==='bird'){return `${this.score} 道障碍`;}return '';}
- get controls(){if(this.game==='bird'){return [];}return this.game==='2048'||this.game==='snake'||this.game==='blocks'?['l','u','d','r']:['l','r'];}
+ get controls(){return this.game==='blocks'?['l','u','d','r']:this.game==='hex'?['l','r']:[];}
+ get hasControls(){return this.game==='blocks'||this.game==='hex';}
+ focusPlay(){this.canvas?.focus({preventScroll:true});if(window.innerWidth<=767){this.canvas?.closest('.ra-play')?.scrollIntoView({block:'start',behavior:'instant'});}}
  get controlsList(){return this.controls.map(k=>({key:k,label:{l:'←',r:'→',u:'↑',d:'↓'}[k]}));}
  @action async open(game){
   this.generation++;this.rankInfo=false;this.rankChosen=false;this.rankScope=this.featured?.game===game?'season':'all';this.game=game;this.run=null;this.playback=null;this.pending=null;this.error='';
@@ -91,13 +93,13 @@ export default class extends Component {
  @action async loadRanking(){const game=this.game;this.rankingError='';try{const r=await ajax('/rsc/arcade/ranking.json',{data:{game},ignoreUnsent:false,timeout:15000});if(this.game===game&&!this.isDestroying){this.ranking=r;this.args.updateSeason?.(r.featured);if(!this.rankChosen){this.rankScope=r.season?'season':'all';}else if(!r.season){this.rankScope='all';}}}catch(e){if(!this.isDestroying){this.rankingError=extractError(e,"网络连接中断，请重试或读取已保存进度。");}}}
  @action async start(){
   if(this.busy||this.syncing||this.pending){return;}
-  if(this.run?.status==='playing'&&!this.error){this.paused=false;this.canvas?.focus({preventScroll:true});return;}
+  if(this.run?.status==='playing'&&!this.error){this.paused=false;this.focusPlay();return;}
   this.busy=true;this.error='';const generation=this.generation;
   try{
    const r=await ajax('/rsc/arcade/start.json',{ignoreUnsent:false,timeout:15000,type:'POST',contentType:'application/json',data:JSON.stringify({game:this.game,request_id:crypto.randomUUID(),rules_version:2,scope:this.rankScope})});
    if(this.isDestroying||generation!==this.generation){return;}
    this.effects=new Effects({reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});this.effects.sprites=this.mergeSprites;this.playback=new Playback(r);this.finishing=false;this.saveRequested=false;this.updateView();
-   this.paused=r.status!=='playing';this.canvas?.focus({preventScroll:true});
+   this.paused=r.status!=='playing';this.focusPlay();
   }catch(e){if(!this.isDestroying){this.error=extractError(e,"网络连接中断，请重试或读取已保存进度。");}}
   finally{if(!this.isDestroying){this.busy=false;}}
  }
@@ -161,8 +163,8 @@ export default class extends Component {
  }
  @action release(key){this.playback?.release(key);}
  @action keyboardPress(key,e){if(e.detail===0){this.input(key);}}
- @action dropPress(e){this.press(this.game==='bird'?'tap':'drop',e);}
- @action dropKeyboard(e){if(e.detail===0){this.input(this.game==='bird'?'tap':'drop');}}
+ @action dropPress(e){this.press('drop',e);}
+ @action dropKeyboard(e){if(e.detail===0){this.input('drop');}}
  advanceFrame(){
   const p=this.playback;if(!p){return;}
   if(p.advance()){this.updateView();}
@@ -217,9 +219,9 @@ export default class extends Component {
     {{#if this.error}}<div class="rg-error" role="alert">{{this.error}}<button type="button" class="btn" disabled={{or this.busy this.syncing}} {{on "click" this.retry}}>重试并恢复进度</button><button type="button" class="btn btn-flat" disabled={{or this.busy this.syncing}} {{on "click" this.recover}}>读取已保存进度</button></div>{{/if}}
     <div class="ra-layout"><div class="ra-play" data-game={{this.game}}>
      <div class="ra-scorebar"><div><small>本局得分</small><strong>{{this.score}}</strong></div><span role="status">{{if this.run this.status "准备就绪"}}</span><small>{{this.progressLabel}}</small></div>
-     <canvas class="ra-canvas" data-game={{this.game}} tabindex="0" role="img" aria-label={{this.selected.name}} {{this.stage}}></canvas>
+     <div class="ra-stage" data-game={{this.game}}><canvas class="ra-canvas" data-game={{this.game}} tabindex="0" role="img" aria-label={{this.selected.name}} {{this.stage}}></canvas>{{#if this.hasControls}}<div class="ra-controls" data-game={{this.game}}>{{#each this.controlsList as |c|}}<button type="button" aria-label={{c.label}} data-key={{c.key}} disabled={{this.inputDisabled}} {{on "pointerdown" (fn this.press c.key)}} {{on "pointerup" (fn this.release c.key)}} {{on "pointercancel" (fn this.release c.key)}} {{on "lostpointercapture" (fn this.release c.key)}} {{on "click" (fn this.keyboardPress c.key)}}>{{c.label}}</button>{{/each}}{{#if (eq this.game "blocks")}}<button type="button" disabled={{this.inputDisabled}} {{on "pointerdown" this.dropPress}} {{on "click" this.dropKeyboard}}>落下</button>{{/if}}</div>{{/if}}</div>
      <div class="ra-toolbar">{{#if (or this.paused this.finished)}}<button type="button" class="btn btn-primary ra-start" disabled={{this.navigationBusy}} {{on "click" this.start}}>{{this.startLabel}}</button>{{else}}<button type="button" class="btn" disabled={{this.busy}} {{on "click" this.pause}}>暂停并保存</button>{{/if}}{{#if this.run}}{{#unless this.finished}}<button type="button" class="btn btn-flat" disabled={{or this.busy this.finishing}} {{on "click" this.finish}}>结束并保存</button>{{/unless}}{{/if}}</div>
-     <div class="ra-controls" data-game={{this.game}}>{{#each this.controlsList as |c|}}<button type="button" aria-label={{c.label}} data-key={{c.key}} disabled={{this.inputDisabled}} {{on "pointerdown" (fn this.press c.key)}} {{on "pointerup" (fn this.release c.key)}} {{on "pointercancel" (fn this.release c.key)}} {{on "lostpointercapture" (fn this.release c.key)}} {{on "click" (fn this.keyboardPress c.key)}}>{{c.label}}</button>{{/each}}{{#if (eq this.game "blocks")}}<button type="button" disabled={{this.inputDisabled}} {{on "pointerdown" this.dropPress}} {{on "click" this.dropKeyboard}}>落下</button>{{/if}}{{#if (eq this.game "merge")}}<button type="button" disabled={{this.inputDisabled}} {{on "pointerdown" this.dropPress}} {{on "click" this.dropKeyboard}}>投放</button>{{/if}}{{#if (eq this.game "bird")}}<button type="button" disabled={{this.inputDisabled}} {{on "pointerdown" this.dropPress}} {{on "click" this.dropKeyboard}}>起飞</button>{{/if}}</div>
+
      <details class="ra-rules"><summary>玩法与操作</summary><p>{{this.rulesText}}</p><p>允许程序策略，正式成绩以服务器复核为准。后台同步成绩；网络长时间中断时暂停，恢复后继续；存档每次操作后保留 30 天，可暂停后回来继续；赛季结束自动结算已同步的进度，跨期不计入新赛季。</p></details>
     </div><aside class="ra-rank"><div class="ra-rank-heading"><div class="ra-rank-tabs">{{#if this.ranking.season}}<button type="button" class={{if (eq this.rankScope "season") "is-active"}} {{on "click" (fn this.selectRank "season")}}>赛季排行</button>{{/if}}<button type="button" class={{if (eq this.rankScope "all") "is-active"}} {{on "click" (fn this.selectRank "all")}}>总排行</button></div><div class="ra-rank-tools"><button type="button" class="rg-icon-button" aria-label="排行说明" title="排行说明" aria-expanded={{if this.rankInfo "true" "false"}} {{on "click" this.toggleRankInfo}}>{{dIcon "circle-info"}}</button><button type="button" class="rg-icon-button" aria-label="刷新排行" title="刷新排行" {{on "click" this.loadRanking}}>{{dIcon "arrows-rotate"}}</button></div></div>{{#if this.rankInfo}}<div class="rg-rules ra-rank-help"><p>每人取最高分，同分并列。</p>{{#if (eq this.rankScope "season")}}<p>第 {{this.ranking.season.number}} 赛季 · 截止 {{this.endLabel}}</p>{{#if this.rankPrizes}}<p>前五名：{{this.rankPrizes}} RSC</p><p>同分平分所占名次奖金，结束后自动到账。</p>{{else}}<p>本期仅排名，不发放 RSC</p>{{/if}}{{else}}<p>历史最高分永久保留。</p>{{/if}}</div>{{/if}}{{#if this.rankingError}}<p role="alert">{{this.rankingError}}</p>{{/if}}<ol>{{#each this.rankRows as |row|}}<li><span class="ra-place">{{row.rank}}</span><ForumUser @user={{row.user}} /><strong>{{row.score}}</strong></li>{{else}}<li class="ra-empty">还没有成绩，来占个位置。</li>{{/each}}</ol></aside></div>
    {{/unless}}

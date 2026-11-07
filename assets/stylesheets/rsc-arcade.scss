@@ -47,18 +47,32 @@
 .ra-cover[data-game="blocks"],.ra-cover[data-game="merge"]{object-position:center bottom}
 .ra-card-art>i{display:none}
 
+// The playfield and its touch controls form one stage. Controls never cover cells.
+.ra-stage{width:min(100%,400px);margin:0 auto;border-radius:14px;overflow:hidden;background:#102c39;scroll-margin-top:calc(var(--header-offset,60px) + 10px)}
+.ra-stage[data-game="blocks"]{background:#304c57;padding-top:8px}
+.ra-stage .ra-canvas{border-radius:0;box-shadow:none}
+.ra-stage .ra-controls{box-sizing:border-box;width:100%;margin:0;padding:12px;gap:12px;border-top:1px solid #ffffff20;background:#193745}
+.ra-stage .ra-controls button{min-height:54px;background:#ffffff12;border-color:#ffffff25;color:#effaf8;flex:1;touch-action:none}
+.ra-stage .ra-controls button:active{background:#ffffff30}
+.ra-stage .ra-controls[data-game="hex"]{justify-content:space-between;gap:clamp(30px,18vw,100px)}
+.ra-stage .ra-controls[data-game="hex"] button{max-width:42%;min-height:60px}
+.ra-stage .ra-controls[data-game="blocks"] button{min-width:0;padding:0}
+.ra-stage .ra-controls[data-game="blocks"]{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.ra-stage .ra-controls[data-game="blocks"] [data-key="l"]{grid-column:1;grid-row:1}
+.ra-stage .ra-controls[data-game="blocks"] [data-key="r"]{grid-column:5;grid-row:1}
+.ra-stage .ra-controls[data-game="blocks"] [data-key="u"]{grid-column:2;grid-row:1}
+.ra-stage .ra-controls[data-game="blocks"] [data-key="d"]{grid-column:3;grid-row:1}
+.ra-stage .ra-controls[data-game="blocks"] button:last-child{grid-column:4;grid-row:1;font-size:.85rem;padding:0}
+@media(min-width:768px) and (hover:hover) and (pointer:fine){.ra-stage .ra-controls{display:none}.ra-stage[data-game="blocks"]{width:min(100%,296px);padding-top:0}}
 @media(max-width:767px){
- .ra-controls{width:100%;gap:12px;margin-top:18px;align-items:stretch}
- .ra-controls button{min-height:58px;flex:1;font-size:1.35rem;touch-action:none}
- .ra-controls[data-game="bricks"],.ra-controls[data-game="hex"]{justify-content:space-between;gap:clamp(30px,18vw,100px)}
- .ra-controls[data-game="bricks"] button,.ra-controls[data-game="hex"] button{max-width:42%;min-height:68px}
- .ra-controls[data-game="blocks"]{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
- .ra-controls[data-game="blocks"] [data-key="l"]{grid-column:1;grid-row:1/3}
- .ra-controls[data-game="blocks"] [data-key="r"]{grid-column:4;grid-row:1/3}
- .ra-controls[data-game="blocks"] [data-key="u"]{grid-column:2;grid-row:1}
- .ra-controls[data-game="blocks"] [data-key="d"]{grid-column:3;grid-row:1}
- .ra-controls[data-game="blocks"] button:last-child{grid-column:2/4;grid-row:2}
- .ra-controls[data-game="merge"] [data-key="l"]{order:0}.ra-controls[data-game="merge"] [data-key="r"]{order:2}.ra-controls[data-game="merge"] button:last-child{order:1}
+ .ra-stage{width:min(100%,400px,calc((100svh - 210px)*400/560))}
+ .ra-stage .ra-canvas{width:100%}
+ .ra-stage[data-game="2048"],.ra-stage[data-game="snake"]{width:min(100%,400px,calc(100svh - 210px))}
+ .ra-stage[data-game="hex"]{width:min(100%,400px,calc(100svh - 250px))}
+ .ra-stage[data-game="blocks"]{width:min(100%,400px)}
+ .ra-stage[data-game="blocks"] .ra-canvas{width:min(100%,296px,calc((100svh - 285px)*296/576))}
+ .ra-stage .ra-controls button{font-size:1.25rem}
 }
-
 .ra-play[data-game="bird"]{touch-action:manipulation}
+
+.ra-play{scroll-margin-top:calc(var(--header-offset,60px) + 8px)}
