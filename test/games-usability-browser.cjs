@@ -43,7 +43,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   const status=await page.evaluate(async()=>({invalid:(await fetch('/rsc/games/state.json?round_id=bad')).status,missing:(await fetch('/rsc/games/state.json?round_id=999999999')).status}));assert.equal(status.invalid,400);assert.equal(status.missing,404);
   await page.setViewportSize({width:320,height:950});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.locator('.rg-record').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/record-mobile.png`});
   await page.getByRole('button',{name:'关闭这条记录',exact:true}).click();assert.equal(await page.locator('.rg-record').count(),0);
-  await page.getByRole('button',{name:'我的记录',exact:true}).click();await page.locator('.rg-history-row').first().click();await page.locator('.rg-record').waitFor();
+  await page.locator('.rg-history-row').first().click();await page.locator('.rg-record').waitFor();
   assert.equal(errors.length,0,errors.join('\n'));
   console.log('PASS: add/subtract/undo/clear, decimal bets, no negative bets, settled lock, exact record deep link and reload, history detail, invalid IDs, desktop/mobile layout');
  } catch(e){console.log('Page errors:',errors,e.message);throw e;} finally {await browser.close();}

@@ -193,17 +193,23 @@ module DiscourseRsc
        net:round.status=='settled' ? Amount.format(round.payout_units.to_i-round.stake_units.to_i) : nil,
        state:state,created_at:round.created_at,settled_at:round.settled_at}
     end
-    def self.state(actor,before:nil,round_id:nil)
+    def self.state(actor,before:nil,round_id:nil,page:nil)
       ensure_access!(actor)
       selected=GameRound.find_by(id:round_id,user_id:actor.id) if round_id
       raise Discourse::NotFound if round_id && !selected
       wallet=Account.wallet_snapshot(actor.id)
-      history=GameRound.where(user_id:actor.id).order(id: :desc)
-      history=history.where('id < ?',before) if before
+      scope=GameRound.where(user_id:actor.id)
+      total=scope.count
+      pages=[(total+19)/20,1].max
+      # A wallet link opens the page containing its round, even outside recent history.
+      page ||= selected ? scope.where('id > ?',selected.id).count/20+1 : 1
+      page=page.to_i.clamp(1,pages)
+      history=scope.order(id: :desc)
+      history=before ? history.where('id < ?',before) : history.offset((page-1)*20)
       rows=history.limit(21).to_a
       {selected_round:selected && view(selected),lottery:Lottery.summary,balance:wallet.balance,wallet_status:wallet.status,read_only:Safety.read_only?,max_stake:SiteSetting.rsc_games_max_stake,
        active:GameRound.where(user_id:actor.id,status:'playing').first&.then { |r| view(r) },
-       history:rows.first(20).map { |r| view(r) },next_cursor:rows.size>20 ? rows[19].id : nil}
+       history_page:page,history_pages:pages,history_total:total,history:rows.first(20).map { |r| view(r) },next_cursor:rows.size>20 ? rows[19].id : nil}
     end
   end
 end

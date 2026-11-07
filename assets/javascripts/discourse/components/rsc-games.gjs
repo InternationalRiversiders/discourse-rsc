@@ -49,7 +49,11 @@ export default class extends Component {
   @tracked game=null;
   @tracked balance=this.args.model.balance;
   @tracked history=this.args.model.history||[];
-  @tracked cursor=this.args.model.next_cursor;
+  @tracked historyPage=this.args.model.history_page||1;
+  @tracked historyPages=this.args.model.history_pages||1;
+  @tracked historyTotal=this.args.model.history_total||0;
+  @tracked pageInput=String(this.args.model.history_page||1);
+  @tracked historyError="";
   @tracked active=this.args.model.active;
   @tracked walletStatus=this.args.model.wallet_status;
   @tracked readOnly=this.args.model.read_only;
@@ -59,15 +63,14 @@ export default class extends Component {
   @tracked bets={};
   @tracked betMode="add";
   @tracked betUndo=[];
-  @tracked inspected=null;
-  @tracked dismissedRound=null;
+  @tracked inspected=this.args.model.selected_round||null;
   @tracked busy=false;
   @tracked animating=false;
   @tracked loading=false;
   @tracked pending=null;
   @tracked error="";
   @tracked rules=false;
-  @tracked showHistory=false;
+  @tracked showHistory=!!this.args.model.selected_round;
   @tracked revealed=false;
   @tracked scene3d=null;
   pending3d=null;
@@ -141,7 +144,7 @@ export default class extends Component {
   get outside(){return [["low","1–18"],["even","双"],["red","红"],["black","黑"],["odd","单"],["high","19–36"]].map(([key,label])=>this.spot(key,label,key));}
   get dozens(){return [["dozen1","1–12"],["dozen2","13–24"],["dozen3","25–36"]].map(([key,label])=>this.spot(key,label));}
   get columns(){return [1,2,3].map(n=>({...this.spot(`column${n}`,`第 ${n} 列`),numbers:Array.from({length:12},(_,i)=>n+i*3).join("、")}));}
-  get rows(){return this.history.map(r=>({...r,name:GAMES.find(g=>g.id===r.game)?.name||r.name,time:formatDateTime(r.created_at),netLabel:r.net===null?"进行中":`${Number(r.net)>0?"+":""}${money(r.net)}`,tone:Number(r.net)>0?"win":Number(r.net)<0?"loss":"push"}));}
+  get rows(){return this.history.map(r=>({...r,expanded:r.id===this.inspected?.id,name:GAMES.find(g=>g.id===r.game)?.name||r.name,time:formatDateTime(r.created_at),netLabel:r.net===null?"进行中":`${Number(r.net)>0?"+":""}${money(r.net)}`,tone:Number(r.net)>0?"win":Number(r.net)<0?"loss":"push"}));}
   spot(key,label,color=""){return {key,label,color,amount:this.bets[key]?money(this.bets[key]):null,selected:!!this.bets[key]};}
   @action open(id){if(this.busy||this.animating||this.pending){return;} this.game=id;this.round=id==="blackjack"?this.active:null;this.choice=id==="dice"?"small":"heads";this.rules=false;this.error="";this.revealed=false;}
   @action back(){if(!this.busy&&!this.animating&&!this.pending){this.game=null;this.rules=false;this.error="";}}
@@ -162,7 +165,10 @@ export default class extends Component {
   }
   @action undoBet(){if(!this.locked&&this.betUndo.length){this.bets=this.betUndo.at(-1);this.betUndo=this.betUndo.slice(0,-1);this.error="";}}
   @action clearBets(){if(!this.locked&&this.total){this.betUndo=[...this.betUndo,this.bets];this.bets={};this.error="";}}
-  get record(){return this.inspected||(this.args.model.selected_round?.id!==this.dismissedRound?this.args.model.selected_round:null);}
+  get record(){return this.inspected;}
+  get viewingLinkedHistory(){return !!this.args.model.selected_round&&this.showHistory;}
+  get previousDisabled(){return this.loading||this.historyPage<=1;}
+  get nextDisabled(){return this.loading||this.historyPage>=this.historyPages;}
   get recordName(){return GAMES.find(g=>g.id===this.record?.game)?.name;}
   get recordTime(){return formatDateTime(this.record?.created_at);}
   get recordNet(){const n=Number(this.record?.net);return this.record?.status==="playing"?"进行中":`${n>0?"+":""}${money(n)} RSC`;}
@@ -185,18 +191,31 @@ export default class extends Component {
     if(s.bets){return s.bets.map(b=>`${labels[b.choice]||b.choice.replace(/^n/,"")}：${b.stake} RSC`).join(" · ");}
     return labels[s.choice]||"";
   }
-  @action closeRecord(){this.dismissedRound=this.args.model.selected_round?.id;this.inspected=null;}
+  @action closeRecord(){this.inspected=null;}
   @action toggleRules(){this.rules=!this.rules;}
-  @action toggleHistory(){this.showHistory=!this.showHistory;}
+  @action toggleHistory(){this.showHistory=!this.showHistory;if(this.showHistory){this.loadHistoryPage(this.historyPage);}}
   @action reveal(){this.revealed=true;}
-  @action inspect(r){if(this.busy||this.animating||this.pending){return;}this.inspected=r;this.showHistory=false;this.error="";window.scrollTo({top:0,behavior:"smooth"});}
+  @action inspect(r){if(this.busy||this.animating||this.pending){return;}this.inspected=this.inspected?.id===r.id?null:r;this.historyError="";}
   @action async refresh(){
     if(this.loading||this.busy||this.animating){return;} this.loading=true;
-    try{const data=await ajax("/rsc/games/state.json");if(this.isDestroying||this.isDestroyed){return;}this.lottery=data.lottery;this.balance=data.balance;this.history=data.history;this.cursor=data.next_cursor;this.active=data.active;this.walletStatus=data.wallet_status;this.readOnly=data.read_only;if(this.game==="blackjack"){this.round=data.active||data.history.find(r=>r.id===this.round?.id)||null;}}
+    try{const data=await ajax("/rsc/games/state.json",{data:{page:this.historyPage}});if(this.isDestroying||this.isDestroyed){return;}this.lottery=data.lottery;this.balance=data.balance;this.setHistory(data);this.active=data.active;this.walletStatus=data.wallet_status;this.readOnly=data.read_only;if(this.game==="blackjack"){this.round=data.active||data.history.find(r=>r.id===this.round?.id)||null;}}
     catch(e){if(!this.isDestroying&&!this.isDestroyed){this.error=extractError(e);}}
     finally{if(!this.isDestroying&&!this.isDestroyed){this.loading=false;}}
   }
-  @action async more(){if(this.loading||!this.cursor){return;}this.loading=true;try{const data=await ajax("/rsc/games/state.json",{data:{before:this.cursor}});if(!this.isDestroying&&!this.isDestroyed){this.history=[...this.history,...data.history];this.cursor=data.next_cursor;}}catch(e){this.error=extractError(e);}finally{this.loading=false;}}
+  setHistory(data){
+    this.history=data.history;this.historyPage=data.history_page;this.historyPages=data.history_pages;this.historyTotal=data.history_total;this.pageInput=String(data.history_page);
+    if(this.inspected){this.inspected=data.history.find(r=>r.id===this.inspected.id)||null;}
+  }
+  async loadHistoryPage(page){
+    if(this.loading){return;}this.loading=true;this.historyError="";
+    try{const data=await ajax("/rsc/games/state.json",{data:{page}});if(!this.isDestroying&&!this.isDestroyed){this.setHistory(data);}}
+    catch(e){if(!this.isDestroying&&!this.isDestroyed){this.historyError=extractError(e);}}
+    finally{if(!this.isDestroying&&!this.isDestroyed){this.loading=false;}}
+  }
+  @action previousPage(){if(!this.previousDisabled){this.loadHistoryPage(this.historyPage-1);}}
+  @action nextPage(){if(!this.nextDisabled){this.loadHistoryPage(this.historyPage+1);}}
+  @action editPage(e){this.pageInput=e.target.value;}
+  @action jumpPage(e){e.preventDefault();const n=Number(this.pageInput);if(Number.isInteger(n)&&n>=1&&n<=this.historyPages){this.loadHistoryPage(n);}else{this.historyError=`请输入 1–${this.historyPages} 之间的页码。`;}}
   @action play(){if(this.startDisabled){return;} if(this.pending){return this.send(this.pending);}const data={game:this.game,stake:this.stake,choice:["coin","dice"].includes(this.game)?this.choice:null,bets:Object.entries(this.bets).map(([choice,stake])=>({choice,stake:String(stake)})),request_id:crypto.randomUUID()};return this.send({url:"/rsc/games/play.json",data});}
   @action move(move){if(this.blocked||this.pending){return;}return this.send({url:`/rsc/games/${this.round.id}/action.json`,data:{move,version:this.round.version,request_id:crypto.randomUUID()}});}
   @action retry(){if(this.pending&&!this.busy){return this.send(this.pending);}}
@@ -207,7 +226,8 @@ export default class extends Component {
       if(this.isDestroying||this.isDestroyed){return;}
       this.animating=["roulette","slots","coin","dice","blackjack"].includes(result.game);this.round=result;this.balance=result.balance;this.pending=null;this.revealed=false;this.betUndo=[];
       if(result.game==="blackjack"){this.active=result.status==="playing"?result:null;}
-      this.history=[result,...this.history.filter(r=>r.id!==result.id)].slice(0,Math.max(20,this.history.length));
+      if(this.historyPage===1){this.history=[result,...this.history.filter(r=>r.id!==result.id)].slice(0,20);}
+      if(request.url==="/rsc/games/play.json"&&!result.replayed){this.historyTotal++;this.historyPages=Math.max(1,Math.ceil(this.historyTotal/20));}
     }catch(e){
       if(this.isDestroying||this.isDestroyed){return;}
       const status=e.jqXHR?.status||e.status;
@@ -234,7 +254,8 @@ export default class extends Component {
       </header>
       {{#if this.error}}<div class="rg-error" role="alert">{{this.error}}{{#if this.pending}}<button type="button" disabled={{this.busy}} {{on "click" this.retry}}>重试同一请求</button>{{else}}<button type="button" disabled={{this.busy}} {{on "click" this.refresh}}>刷新</button>{{/if}}</div>{{/if}}
       {{#if this.readOnly}}<div class="rg-notice">游戏暂时维护中</div>{{else if (not (eq this.walletStatus "active"))}}<div class="rg-notice">钱包已冻结，暂不能参与游戏</div>{{/if}}
-      {{#if this.record}}<section class="rg-record" aria-label="游戏记录"><header><div><h2>{{this.recordName}} · 游戏记录</h2><small>{{this.recordTime}}</small></div><button type="button" class="rg-icon-button" aria-label="关闭这条记录" {{on "click" this.closeRecord}}>{{dIcon "xmark"}}</button></header><dl><div><dt>投入</dt><dd>{{this.record.stake}} RSC</dd></div><div><dt>返还（含本金）</dt><dd>{{this.record.payout}} RSC</dd></div><div><dt>净收益</dt><dd>{{this.recordNet}}</dd></div></dl>{{#if this.recordBets}}<p>投注：{{this.recordBets}}</p>{{/if}}<p>{{this.recordResult}}</p></section>{{/if}}
+
+      {{#unless this.viewingLinkedHistory}}
       {{#unless this.game}}
         {{#if this.active}}<button type="button" class="rg-resume" {{on "click" (fn this.open "blackjack")}}><span>♠</span>继续21点<strong>返回牌局 →</strong></button>{{/if}}
         {{#if this.lottery}}<LinkTo @route="rsc-lottery" class="rl-banner"><span class="rl-banner-title"><small>RIVERSIDE</small><strong>大乐透</strong><span>每日 20:00 开奖 · 北京时间</span></span><span class="rl-banner-pool"><small>当前奖池</small><strong>{{this.lotteryPool}} <small>RSC</small></strong></span><span class="rl-banner-cta">去选号 →</span></LinkTo>{{/if}}
@@ -285,7 +306,11 @@ export default class extends Component {
           </aside>
         </div>
       {{/unless}}
-      {{#if this.showHistory}}<section class="rg-history"><div class="rg-history-heading"><h2>我的记录</h2><button type="button" class="rg-icon-button" aria-label="关闭记录" {{on "click" this.toggleHistory}}>{{dIcon "xmark"}}</button></div>{{#if this.history.length}}<div class="rg-history-table"><div class="rg-history-labels"><span>游戏 / 时间</span><span>投入</span><span>净收益</span></div>{{#each this.rows key="id" as |row|}}<button type="button" class="rg-history-row" disabled={{this.locked}} {{on "click" (fn this.inspect row)}}><span><strong>{{row.name}}</strong><small>{{row.time}}</small></span><span>{{row.stake}}</span><strong class="rg-{{row.tone}}">{{row.netLabel}}</strong></button>{{/each}}</div>{{#if this.cursor}}<button type="button" class="rg-secondary rg-more" disabled={{this.loading}} {{on "click" this.more}}>更早记录</button>{{/if}}{{else}}<div class="rg-empty">还没有游戏记录</div>{{/if}}</section>{{/if}}
+      {{/unless}}
+      {{#if this.showHistory}}<section class="rg-history"><div class="rg-history-heading"><h2>我的记录</h2><button type="button" class="rg-icon-button" aria-label="关闭记录" {{on "click" this.toggleHistory}}>{{dIcon "xmark"}}</button></div>{{#if this.history.length}}<div class="rg-history-table"><div class="rg-history-labels"><span>游戏 / 时间</span><span>投入</span><span>净收益</span></div>{{#each this.rows key="id" as |row|}}<button type="button" class="rg-history-row" aria-expanded={{if row.expanded "true" "false"}} aria-controls="rg-record-{{row.id}}" disabled={{this.locked}} {{on "click" (fn this.inspect row)}}><span><strong>{{row.name}}</strong><small>{{row.time}}</small></span><span>{{row.stake}}</span><strong class="rg-{{row.tone}}">{{row.netLabel}}</strong></button>{{#if row.expanded}}<div id="rg-record-{{row.id}}">{{#if this.record}}<section class="rg-record" aria-label="游戏记录"><header><div><h2>{{this.recordName}} · 游戏记录</h2><small>{{this.recordTime}}</small></div><button type="button" class="rg-icon-button" aria-label="关闭这条记录" {{on "click" this.closeRecord}}>{{dIcon "xmark"}}</button></header><dl><div><dt>投入</dt><dd>{{this.record.stake}} RSC</dd></div><div><dt>返还（含本金）</dt><dd>{{this.record.payout}} RSC</dd></div><div><dt>净收益</dt><dd>{{this.recordNet}}</dd></div></dl>{{#if this.recordBets}}<p>投注：{{this.recordBets}}</p>{{/if}}<p>{{this.recordResult}}</p></section>{{/if}}</div>{{/if}}{{/each}}</div>{{else}}<div class="rg-empty">还没有游戏记录</div>{{/if}}
+        {{#if this.historyError}}<p class="rg-history-error" role="alert">{{this.historyError}}</p>{{/if}}
+        <form class="rg-history-pagination" aria-label="记录分页" {{on "submit" this.jumpPage}}><span>共 {{this.historyTotal}} 条 · {{this.historyPage}} / {{this.historyPages}}</span><button type="button" disabled={{this.previousDisabled}} {{on "click" this.previousPage}}>上一页</button><button type="button" disabled={{this.nextDisabled}} {{on "click" this.nextPage}}>下一页</button>{{#if (not (eq this.historyPages 1))}}<label>第 <input type="number" aria-label="记录页码" inputmode="numeric" min="1" max={{this.historyPages}} value={{this.pageInput}} disabled={{this.loading}} {{on "input" this.editPage}} /> 页</label><button type="submit" disabled={{this.loading}}>跳转</button>{{/if}}</form>
+      </section>{{/if}}
     </section>
   </template>
 }

@@ -6,7 +6,7 @@ module DiscourseRsc
       render 'default/empty'
     end
     def state
-      render_json_dump Games.state(current_user,before:params[:before].present? ? positive_id(:before) : nil,round_id:params[:round_id].present? ? positive_id(:round_id) : nil)
+      render_json_dump Games.state(current_user,before:params[:before].present? ? positive_id(:before) : nil,round_id:params[:round_id].present? ? positive_id(:round_id) : nil,page:params[:page].present? ? positive_id(:page) : nil)
     end
     def play
       RateLimiter.new(current_user,'rsc-games-play',40,1.minute).performed!

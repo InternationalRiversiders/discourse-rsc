@@ -37,7 +37,9 @@ class GamesTest < NativeBusinessTest
     21.times { play }
     state=R::Games.state(@alice,round_id:r[:id])
     assert_equal r[:id],state[:selected_round][:id]
-    refute_includes state[:history].map { |row| row[:id] },r[:id]
+    assert_includes state[:history].map { |row| row[:id] },r[:id]
+    assert_equal 2,state[:history_page]
+    assert_equal 22,state[:history_total]
     assert_equal r[:stake],state[:selected_round][:stake]
     assert_equal r[:payout],state[:selected_round][:payout]
     assert_raises(Discourse::NotFound) { R::Games.state(@bob,round_id:r[:id]) }
@@ -45,6 +47,23 @@ class GamesTest < NativeBusinessTest
     assert_nil R::Games.state(@alice)[:selected_round]
     assert_equal "/rsc/games?round_id=#{r[:id]}",R::WalletHistory.context({'game_round_id'=>r[:id]},@alice)[:path]
     consistent
+  end
+  def test_games_history_pages_do_not_overlap_and_count_only_owner
+    43.times { play(stake:'1') }
+    play(actor:@bob,stake:'1')
+    pages=(1..3).map { |n| R::Games.state(@alice,page:n) }
+    assert_equal [20,20,3],pages.map { |s| s[:history].size }
+    assert_equal [1,2,3],pages.map { |s| s[:history_page] }
+    assert pages.all? { |s| s[:history_pages]==3 && s[:history_total]==43 }
+    ids=pages.flat_map { |s| s[:history].map { |r| r[:id] } }
+    assert_equal ids.uniq,ids
+    assert_equal R::GameRound.where(user_id:@alice.id).order(id: :desc).pluck(:id),ids
+    assert_equal 3,R::Games.state(@alice,page:999)[:history_page]
+    # Older clients may still request cursor-based history.
+    assert_equal pages[1][:history],R::Games.state(@alice,before:ids[19])[:history]
+    R::GameRound.where(user_id:@bob.id).delete_all
+    empty=R::Games.state(@bob,page:9)
+    assert_equal [1,1,0,[]],empty.values_at(:history_page,:history_pages,:history_total,:history)
   end
   def test_games_record_lookup_hides_active_blackjack_deck_and_hole_card
     r=deck([9,7,5,9,1]) { play('blackjack',choice:nil) }
