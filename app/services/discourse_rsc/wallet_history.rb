@@ -35,7 +35,7 @@ module DiscourseRsc
         entry.units.negative? ? data['recipient_user_id'] : journal.actor_user_id
       elsif journal.operation=='red_packet_claim'
         data['sender_user_id']
-      elsif journal.actor_user_id && journal.actor_user_id!=user.id
+      elsif journal.actor_user_id&.nonzero? && journal.actor_user_id!=user.id
         journal.actor_user_id
       end
       info=context(data,user)
@@ -61,7 +61,7 @@ module DiscourseRsc
     def self.context(data,user,legacy:false)
       # Only public context fields. Never expose raw imported metadata wholesale.
       detail=data.values_at('reason','date','message','symbol','matchName','homeTeam','awayTeam','question','outcome').select { |v| v.is_a?(String) }.map { |s| s.first(500) }.join(' · ')
-      path=data["game_round_id"] ? "/rsc/games" : nil
+      path=data["lottery_draw_id"] ? "/rsc/lottery" : (data["game_round_id"] ? "/rsc/games" : nil)
       post_id=data['post_id'] || data['postId']
       post=Post.find_by(id:post_id) if post_id
       if post && !post.deleted_at && !post.hidden && Guardian.new(user).can_see?(post)

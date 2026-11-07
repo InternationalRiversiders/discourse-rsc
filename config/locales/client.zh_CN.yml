@@ -317,6 +317,9 @@ zh_CN:
         prediction_settlement: 预测结算
         game_stake: 游戏投入
         game_settlement: 游戏结算
+        lottery_ticket: 大乐透购票
+        lottery_prize: 大乐透中奖
+        lottery_seed: 大乐透奖池补贴
         stock_reserve: 委托预留
         stock_fill: 开仓成交
         stock_close: 平仓结算

@@ -66,9 +66,9 @@ export default class extends Component {
 
   <template>
     <div class="rg-large-ticket {{if this.use3d 'is-3d'}}">
-      <div class="rg-3d rg-3d--scratch" role="img" aria-label="刮卡寻宝票面，可用鼠标或手指刮开" {{this.scene}} {{this.sync this.serial this.complete}}></div>
+      <div class="rg-3d rg-3d--scratch" role="img" aria-label="刮刮乐票面，可用鼠标或手指刮开" {{this.scene}} {{this.sync this.serial this.complete}}></div>
       <div class="rg-large-ticket-heading"><span>RIVERSIDE</span><span class="rg-ticket-price">{{this.price}} RSC</span></div>
-      <div class="rg-large-ticket-title"><strong>刮卡寻宝</strong><span>十重好运</span></div>
+      <div class="rg-large-ticket-title"><strong>刮刮乐</strong><span>十重好运</span></div>
       <div class="rg-large-ticket-meta">10 个开奖位 · 每位 {{this.unit}} RSC</div>
       <div class="rg-large-ticket-grid">
         {{#each this.spots key="key" as |spot|}}

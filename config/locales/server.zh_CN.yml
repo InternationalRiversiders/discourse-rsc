@@ -1,5 +1,6 @@
 zh_CN:
   site_settings:
+    rsc_lottery_enabled: "启用 Riverside 大乐透"
     rsc_games_enabled: "启用校园生活中的 RSC 游戏"
     rsc_games_max_stake: "每局游戏最大基础投入（RSC）；二十一点加倍可追加同额投入"
     rsc_forex_activity_enabled: "启用久留美外汇活动"
@@ -85,6 +86,11 @@ zh_CN:
       stock_refunded: 委托结束，退回 %{amount} RSC
       red_packet_claimed_by: 领取了你的红包 %{amount} RSC
     errors:
+      lottery_disabled: 大乐透暂未开放。
+      lottery_number: 请输入四位数字，范围为 0000–9999。
+      lottery_quantity: 每次可购买 1–20 注。
+      lottery_limit: 本期每人最多购买 20 注，请查看已购数量。
+      lottery_closed: 本期已截止，请刷新后购买下一期。
       games_disabled: 游戏暂未开放。
       invalid_game: 请选择有效的游戏。
       game_stake_range: '每局投入须为 1–%{max} RSC。'

@@ -1508,7 +1508,7 @@ function drawTicket(g, data) {
   title.addColorStop(0, "#9a5a1c");
   title.addColorStop(1, "#5d3810");
   g.fillStyle = title;
-  g.fillText("刮卡寻宝", 60, 196);
+  g.fillText("刮刮乐", 60, 196);
   g.textAlign = "right";
   g.font = "600 36px 'PingFang SC', 'Noto Sans CJK SC', sans-serif";
   g.fillStyle = "#a0632a";

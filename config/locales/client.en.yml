@@ -323,6 +323,9 @@ en:
         prediction_settlement: Prediction settlement
         game_stake: 游戏投入
         game_settlement: 游戏结算
+        lottery_ticket: 大乐透购票
+        lottery_prize: 大乐透中奖
+        lottery_seed: 大乐透奖池补贴
         stock_reserve: Order reservation
         stock_fill: Position opened
         stock_close: Position closed

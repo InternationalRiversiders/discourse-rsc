@@ -2,7 +2,7 @@
 require 'securerandom'
 module DiscourseRsc
   class Games
-    NAMES = { 'slots'=>'三轴老虎机', 'roulette'=>'欧式轮盘', 'scratch'=>'刮刮乐', 'blackjack'=>'二十一点', 'coin'=>'抛硬币', 'dice'=>'骰子大小' }.freeze
+    NAMES = { 'slots'=>'转转乐', 'roulette'=>'幸运转盘', 'scratch'=>'刮刮乐', 'blackjack'=>'21点', 'coin'=>'抛硬币', 'dice'=>'猜骰子' }.freeze
     RED = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].freeze
     SYMBOLS = %w[cherry lemon bell clover diamond seven].freeze
     SLOT_PAY = [5,8,12,20,40,96].freeze
@@ -199,7 +199,7 @@ module DiscourseRsc
       history=GameRound.where(user_id:actor.id).order(id: :desc)
       history=history.where('id < ?',before) if before
       rows=history.limit(21).to_a
-      {balance:wallet.balance,wallet_status:wallet.status,read_only:Safety.read_only?,max_stake:SiteSetting.rsc_games_max_stake,
+      {lottery:Lottery.summary,balance:wallet.balance,wallet_status:wallet.status,read_only:Safety.read_only?,max_stake:SiteSetting.rsc_games_max_stake,
        active:GameRound.where(user_id:actor.id,status:'playing').first&.then { |r| view(r) },
        history:rows.first(20).map { |r| view(r) },next_cursor:rows.size>20 ? rows[19].id : nil}
     end

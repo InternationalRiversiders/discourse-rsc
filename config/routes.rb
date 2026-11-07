@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 DiscourseRsc::Engine.routes.draw do
+  get "/lottery" => "lottery#index"
+  get "/lottery/state" => "lottery#state"
+  post "/lottery/buy" => "lottery#buy"
   get "/games" => "games#index"
   get "/games/state" => "games#state"
   post "/games/play" => "games#play"

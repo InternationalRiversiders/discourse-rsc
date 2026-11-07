@@ -1,4 +1,5 @@
 import Component from "@glimmer/component";
+import { LinkTo } from "@ember/routing";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
 import { on } from "@ember/modifier";
@@ -16,12 +17,12 @@ import { createGameScene, prefetchThree, supports3d } from "../lib/game-3d";
 import { formatDateTime } from "../lib/campus-time";
 
 const GAMES=[
-  {id:"slots",name:"水果转转乐",mark:"01",color:"violet"},
-  {id:"roulette",name:"数字转盘",mark:"02",color:"green"},
-  {id:"scratch",name:"刮卡寻宝",mark:"03",color:"gold"},
-  {id:"blackjack",name:"凑 21",mark:"04",color:"blue"},
-  {id:"coin",name:"银杏纸船",mark:"05",color:"rose"},
-  {id:"dice",name:"骰子猜点",mark:"06",color:"teal"},
+  {id:"slots",name:"转转乐",mark:"01",color:"violet"},
+  {id:"roulette",name:"幸运转盘",mark:"02",color:"green"},
+  {id:"scratch",name:"刮刮乐",mark:"03",color:"gold"},
+  {id:"blackjack",name:"21点",mark:"04",color:"blue"},
+  {id:"coin",name:"抛硬币",mark:"05",color:"rose"},
+  {id:"dice",name:"猜骰子",mark:"06",color:"teal"},
 ];
 const SYMBOLS={cherry:"🍒",lemon:"🍋",bell:"🔔",clover:"🍀",diamond:"💎",seven:"7"};
 const SYMBOL_NAMES={cherry:"樱桃",lemon:"柠檬",bell:"铃铛",clover:"四叶草",diamond:"钻石",seven:"7"};
@@ -44,6 +45,7 @@ const card=(n,i,round,dealer)=>{
   return {...base,rank:["A","2","3","4","5","6","7","8","9","10","J","Q","K"][rank],suit:suits[Math.floor(n/13)],red:[1,3].includes(Math.floor(n/13))};
 };
 export default class extends Component {
+  @tracked lottery=this.args.model.lottery;
   @tracked game=null;
   @tracked balance=this.args.model.balance;
   @tracked history=this.args.model.history||[];
@@ -70,6 +72,7 @@ export default class extends Component {
   games=GAMES;
   constructor(){super(...arguments);prefetchThree();}
   chips=[5,10,25,50];
+  get lotteryPool(){return money(this.lottery?.pool);}
   get name(){return GAMES.find(g=>g.id===this.game)?.name;}
   get rulesLines(){return RULES[this.game]||[];}
   get largeScratch(){return !this.round||Array.isArray(this.round.state.spots);}
@@ -149,7 +152,7 @@ export default class extends Component {
   @action inspect(r){if(this.busy||this.animating||this.pending){return;}this.game=r.game;this.round=r;this.revealed=true;this.showHistory=false;this.rules=false;this.error="";}
   @action async refresh(){
     if(this.loading||this.busy||this.animating){return;} this.loading=true;
-    try{const data=await ajax("/rsc/games/state.json");if(this.isDestroying||this.isDestroyed){return;}this.balance=data.balance;this.history=data.history;this.cursor=data.next_cursor;this.active=data.active;this.walletStatus=data.wallet_status;this.readOnly=data.read_only;if(this.game==="blackjack"){this.round=data.active||data.history.find(r=>r.id===this.round?.id)||null;}}
+    try{const data=await ajax("/rsc/games/state.json");if(this.isDestroying||this.isDestroyed){return;}this.lottery=data.lottery;this.balance=data.balance;this.history=data.history;this.cursor=data.next_cursor;this.active=data.active;this.walletStatus=data.wallet_status;this.readOnly=data.read_only;if(this.game==="blackjack"){this.round=data.active||data.history.find(r=>r.id===this.round?.id)||null;}}
     catch(e){if(!this.isDestroying&&!this.isDestroyed){this.error=extractError(e);}}
     finally{if(!this.isDestroying&&!this.isDestroyed){this.loading=false;}}
   }
@@ -192,7 +195,8 @@ export default class extends Component {
       {{#if this.error}}<div class="rg-error" role="alert">{{this.error}}{{#if this.pending}}<button type="button" disabled={{this.busy}} {{on "click" this.retry}}>重试同一请求</button>{{else}}<button type="button" disabled={{this.busy}} {{on "click" this.refresh}}>刷新</button>{{/if}}</div>{{/if}}
       {{#if this.readOnly}}<div class="rg-notice">游戏暂时维护中</div>{{else if (not (eq this.walletStatus "active"))}}<div class="rg-notice">钱包已冻结，暂不能参与游戏</div>{{/if}}
       {{#unless this.game}}
-        {{#if this.active}}<button type="button" class="rg-resume" {{on "click" (fn this.open "blackjack")}}><span>♠</span>继续凑 21<strong>返回牌局 →</strong></button>{{/if}}
+        {{#if this.active}}<button type="button" class="rg-resume" {{on "click" (fn this.open "blackjack")}}><span>♠</span>继续21点<strong>返回牌局 →</strong></button>{{/if}}
+        {{#if this.lottery}}<LinkTo @route="rsc-lottery" class="rl-banner"><span class="rl-banner-title"><small>RIVERSIDE</small><strong>大乐透</strong><span>每日 20:00 开奖 · 北京时间</span></span><span class="rl-banner-pool"><small>当前奖池</small><strong>{{this.lotteryPool}} <small>RSC</small></strong></span><span class="rl-banner-cta">去选号 →</span></LinkTo>{{/if}}
         <div class="rg-lobby">{{#each this.games as |game|}}<button type="button" class="rg-game-card rg-game-card--{{game.color}}" {{on "click" (fn this.open game.id)}}><span class="rg-card-number">{{game.mark}}</span><RscGameArt @game={{game.id}} /><div class="rg-card-bottom"><h2>{{game.name}}</h2><span class="rg-card-arrow">↗</span></div></button>{{/each}}</div>
       {{else}}
         <nav class="rg-tabs" aria-label="选择游戏">{{#each this.games as |game|}}<button type="button" class={{if (eq this.game game.id) "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.game game.id}} {{on "click" (fn this.open game.id)}}>{{game.name}}</button>{{/each}}</nav>
@@ -212,10 +216,10 @@ export default class extends Component {
               </div>
             {{else if (eq this.game "scratch")}}
               {{#if this.largeScratch}}<RscScratchCard @round={{this.round}} @price={{this.stake}} @onReveal={{this.reveal}} @revealed={{this.revealed}} />{{else}}
-              <div class="rg-scratch-ticket"><div class="rg-ticket-top"><span>RIVERSIDE</span><strong>刮卡寻宝</strong><small>最高 250 倍</small></div><div class="rg-scratch-area"><div class="rg-scratch-grid">{{#each this.tiles as |tile|}}<span class={{if tile.lucky "is-lucky"}} style={{tile.style}}>{{tile.value}}<small>倍</small></span>{{/each}}</div>{{#if (and this.round (not this.revealed))}}<canvas class="rg-scratch-cover" aria-label="刮开票面，或使用下方全部刮开按钮" {{this.scratch this.round.id}}></canvas>{{else unless this.round}}<div class="rg-scratch-placeholder">✦</div>{{/if}}</div><div class="rg-ticket-bottom">{{#if (and this.round (not this.revealed))}}<button type="button" {{on "click" this.reveal}}>全部刮开</button>{{else}}<span>三个相同即中奖</span>{{/if}}</div></div>
+              <div class="rg-scratch-ticket"><div class="rg-ticket-top"><span>RIVERSIDE</span><strong>刮刮乐</strong><small>最高 250 倍</small></div><div class="rg-scratch-area"><div class="rg-scratch-grid">{{#each this.tiles as |tile|}}<span class={{if tile.lucky "is-lucky"}} style={{tile.style}}>{{tile.value}}<small>倍</small></span>{{/each}}</div>{{#if (and this.round (not this.revealed))}}<canvas class="rg-scratch-cover" aria-label="刮开票面，或使用下方全部刮开按钮" {{this.scratch this.round.id}}></canvas>{{else unless this.round}}<div class="rg-scratch-placeholder">✦</div>{{/if}}</div><div class="rg-ticket-bottom">{{#if (and this.round (not this.revealed))}}<button type="button" {{on "click" this.reveal}}>全部刮开</button>{{else}}<span>三个相同即中奖</span>{{/if}}</div></div>
               {{/if}}
             {{else if (eq this.game "blackjack")}}
-              <div class="rg-felt"><div class="rg-hand-label">庄家 {{#if this.round}}<span>{{this.round.state.dealer_score}}</span>{{/if}}</div><div class="rg-3d rg-3d--blackjack" role="img" aria-label={{this.sceneLabel}} {{this.view3d "blackjack"}}></div><div class="rg-hand rg-hand--dealer">{{#each this.dealer key="key" as |card|}}<div class="rg-playing-card {{if card.hidden 'is-hidden'}} {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face">{{#unless card.hidden}}<b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b>{{/unless}}</div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-felt-mark"><strong>TWENTY-ONE</strong><span>凑 21</span></div><div class="rg-hand rg-hand--player">{{#each this.player key="key" as |card|}}<div class="rg-playing-card {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face"><b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b></div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-hand-label">你的手牌 {{#if this.round}}<span>{{this.round.state.player_score}}</span>{{/if}}</div></div>
+              <div class="rg-felt"><div class="rg-hand-label">庄家 {{#if this.round}}<span>{{this.round.state.dealer_score}}</span>{{/if}}</div><div class="rg-3d rg-3d--blackjack" role="img" aria-label={{this.sceneLabel}} {{this.view3d "blackjack"}}></div><div class="rg-hand rg-hand--dealer">{{#each this.dealer key="key" as |card|}}<div class="rg-playing-card {{if card.hidden 'is-hidden'}} {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face">{{#unless card.hidden}}<b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b>{{/unless}}</div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-felt-mark"><strong>TWENTY-ONE</strong><span>21点</span></div><div class="rg-hand rg-hand--player">{{#each this.player key="key" as |card|}}<div class="rg-playing-card {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face"><b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b></div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-hand-label">你的手牌 {{#if this.round}}<span>{{this.round.state.player_score}}</span>{{/if}}</div></div>
             {{else if (eq this.game "coin")}}
               <div class="rg-3d rg-3d--coin" role="img" aria-label={{this.sceneLabel}} {{this.view3d "coin"}}></div><div class="rg-coin-scene"><div class="rg-coin-flipper" style={{this.coinStyle}}><div class="rg-big-coin rg-coin-front"><span>RIVERSIDE</span><svg class="rg-coin-emblem" viewBox="-300 -300 600 600" aria-hidden="true"><path d="M0 95C-120 40-265-40-270-130C-215-205-120-250-40-235Q-12-185 0-150Q12-185 40-235C120-250 215-205 270-130C265-40 120 40 0 95ZM0 90C4 170 30 230 70 270" /></svg><span>RSC</span></div><div class="rg-big-coin rg-coin-back"><span>RIVERSIDE</span><svg class="rg-coin-emblem" viewBox="-320 -300 640 620" aria-hidden="true"><path d="M-300 40H300L200 175H-200ZM-150 40L10-275L150 40ZM-300 40L-205-55L-150 40M300 40L205-55L150 40M10-275L0 40M-260 240Q-170 210-80 240T100 240T280 240" /></svg><span>RSC</span></div></div><div class="rg-object-shadow"></div></div>
             {{else if (eq this.game "dice")}}

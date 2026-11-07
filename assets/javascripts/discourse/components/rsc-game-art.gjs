@@ -13,7 +13,7 @@ import { applyCover, attract, COVER_VERSION } from "../lib/game-covers";
 // the live scene running a short demo loop.
 export default class extends Component {
   @tracked loaded = false;
-  get src() { return getURL(`/plugins/discourse-rsc/images/games/cover-${this.args.game}-${COVER_VERSION}.webp`); }
+  get src() { const version = this.args.game === "scratch" ? "v2" : COVER_VERSION; return getURL(`/plugins/discourse-rsc/images/games/cover-${this.args.game}-${version}.webp`); }
   @action onLoad() { this.loaded = true; }
   cover = modifier((el, [game]) => {
     let alive = true, ctl = null, stop = null, host = null, token = 0;
@@ -58,7 +58,7 @@ export default class extends Component {
       <img class="rg-art-cover" src={{this.src}} alt="" decoding="async" {{on "load" this.onLoad}} />
       {{#if (eq @game "slots")}}<div class="rg-mini-slots"><span>7</span><span>7</span><span>7</span></div><i class="rg-lever"></i>{{/if}}
       {{#if (eq @game "roulette")}}<div class="rg-mini-wheel"><span>0</span></div><i class="rg-chip">25</i>{{/if}}
-      {{#if (eq @game "scratch")}}<div class="rg-mini-ticket"><span>刮卡寻宝</span><strong>★ ★ ★</strong><small>RSC</small></div>{{/if}}
+      {{#if (eq @game "scratch")}}<div class="rg-mini-ticket"><span>刮刮乐</span><strong>★ ★ ★</strong><small>RSC</small></div>{{/if}}
       {{#if (eq @game "blackjack")}}<div class="rg-mini-card rg-mini-card--back">K<span>♠</span></div><div class="rg-mini-card">A<span>♥</span></div>{{/if}}
       {{#if (eq @game "coin")}}<div class="rg-mini-coin rg-mini-coin--back">R</div><div class="rg-mini-coin">R</div>{{/if}}
       {{#if (eq @game "dice")}}<div class="rg-mini-die">⚄</div><div class="rg-mini-die rg-mini-die--second">⚂</div>{{/if}}

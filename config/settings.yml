@@ -1,4 +1,7 @@
 plugins:
+  rsc_lottery_enabled:
+    default: false
+    client: true
   rsc_games_enabled:
     default: false
     client: true
