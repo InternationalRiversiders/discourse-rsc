@@ -8,6 +8,14 @@ const easeOutCubic = (t) => 1 - (1 - t) ** 3;
 const easeInOutSine = (t) => -(Math.cos(Math.PI * t) - 1) / 2;
 const smooth = (t) => t * t * (3 - 2 * t);
 
+// Match high-density displays without unbounded mobile GPU allocations.
+export function scenePixelRatio(width, height, { dpr = 1, moving = false, maxSize = 8192 } = {}) {
+  if (!(width > 0 && height > 0)) return 1;
+  const target = Math.max(1.25, Math.min(dpr || 1, moving ? 2 : 2.5));
+  const budget = moving ? 1_250_000 : 2_000_000;
+  return Math.min(target, Math.sqrt(budget / (width * height)), maxSize / width, maxSize / height);
+}
+
 export function seeded(seed) {
   let a = (Number(seed) || 7) >>> 0;
   return () => {
@@ -31,7 +39,6 @@ class Stage {
     this.T = T;
     this.host = host;
     const renderer = (this.renderer = new T.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" }));
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.toneMapping = T.ACESFilmicToneMapping;
     renderer.toneMappingExposure = exposure;
@@ -47,7 +54,7 @@ class Stage {
     this.scene.environment = this.env;
     this.tasks = new Set();
     this.frame = 0;
-    this.aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    this.aniso = Math.min(16, renderer.capabilities.getMaxAnisotropy());
     // Camera framing set by each scene; drift and pointer parallax are layered on top.
     this.view = { pos: new T.Vector3(0, 5, 5), target: new T.Vector3() };
     this.ambient = [];
@@ -64,6 +71,8 @@ class Stage {
     host.appendChild(renderer.domElement);
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(host);
+    this.onResize = () => this.resize();
+    window.addEventListener("resize", this.onResize);
     this.io = new IntersectionObserver((entries) => {
       this.visible = entries.some((e) => e.isIntersecting);
       this.invalidate();
@@ -96,6 +105,8 @@ class Stage {
   resize() {
     const w = this.host.clientWidth, h = this.host.clientHeight;
     if (!w || !h || this.disposed) return;
+    const ratio = scenePixelRatio(w, h, { dpr: window.devicePixelRatio, moving: this.busy, maxSize: this.renderer.capabilities.maxTextureSize });
+    if (this.renderer.getPixelRatio() !== ratio) this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.fit?.(w / h);
@@ -238,6 +249,7 @@ class Stage {
     this.disposed = true;
     cancelAnimationFrame(this.frame);
     this.observer.disconnect();
+    window.removeEventListener("resize", this.onResize);
     this.io.disconnect();
     document.removeEventListener("visibilitychange", this.onVisibility);
     this.host.removeEventListener("pointermove", this.onPointer);
@@ -1045,7 +1057,10 @@ function drawSymbol(g, name, x, y, s) {
 
 function reelTexture(stage, blur) {
   // Circumference runs along the canvas width; symbols are drawn rotated so they stand upright.
-  const W = CELL * REEL.length, [c, g] = makeCanvas(W, CELL);
+  const W = CELL * REEL.length;
+  const scale = Math.min(blur ? 1 : 2, stage.renderer.capabilities.maxTextureSize / W);
+  const [c, g] = makeCanvas(Math.round(W * scale), Math.round(CELL * scale));
+  g.scale(scale, scale);
   const bg = g.createLinearGradient(0, 0, 0, CELL);
   bg.addColorStop(0, "#efe9f4");
   bg.addColorStop(0.5, "#fffdf8");
@@ -1170,7 +1185,8 @@ function roundRect(g, x, y, w, h, r) {
 }
 
 function cardCanvas(n) {
-  const W = 256, H = 362, [c, g] = makeCanvas(W, H);
+  const W = 256, H = 362, [c, g] = makeCanvas(W * 2, H * 2);
+  g.scale(2, 2);
   roundRect(g, 3, 3, W - 6, H - 6, 22);
   if (n === null || n === undefined) {
     g.fillStyle = "#f4efe4";
@@ -1911,10 +1927,12 @@ export function buildScene(T, game, host, options = {}) {
       stage.reduced = reduced;
       stage.speed = reduced ? 0.55 : 1;
       stage.busy = true;
+      stage.resize();
       host.dataset.motion = "running";
       const run = ctl.play(round);
       const finish = () => {
         stage.busy = false;
+        stage.resize();
         stage.speed = 1;
         delete host.dataset.motion;
       };

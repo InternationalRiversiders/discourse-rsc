@@ -279,5 +279,5 @@
   .rg-ranking-place { width: 26px; height: 26px; flex-shrink: 0; display: grid; place-items: center; border-radius: 8px; color: var(--primary-medium); background: var(--primary-very-low); font-size: 12px; &.is-top { color: #937330; background: #b3934720; font-weight: 700; } }
   .rsc-forum-user { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; color: var(--primary); span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; } img { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; } }
   .rg-ranking-status { padding: 18px 0; color: var(--primary-medium); font-size: 14px; }
-  @media (max-width: 600px) { padding: 14px; .rg-ranking-list { grid-template-columns: minmax(0,1fr); } li { gap: 8px; } }
+  @media (max-width: 600px) { padding: 14px; .rg-ranking-heading { gap: 8px; h2 { font-size: 15px; white-space: nowrap; } } .rg-ranking-period button { font-size: 12px; padding: 5px 6px; } .rg-ranking-list { grid-template-columns: minmax(0,1fr); } li { gap: 8px; } }
 }
