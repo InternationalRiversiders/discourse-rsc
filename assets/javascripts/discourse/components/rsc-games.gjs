@@ -9,6 +9,7 @@ import { eq, and, not, or } from "truth-helpers";
 import { ajax } from "discourse/lib/ajax";
 import { extractError } from "discourse/lib/ajax-error";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
+import RscGameRanking from "./rsc-game-ranking";
 import RscGameArt from "./rsc-game-art";
 import RscScratchCard from "./rsc-scratch-card";
 import RscRouletteWheel from "./rsc-roulette-wheel";
@@ -28,12 +29,12 @@ const SYMBOLS={cherry:"🍒",lemon:"🍋",bell:"🔔",clover:"🍀",diamond:"�
 const SYMBOL_NAMES={cherry:"樱桃",lemon:"柠檬",bell:"铃铛",clover:"四叶草",diamond:"钻石",seven:"7"};
 const RED=[1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
 const RULES={
-  slots:["每轴 6 种图案，独立且等概率。左起两个相同返还 1 倍；三个相同时按下表返还，不叠加。","🍒 5 倍 · 🍋 8 倍 · 🔔 12 倍 · 🍀 20 倍 · 💎 40 倍 · 7 96 倍"],
-  roulette:["单零轮盘，0–36 共 37 个数字等概率。点击投注格放入当前金额，可同时选多个位置。","单号 36 倍；每列为间隔 3 的 12 个数字，三个区间各含 12 个数字，均返还 3 倍；红黑、单双、大小 2 倍。开出 0 时，只有单号 0 获奖。"],
-  scratch:["一张大卡含 10 个独立开奖位。输入金额为整张价格，每个位点按总价的 1/10 计算返还，奖金累加。购票即结算，刮开与刷新不改变结果。","0 倍 57% · 1 倍 19% · 2 倍 18% · 5 倍 5% · 10 倍 0.9% · 50 倍 0.09% · 250 倍 0.01%"],
-  blackjack:["每局重新洗入 6 副牌。A 算 1 或 11，J/Q/K 算 10。比庄家更接近 21 点获胜，超过 21 点即输。","庄家软 17 点停牌，并在开局检查天然 21 点。天然 21 点返还 2.5 倍，普通胜利返还 2 倍，平局退还本金。","前两张牌可加倍：追加同额投入，只再取一张牌。不设分牌、保险和投降。断线后可继续原牌局。"],
-  coin:["正面银杏叶、反面纸船，各 50% 概率。猜中返还 1.96 倍。"],
-  dice:["三颗公平六面骰。小为 4–10 点，大为 11–17 点。三个相同为豹子，大小都不获奖。","猜中返还 2 倍。"],
+  slots:["每轴 6 种图案，独立且等概率。任意两个相同返还 1.5 倍；三个相同时按下表返还，不叠加。","🍒 2 倍 · 🍋 3 倍 · 🔔 5 倍 · 🍀 7 倍 · 💎 20 倍 · 7 40 倍"],
+  roulette:["单零轮盘，0–36 共 37 个数字等概率。点击投注格放入当前金额，可同时选多个位置。","单号 36 倍；每列为间隔 3 的 12 个数字，三个区间各含 12 个数字，均返还 3 倍；红黑、单双、大小 2 倍。开出 0 时，单号 0 返还 36 倍；红黑、单双、大小退回一半本金，列和区间不返还。"],
+  scratch:["一张大卡含 10 个独立开奖位。输入金额为整张价格，每个位点按总价的 1/10 计算返还，奖金累加。购票即结算，刮开与刷新不改变结果。","0 倍 50% · 1 倍 20% · 2 倍 27% · 5 倍 2.4% · 10 倍 0.5% · 50 倍 0.09% · 250 倍 0.01%"],
+  blackjack:["每局重新洗入 6 副牌。A 算 1 或 11，J/Q/K 算 10。比庄家更接近 21 点获胜，超过 21 点即输。","庄家不足 17 点必须要牌，达到 17 点就停牌。软 17 点是把 A 算作 11 后合计 17 点，例如 A＋6；庄家这种情况也停牌。","天然 21 点指开局两张牌为 A＋10/J/Q/K。双方都是天然 21 点时退还本金，否则天然 21 点胜过普通 21 点，获胜返还 2.5 倍；普通胜利返还 2 倍，平局退还本金。","前两张牌可加倍：追加同额投入，只再取一张牌。不设分牌、保险和投降。断线后可继续原牌局。"],
+  coin:["正面银杏叶、反面纸船，各 50% 概率。猜中返还 2 倍，猜错不返还，不抽成。"],
+  dice:["三颗公平六面骰。小为 4–10 点，大为 11–17 点。三个相同为豹子，无论选大小都退回本金。","猜中返还 2 倍。"],
 };
 const money=(n)=>Number(n||0).toLocaleString("zh-CN",{maximumFractionDigits:2});
 // Deal order: player, dealer, player, dealer; later cards arrive one by one.
@@ -80,6 +81,7 @@ export default class extends Component {
   constructor(){super(...arguments);prefetchThree();}
   chips=[5,10,25,50];
   get lotteryPool(){return money(this.lottery?.pool);}
+  get selectedGame(){return this.game ? [this.game] : [];}
   get name(){return GAMES.find(g=>g.id===this.game)?.name;}
   get rulesLines(){return RULES[this.game]||[];}
   get largeScratch(){return !this.round||Array.isArray(this.round.state.spots);}
@@ -94,7 +96,7 @@ export default class extends Component {
   get doubleDisabled(){return this.blocked||!!this.pending||!this.round?.state.can_double||Number(this.balance)<Number(this.round?.stake);}
   get netLabel(){const n=Number(this.round?.net);return `${n>0?"+":""}${money(n)} RSC`;}
   get tone(){return Number(this.round?.net)>0?"win":Number(this.round?.net)<0?"loss":"push";}
-  get outcomeTitle(){return {win:"获胜",lose:"未中奖",push:"平局",bust:"爆牌",blackjack:"天生 21"}[this.round?.state.result]||"";}
+  get outcomeTitle(){if(this.round?.state.result==="push"){return this.game==="dice"?"豹子 · 退回本金":this.game==="blackjack"?"平局 · 退回本金":"回本";}if(this.game==="roulette"&&Number(this.round?.net)<0&&Number(this.round?.payout)>0){return "部分返还";}return {win:"获胜",lose:"未中奖",push:"平局",bust:"爆牌",blackjack:"天生 21"}[this.round?.state.result]||"";}
   get showResult(){return !this.animating&&!this.pending&&this.round?.status==="settled"&&(this.game!=="scratch"||(this.revealed&&!this.largeScratch));}
   get reels(){return (this.round?.state.symbols||["seven","seven","seven"]).map((x,i)=>({key:i,strip:this.animating ? [...Array.from({length:18+i*6},(_,j)=>SYMBOLS[Object.keys(SYMBOLS)[(j+i)%6]]),SYMBOLS[x]] : [SYMBOLS[x]]}));}
   get dice(){return (this.round?.state.dice||[1,3,5]).map((value,i)=>{const [x,y]=[[0,0],[-90,0],[0,-90],[0,90],[90,0],[0,180]][value-1];return {key:i,value,x,y,style:`transform: rotateX(${x}deg) rotateY(${y}deg)`};});}
@@ -283,7 +285,7 @@ export default class extends Component {
               <div class="rg-scratch-ticket"><div class="rg-ticket-top"><span>RIVERSIDE</span><strong>刮刮乐</strong><small>最高 250 倍</small></div><div class="rg-scratch-area"><div class="rg-scratch-grid">{{#each this.tiles as |tile|}}<span class={{if tile.lucky "is-lucky"}} style={{tile.style}}>{{tile.value}}<small>倍</small></span>{{/each}}</div>{{#if (and this.round (not this.revealed))}}<canvas class="rg-scratch-cover" aria-label="刮开票面，或使用下方全部刮开按钮" {{this.scratch this.round.id}}></canvas>{{else unless this.round}}<div class="rg-scratch-placeholder">✦</div>{{/if}}</div><div class="rg-ticket-bottom">{{#if (and this.round (not this.revealed))}}<button type="button" {{on "click" this.reveal}}>全部刮开</button>{{else}}<span>三个相同即中奖</span>{{/if}}</div></div>
               {{/if}}
             {{else if (eq this.game "blackjack")}}
-              <div class="rg-felt"><div class="rg-hand-label">庄家 {{#if this.round}}<span>{{this.round.state.dealer_score}}</span>{{/if}}</div><div class="rg-3d rg-3d--blackjack" role="img" aria-label={{this.sceneLabel}} {{this.view3d "blackjack"}}></div><div class="rg-hand rg-hand--dealer">{{#each this.dealer key="key" as |card|}}<div class="rg-playing-card {{if card.hidden 'is-hidden'}} {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face">{{#unless card.hidden}}<b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b>{{/unless}}</div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-felt-mark"><strong>TWENTY-ONE</strong><span>21点</span></div><div class="rg-hand rg-hand--player">{{#each this.player key="key" as |card|}}<div class="rg-playing-card {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face"><b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b></div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-hand-label">你的手牌 {{#if this.round}}<span>{{this.round.state.player_score}}</span>{{/if}}</div></div>
+              <div class="rg-felt"><div class="rg-hand-label">庄家 {{#if this.round}}<span>{{this.round.state.dealer_score}}</span>{{/if}}</div><div class="rg-3d rg-3d--blackjack" role="img" aria-label={{this.sceneLabel}} {{this.view3d "blackjack"}}></div><div class="rg-hand rg-hand--dealer">{{#each this.dealer key="key" as |card|}}<div class="rg-playing-card {{if card.hidden 'is-hidden'}} {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face">{{#unless card.hidden}}<b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b>{{/unless}}</div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-hand rg-hand--player">{{#each this.player key="key" as |card|}}<div class="rg-playing-card {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face"><b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b></div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-hand-label">你的手牌 {{#if this.round}}<span>{{this.round.state.player_score}}</span>{{/if}}</div></div>
             {{else if (eq this.game "coin")}}
               <div class="rg-3d rg-3d--coin" role="img" aria-label={{this.sceneLabel}} {{this.view3d "coin"}}></div><div class="rg-coin-scene"><div class="rg-coin-flipper" style={{this.coinStyle}}><div class="rg-big-coin rg-coin-front"><span>RIVERSIDE</span><svg class="rg-coin-emblem" viewBox="-300 -300 600 600" aria-hidden="true"><path d="M0 95C-120 40-265-40-270-130C-215-205-120-250-40-235Q-12-185 0-150Q12-185 40-235C120-250 215-205 270-130C265-40 120 40 0 95ZM0 90C4 170 30 230 70 270" /></svg><span>RSC</span></div><div class="rg-big-coin rg-coin-back"><span>RIVERSIDE</span><svg class="rg-coin-emblem" viewBox="-320 -300 640 620" aria-hidden="true"><path d="M-300 40H300L200 175H-200ZM-150 40L10-275L150 40ZM-300 40L-205-55L-150 40M300 40L205-55L150 40M10-275L0 40M-260 240Q-170 210-80 240T100 240T280 240" /></svg><span>RSC</span></div></div><div class="rg-object-shadow"></div></div>
             {{else if (eq this.game "dice")}}
@@ -306,6 +308,7 @@ export default class extends Component {
             {{#if this.rules}}<div class="rg-rules">{{#each this.rulesLines as |line|}}<p>{{line}}</p>{{/each}}{{#if (eq this.game "roulette")}}<dl class="rg-column-rules">{{#each this.columns as |column|}}<dt>{{column.label}}</dt><dd>{{column.numbers}}</dd>{{/each}}</dl>{{/if}}<p>返还倍数包含本金。所有金额均为社区娱乐积分 RSC。每局基础投入 1–{{this.maxStake}} RSC。{{#if (eq this.game "blackjack")}}加倍可追加同额投入。{{/if}}</p></div>{{/if}}
           </aside>
         </div>
+        {{#each this.selectedGame key="@identity" as |game|}}<RscGameRanking @game={{game}} />{{/each}}
       {{/unless}}
       {{/unless}}
       {{#if this.showHistory}}<section class="rg-history"><div class="rg-history-heading"><h2>我的记录</h2><button type="button" class="rg-icon-button" aria-label="关闭记录" {{on "click" this.toggleHistory}}>{{dIcon "xmark"}}</button></div>{{#if this.history.length}}<div class="rg-history-table"><div class="rg-history-labels"><span>游戏 / 时间</span><span>投入</span><span>净收益</span></div>{{#each this.rows key="id" as |row|}}<button type="button" class="rg-history-row" aria-expanded={{if row.expanded "true" "false"}} aria-controls="rg-record-{{row.id}}" disabled={{this.locked}} {{on "click" (fn this.inspect row)}}><span><strong>{{row.name}}</strong><small>{{row.time}}</small></span><span>{{row.stake}}</span><strong class="rg-{{row.tone}}">{{row.netLabel}}</strong></button>{{#if row.expanded}}<div id="rg-record-{{row.id}}">{{#if this.record}}<section class="rg-record" aria-label="游戏详情">{{#if this.recordHands.length}}{{#each this.recordHands as |hand|}}<div class="rg-record-hand"><span class="rg-record-label">{{hand.label}}</span><span class="rg-record-cards">{{#each hand.cards key="key" as |c|}}<span class="rg-record-card {{if c.red 'is-red'}} {{if c.hidden 'is-hidden'}}">{{#if c.hidden}}<span aria-label="暗牌">?</span>{{else}}{{c.rank}}{{c.suit}}{{/if}}</span>{{/each}}</span><span>{{hand.scoreLabel}}</span></div>{{/each}}{{else}}{{#if this.recordBets}}<p>投注：{{this.recordBets}}</p>{{/if}}<p>{{this.recordResult}}</p>{{/if}}</section>{{/if}}</div>{{/if}}{{/each}}</div>{{else}}<div class="rg-empty">还没有游戏记录</div>{{/if}}

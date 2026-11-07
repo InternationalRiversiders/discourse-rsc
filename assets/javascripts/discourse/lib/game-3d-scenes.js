@@ -1279,26 +1279,6 @@ function tableCanvas() {
   g.beginPath();
   g.arc(cx, cz, 3.25 * k, 0.18 * Math.PI, 0.82 * Math.PI);
   g.stroke();
-  const arcText = (text, radius, size, color) => {
-    g.save();
-    g.translate(cx, cz);
-    g.font = `bold ${size}px Georgia, 'Songti SC', 'Noto Serif CJK SC', serif`;
-    g.fillStyle = color;
-    g.textAlign = "center";
-    g.textBaseline = "middle";
-    const chars = [...text], step = (size * 0.78) / radius;
-    chars.forEach((ch, i) => {
-      const a = Math.PI / 2 + (chars.length / 2 - i - 0.5) * step;
-      g.save();
-      g.rotate(a - Math.PI / 2);
-      g.translate(0, radius);
-      g.fillText(ch, 0, 0);
-      g.restore();
-    });
-    g.restore();
-  };
-  arcText("TWENTY · ONE", 3.55 * k, 70, "#f0d796");
-  arcText("庄家软 17 点停牌", 3.0 * k, 46, "#cfe6d7cc");
   g.strokeStyle = "#f0d79699";
   g.lineWidth = 6;
   g.beginPath();

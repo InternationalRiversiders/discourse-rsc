@@ -46,7 +46,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
      const rejected=await send('invalid');const first=await send(csrf),a=await first.json();const replay=await send(csrf),b=await replay.json();
      return {csrf:rejected.status,status:first.status,a,b};
     });
-    assert.equal(checks.csrf,403);assert.equal(checks.status,200);assert.equal(checks.a.id,checks.b.id);assert(checks.b.replayed);assert(Number(checks.a.payout)<=1.96);assert.equal(checks.a.balance,checks.b.balance);
+    assert.equal(checks.csrf,403);assert.equal(checks.status,200);assert.equal(checks.a.id,checks.b.id);assert(checks.b.replayed);assert(Number(checks.a.payout)<=2);assert.equal(checks.a.balance,checks.b.balance);
    }
    assert.deepEqual(errors,[]);console.log(`${scheme}: six games, responsive layouts, rules, no browser exceptions`);await context.close();
   }

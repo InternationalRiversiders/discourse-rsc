@@ -5,8 +5,8 @@ module DiscourseRsc
     NAMES = { 'slots'=>'转转乐', 'roulette'=>'幸运转盘', 'scratch'=>'刮刮乐', 'blackjack'=>'21点', 'coin'=>'抛硬币', 'dice'=>'猜骰子' }.freeze
     RED = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].freeze
     SYMBOLS = %w[cherry lemon bell clover diamond seven].freeze
-    SLOT_PAY = [5,8,12,20,40,96].freeze
-    SCRATCH = [[0,5700],[1,1900],[2,1800],[5,500],[10,90],[50,9],[250,1]].freeze
+    SLOT_PAY = [2,3,5,7,20,40].freeze
+    SCRATCH = [[0,5000],[1,2000],[2,2700],[5,240],[10,50],[50,9],[250,1]].freeze
     ROULETTE_CHOICES = (%w[red black odd even low high dozen1 dozen2 dozen3 column1 column2 column3] + (0..36).map { |n| "n#{n}" }).freeze
 
     def self.ensure_access!(actor, writable: false)
@@ -46,7 +46,7 @@ module DiscourseRsc
         # Instant games never remain playing past this transaction, so permit
         # them alongside an existing blackjack hand without changing its cards.
         round=GameRound.create!(user_id:actor.id,game:game,status:game=='blackjack' ? 'playing' : 'settled',stake_units:wager,
-          state:{'choice'=>choice,'bets'=>normalized,'rules_version'=>1})
+          state:{'choice'=>choice,'bets'=>normalized,'rules_version'=>3})
         reserve(round,actor,wager,'open')
         if game=='blackjack'
           deck=shuffle((0...312).map { |n| n%52 })
@@ -124,22 +124,23 @@ module DiscourseRsc
       case round.game
       when 'coin'
         state['landed']=SecureRandom.random_number(2).zero? ? 'heads' : 'tails'
-        state['landed']==state['choice'] ? stake*196/100 : 0
+        state['landed']==state['choice'] ? stake*2 : 0
       when 'dice'
         dice=Array.new(3) { SecureRandom.random_number(6)+1 }; state['dice']=dice
         state['total']=dice.sum
         win=dice.uniq.size>1 && (state['choice']=='small' ? (4..10).cover?(dice.sum) : (11..17).cover?(dice.sum))
-        win ? stake*2 : 0
+        dice.uniq.size==1 ? stake : win ? stake*2 : 0
       when 'slots'
         reels=Array.new(3) { SecureRandom.random_number(SYMBOLS.size) }
         state['symbols']=reels.map { |n| SYMBOLS[n] }
-        multiplier=reels.uniq.size==1 ? SLOT_PAY[reels[0]] : reels[0]==reels[1] ? 1 : 0
+        multiplier=reels.uniq.size==1 ? SLOT_PAY[reels[0]] : reels.uniq.size==2 ? 1.5 : 0
         state['multiplier']=multiplier
-        stake*multiplier
+        # Half-unit payouts use integer arithmetic, never floating-point money.
+        reels.uniq.size==2 ? stake*3/2 : stake*multiplier
       when 'scratch'
         # One paid card, ten independent spots. All money remains integer units.
         spot_stake=stake/10
-        state['rules_version']=2
+        state['rules_version']=3
         state['spot_stake']=Amount.format(spot_stake)
         state['spots']=Array.new(10) do
           ticket=SecureRandom.random_number(10000); running=0
@@ -149,13 +150,13 @@ module DiscourseRsc
         state['spots'].sum { |spot| Amount.parse(spot['payout']) }
       when 'roulette'
         number=SecureRandom.random_number(37); state['number']=number
-        state['bets'].sum { |b| roulette_multiplier(b['choice'],number)*Amount.parse(b['stake']) }
+        state['bets'].sum { |b| (roulette_multiplier(b['choice'],number)*Amount.parse(b['stake'])).to_i }
       end
     end
 
     def self.roulette_multiplier(choice,number)
       return choice=="n#{number}" ? 36 : 0 if choice.start_with?('n')
-      return 0 if number.zero?
+      return %w[red black odd even low high].include?(choice) ? Rational(1,2) : 0 if number.zero?
       case choice
       when 'red' then RED.include?(number) ? 2 : 0
       when 'black' then RED.include?(number) ? 0 : 2

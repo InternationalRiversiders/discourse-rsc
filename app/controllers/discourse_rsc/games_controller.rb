@@ -8,6 +8,10 @@ module DiscourseRsc
     def state
       render_json_dump Games.state(current_user,before:params[:before].present? ? positive_id(:before) : nil,round_id:params[:round_id].present? ? positive_id(:round_id) : nil,page:params[:page].present? ? positive_id(:page) : nil)
     end
+    def ranking
+      params[:game] == 'lottery' ? Lottery.ensure_access!(current_user) : Games.ensure_access!(current_user)
+      render_json_dump GameRanking.fetch(game:params[:game].to_s,period:params.fetch(:period,'month').to_s)
+    end
     def play
       RateLimiter.new(current_user,'rsc-games-play',40,1.minute).performed!
       bets=params[:bets]

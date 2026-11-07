@@ -236,4 +236,22 @@ class LotteryTest < NativeBusinessTest
     SecureRandom.define_singleton_method(:random_number, old) if old
   end
 
+  def test_lottery_ranking_uses_net_of_all_tickets_in_draw_and_excludes_unsettled
+    buy('1234')
+    buy('0000',quantity:3)
+    buy('1234',actor:@bob)
+    assert_empty R::GameRanking.calculate(game:'lottery',period:'all')[:rows]
+    settle
+    board=R::GameRanking.calculate(game:'lottery',period:'all')
+    assert_equal [@bob.id,@alice.id],board[:rows].map { |r| r[:user][:id] }
+    [@alice,@bob].each do |user|
+      tickets=R::LotteryTicket.where(draw_id:@draw.id,user_id:user.id)
+      net=tickets.sum(:payout_units).to_i-tickets.sum(:quantity)*5*R::Amount::UNIT
+      row=board[:rows].find { |r| r[:user][:id]==user.id }
+      assert_equal R::Amount.format(net),row[:value]
+    end
+    assert board[:rows].all? { |r| r.keys.sort==[:achieved_at,:user,:value].sort }
+    consistent
+  end
+
 end

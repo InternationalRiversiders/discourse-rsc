@@ -5,6 +5,7 @@ class GamesTest < NativeBusinessTest
   def setup
     super
     R::GameRound.delete_all
+    R::Games::NAMES.each_key { |g| %w[month all].each { |p| Rails.cache.delete("rsc:game-ranking:v1:#{g}:#{p}") } }
     SiteSetting.rsc_games_enabled=true
     SiteSetting.rsc_games_max_stake=500
     fund(@alice,'2000'); fund(@bob,'100')
@@ -74,8 +75,8 @@ class GamesTest < NativeBusinessTest
   def test_games_coin_replay_and_conflicting_input
     key=SecureRandom.uuid
     result=stub_method(SecureRandom,:random_number,0) { play(request_id:key) }
-    assert_equal '9.6',result[:net]
-    assert_equal '2009.6',result[:balance]
+    assert_equal '10',result[:net]
+    assert_equal '2010',result[:balance]
     repeat=play(request_id:key)
     assert_equal result[:id],repeat[:id]
     assert repeat[:replayed]
@@ -171,22 +172,23 @@ class GamesTest < NativeBusinessTest
   end
   def test_games_roulette_expected_return_for_every_bet
     R::Games::ROULETTE_CHOICES.each do |choice|
-      assert_equal 36,(0..36).sum { |n| R::Games.roulette_multiplier(choice,n) },choice
+      expected=%w[red black odd even low high].include?(choice) ? Rational(73,2) : 36
+      assert_equal expected,(0..36).sum { |n| R::Games.roulette_multiplier(choice,n) },choice
     end
     r=stub_method(SecureRandom,:random_number,0) { play('roulette',bets:[{'choice'=>'n0','stake'=>'10'},{'choice'=>'red','stake'=>'10'}]) }
-    assert_equal '20',r[:stake];assert_equal '360',r[:payout]
+    assert_equal '20',r[:stake];assert_equal '365',r[:payout]
     consistent
   end
   def test_games_slots_expected_return
     total=(0...6).to_a.repeated_permutation(3).sum do |a,b,c|
       draws=[a,b,c]
-      round=R::GameRound.new(game:"slots",stake_units:1,state:{})
+      round=R::GameRound.new(game:"slots",stake_units:2,state:{})
       stub_method(SecureRandom,:random_number,->(_){draws.shift}) { R::Games.instant(round) }
     end
-    assert_equal 211,total
-    assert_operator total,:<,216
+    assert_equal 424,total
+    assert_operator total,:<,432
     assert_equal 10000,R::Games::SCRATCH.sum(&:last)
-    assert_equal 9600,R::Games::SCRATCH.sum { |m,w|m*w }
+    assert_equal 9800,R::Games::SCRATCH.sum { |m,w|m*w }
     %w[small big].each do |choice|
       wins=(1..6).to_a.repeated_permutation(3).count { |ds| 
         draws=ds.map { |n|n-1 };round=R::GameRound.new(game:"dice",stake_units:1,state:{"choice"=>choice})
@@ -213,14 +215,14 @@ class GamesTest < NativeBusinessTest
   end
   def test_games_scratch_card_total_price_scaling_and_one_debit
     [10,20].each do |price|
-      draws=[0,5699,5700,7599,7600,9399,9400,9899,9900,9999]
+      draws=[0,4999,5000,6999,7000,9699,9700,9939,9940,9999]
       key=SecureRandom.uuid
       r=stub_method(SecureRandom,:random_number,->(_){draws.shift}) { play('scratch',stake:price.to_s,request_id:key) }
       assert_equal price.to_s,r[:stake]
       assert_equal (price/10).to_s,r[:state]['spot_stake']
       assert_equal [0,0,1,1,2,2,5,5,10,250],r[:state]['spots'].map { |spot|spot['multiplier'] }
       assert_equal (276*price/10).to_s,r[:payout]
-      assert_equal 2,r[:state]['rules_version']
+      assert_equal 3,r[:state]['rules_version']
       assert_equal 1,R::Journal.where(operation:'game_stake',metadata:{game_round_id:r[:id],game:'scratch',reason:'刮刮乐'}).count
       repeat=play('scratch',stake:price.to_s,request_id:key)
       assert repeat[:replayed]
@@ -264,4 +266,65 @@ class GamesTest < NativeBusinessTest
     assert_equal 3,R::GameRound.find(r[:id]).state['player'].size
     consistent
   end
+  def test_games_fair_dice_and_coin_and_fractional_refunds
+    %w[small big].each do |choice|
+      payouts=(0...6).to_a.repeated_permutation(3).map do |draws|
+        round=R::GameRound.new(game:'dice',stake_units:2,state:{'choice'=>choice})
+        stub_method(SecureRandom,:random_number,->(_){draws.shift}) { R::Games.instant(round) }
+      end
+      assert_equal 432,payouts.sum
+      assert_equal 6,payouts.count(2)
+      assert_equal 105,payouts.count(4)
+    end
+    r=stub_method(SecureRandom,:random_number,0) { play('dice',stake:'1.01',choice:'big') }
+    assert_equal ['1.01','0','push'],[r[:payout],r[:net],r[:state]['result']]
+    r=stub_method(SecureRandom,:random_number,0) { play('roulette',bets:[{'choice'=>'red','stake'=>'1.01'}]) }
+    assert_equal '0.505',r[:payout]
+    draws=[0,1,0]
+    r=stub_method(SecureRandom,:random_number,->(_){draws.shift}) { play('slots',stake:'1.01') }
+    assert_equal '1.515',r[:payout]
+    assert_equal '0.505',r[:net]
+    assert_equal 1.5,r[:state]['multiplier']
+    consistent
+  end
+
+  def ranking_round(actor,game,net,at:Time.current)
+    R::GameRound.create!(user_id:actor.id,game:game,status:'settled',stake_units:R::Amount.parse('10'),
+      payout_units:R::Amount.parse((10+net).to_s),settled_at:at,state:{})
+  end
+
+  def test_games_ranking_best_per_user_and_period_and_exclusions
+    ranking_round(@alice,'slots',20,at:31.days.ago)
+    ranking_round(@alice,'slots',5,at:2.days.ago)
+    ranking_round(@alice,'slots',3)
+    ranking_round(@bob,'slots',5,at:1.day.ago)
+    R::Account.wallet(@admin.id)
+    ranking_round(@admin,'slots',500)
+    board=R::GameRanking.fetch(game:'slots')
+    assert_equal 'net',board[:metric]
+    assert_equal [@alice.id,@bob.id],board[:rows].map { |r| r[:user][:id] }
+    assert_equal ['5','5'],board[:rows].map { |r| r[:value] }
+    assert_equal '20',R::GameRanking.fetch(game:'slots',period:'all')[:rows].first[:value]
+    R::Account.wallet(@alice.id).update!(status:'frozen')
+    assert_equal [@bob.id],R::GameRanking.calculate(game:'slots',period:'all')[:rows].map { |r| r[:user][:id] }
+    @bob.update!(suspended_till:1.day.from_now)
+    assert_empty R::GameRanking.calculate(game:'slots',period:'all')[:rows]
+    @bob.update!(suspended_till:nil)
+    assert_raises(R::Error) { R::GameRanking.fetch(game:"slots' OR 1=1 --") }
+    assert_raises(R::Error) { R::GameRanking.fetch(game:'slots',period:'nope') }
+  end
+
+  def test_games_streaks_pushes_do_not_count_or_break_and_other_games_do_not_mix
+    [10,0,10,-10,10,10,10].each_with_index { |n,i| ranking_round(@alice,'dice',n,at:(100-i).minutes.ago) }
+    5.times { |i| ranking_round(@alice,'coin',10,at:(90-i).minutes.ago) }
+    4.times { |i| ranking_round(@bob,'dice',10,at:(100-i).minutes.ago) }
+    ranking_round(@bob,'dice',-10)
+    board=R::GameRanking.calculate(game:'dice',period:'month')
+    assert_equal 'streak',board[:metric]
+    assert_equal [@bob.id,@alice.id],board[:rows].map { |r| r[:user][:id] }
+    assert_equal [4,3],board[:rows].map { |r| r[:value] }
+    assert_equal 5,R::GameRanking.calculate(game:'coin',period:'all')[:rows].first[:value]
+    assert_empty R::GameRanking.calculate(game:'blackjack',period:'all')[:rows]
+  end
+
 end

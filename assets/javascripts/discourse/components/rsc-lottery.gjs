@@ -1,3 +1,4 @@
+import RscGameRanking from "./rsc-game-ranking";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { service } from "@ember/service";
@@ -157,6 +158,7 @@ export default class extends Component {
         {{#if (eq this.tab "mine")}}<div class="rl-ticket-list">{{#each this.tickets key="id" as |ticket|}}<article class="rl-ticket {{if ticket.winning 'winning'}}"><div><strong>{{ticket.number}}</strong><span>× {{ticket.quantity}} 注</span><small>{{ticket.date}} 开奖</small></div><div><b>{{ticket.state}}</b>{{#if ticket.winning}}<span>+{{ticket.payoutLabel}} RSC</span>{{/if}}</div></article>{{else}}<p class="rl-empty">还没有彩票，选一个属于你的号码。</p>{{/each}}</div>
         {{else}}<div class="rl-draw-list">{{#each this.history key="id" as |draw|}}<article class="rl-draw"><span>{{draw.date}}</span><div class="rl-balls">{{#each draw.digits key="index" as |digit|}}<b>{{digit.value}}</b>{{/each}}</div><span>头奖 {{draw.winners}} 注 · 派奖 {{draw.paidLabel}} RSC</span></article>{{else}}<p class="rl-empty">等待第一期开奖。</p>{{/each}}</div>{{/if}}
       </section>
+      <RscGameRanking @game="lottery" />
       <details class="rl-rules"><summary>玩法与奖池规则</summary><p>每天北京时间 20:00 截止并开奖，四位数字独立随机产生，可包含 0，也可重复。每人每期最多 20 注。</p><p>每注 5 RSC，其中 4 RSC 进入奖池，1 RSC 由系统回收。先支付二、三等奖，再由一等奖按中奖注数平分剩余奖池。小奖总额超过奖池时按比例分配，不额外增发。</p><p>初始奖池投入 5,000 RSC；无人中一等奖时余额滚入下一期，有人中一等奖后下一期补入 3,000 RSC。奖金为返还总额，包含本金；不可分割的极小尾数留在奖池。此处仅使用社区娱乐积分。</p></details>
       {{#if this.data.accounting}}<details class="rl-rules rl-accounting"><summary>奖池账目 · 管理员</summary><div class="rl-stats">{{#each this.stats as |stat|}}<div><span>{{stat.label}}</span><strong>{{stat.value}} RSC</strong></div>{{/each}}</div><p>净回收 = 手续费回收 − 系统累计补贴；现存奖池仍用于派奖，不计作永久回收。</p></details>{{/if}}
     </section>

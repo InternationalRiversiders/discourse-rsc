@@ -65,6 +65,7 @@ after_initialize do
     app/services/discourse_rsc/wallet
     app/services/discourse_rsc/commands
     app/services/discourse_rsc/games
+    app/services/discourse_rsc/game_ranking
     app/services/discourse_rsc/lottery
     app/services/discourse_rsc/red_packets
     app/services/discourse_rsc/packet_sharing
