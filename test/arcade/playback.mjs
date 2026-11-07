@@ -6,6 +6,7 @@ const url=source=>'data:text/javascript;base64,'+Buffer.from(source).toString('b
 const coreUrl=url(fs.readFileSync(new URL('lib/arcade-core.js',root),'utf8'));
 const {default:Core}=await import(coreUrl);
 const {default:Playback}=await import(url(fs.readFileSync(new URL('lib/arcade-playback.js',root),'utf8').replace('"./arcade-core"',JSON.stringify(coreUrl))));
+const {default:Effects}=await import(url(fs.readFileSync(new URL('lib/arcade-effects.js',root),'utf8')));
 let serial=0;
 function run(game){return {id:++serial,game,status:'playing',version:0,state:Core.create(game,Array(20).fill(3733))};}
 function server(r,request){
@@ -58,7 +59,7 @@ const source=fs.readFileSync(new URL('components/rsc-arcade.gjs',root),'utf8');
 const klass=source.slice(source.indexOf('export default class'),source.indexOf(' <template>')).replace('export default class','return class').replace(/@tracked /g,'').replace(/@action /g,'')+'}';
 const requests=[];
 const ajax=(_path,opts)=>new Promise((resolve,reject)=>requests.push({body:JSON.parse(opts.data),resolve,reject}));
-const Component=new Function('Component','GAMES','Core','Playback','ajax','extractError','modifier','draw','formatDateTime','crypto',klass)(class{},[],Core,Playback,ajax,e=>e.message,()=>null,()=>{},()=>'',{randomUUID});
+const Component=new Function('Component','GAMES','Core','Playback','Effects','ajax','extractError','modifier','draw','formatDateTime','crypto',klass)(class{},[],Core,Playback,Effects,ajax,e=>e.message,()=>null,()=>{},()=>'',{randomUUID});
 function component(game){const c=new Component();c.game=game;c.playback=new Playback(view(run(game)));c.run=c.playback.run;c.state=c.playback.state;c.paused=false;c.loadRanking=()=>{};return c;}
 async function settle(c,r){const req=requests.shift();assert(req);const response=server(r,req.body);req.resolve(view(response));await new Promise(resolve=>setImmediate(resolve));return response;}
 {

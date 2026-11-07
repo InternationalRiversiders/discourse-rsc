@@ -5,6 +5,7 @@ DiscourseRsc::Engine.routes.draw do
   get "/lottery/state" => "lottery#state"
   post "/lottery/buy" => "lottery#buy"
   get "/arcade/ranking" => "arcade#ranking"
+  get "/arcade/catalog" => "arcade#catalog"
   post "/arcade/start" => "arcade#start"
   post "/arcade/:id/advance" => "arcade#advance"
   get "/games" => "games#index"

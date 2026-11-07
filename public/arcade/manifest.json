@@ -1,0 +1,12 @@
+{
+  "protocol": 1,
+  "rules_version": 1,
+  "script": "/plugins/discourse-rsc/arcade/rsc-arcade-sdk-aa8861933cca72d9.js",
+  "sha256": "aa8861933cca72d994e88d8b5bf5debd3b9f00682da92f80ca66a58ef61c45ff",
+  "sources": {
+    "core": "4d51fb43fabcafdf7fd4b988217ada46e44c9c84b1c017627345369918fa81de",
+    "playback": "0a11b9c5ebeb4be094ce28b7b8289b9e8586d45e87482372268049fc2e006dbe",
+    "effects": "e90457a019710a0b6275154350cc0ff1a3579ba299ca9f9d094a36a62768c8ab",
+    "draw": "3690bd7c602fc83441c6522bea11e54cc34da3a2130b0aa676cc0101b7d96d6f"
+  }
+}

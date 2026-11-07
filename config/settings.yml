@@ -7,6 +7,12 @@ plugins:
     client: true
   rsc_arcade_rewards_enabled:
     default: false
+  rsc_arcade_rotation_cadence:
+    default: weekly
+    type: enum
+    choices:
+      - weekly
+      - daily
   rsc_games_enabled:
     default: false
     client: true

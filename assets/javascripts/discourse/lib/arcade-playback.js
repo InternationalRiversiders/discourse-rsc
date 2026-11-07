@@ -47,6 +47,7 @@ export default class ArcadePlayback {
     if (this.grid) {
       const key = this.keys.shift();
       if (!key) { return false; }
+      this.visualMove = {direction:key,board:this.state.board.slice(),tick:this.state.tick+1};
       this.state = Core.preview(this.state, key);
       this.events = [[0, key]];
       this.frames = 1;

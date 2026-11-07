@@ -1,5 +1,8 @@
 en:
   site_settings:
+    rsc_arcade_enabled: "Enable free arcade challenges"
+    rsc_arcade_rewards_enabled: "Reward the featured game's top five in new seasons (100, 60, 40, 25, 15 RSC); running seasons keep their prize snapshot"
+    rsc_arcade_rotation_cadence: "Arcade rotation: weekly or daily; changes apply to the next season"
     rsc_lottery_enabled: "启用 Riverside 大乐透"
     rsc_games_enabled: "启用校园生活中的 RSC 游戏"
     rsc_games_max_stake: "每局游戏最大基础投入（RSC）；二十一点加倍可追加同额投入"

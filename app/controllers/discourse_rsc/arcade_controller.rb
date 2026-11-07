@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 module DiscourseRsc
   class ArcadeController < WalletController
+    def catalog
+      render_json_dump Arcade.catalog(current_user)
+    end
     def ranking
       render_json_dump Arcade.ranking(current_user,params[:game].to_s)
     end

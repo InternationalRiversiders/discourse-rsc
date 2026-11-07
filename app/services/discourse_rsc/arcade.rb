@@ -24,9 +24,46 @@ module DiscourseRsc
       candidate+=7.days if candidate<=local
       candidate.utc
     end
-    def self.period
-      ends=end_time
-      ArcadePeriod.create_or_find_by!(ends_at:ends) { |p| p.prizes=SiteSetting.rsc_arcade_rewards_enabled ? PRIZES : [] }
+    def self.period(now=Time.current)
+      latest=ArcadePeriod.where.not(game:nil).order(ordinal: :desc).first
+      return latest if latest && latest.starts_at<=now && latest.ends_at>now
+      ArcadePeriod.transaction do
+        Commands.lock('arcade-rotation')
+        latest=ArcadePeriod.where.not(game:nil).order(ordinal: :desc).first
+        next latest if latest && latest.starts_at<=now && latest.ends_at>now
+        cadence=SiteSetting.rsc_arcade_rotation_cadence=='daily' ? 'daily' : 'weekly'
+        duration=cadence=='daily' ? 1.day : 7.days
+        if latest
+          # No empty rows/jobs for missed seasons during downtime. Rotation
+          # advances by elapsed periods; the prior played season still settles.
+          steps=((now-latest.ends_at)/duration).floor+1
+          starts=latest.ends_at+(steps-1)*duration
+          ends=starts+duration
+          number=latest.ordinal+steps
+          game=NAMES.keys[(NAMES.keys.index(latest.game)+steps)%NAMES.size]
+        else
+          starts=now;number=1;game=NAMES.keys.first
+          if cadence=='daily'
+            ends=now.in_time_zone('Asia/Shanghai').beginning_of_day+20.hours
+            ends+=1.day if ends<=now
+          else
+            ends=end_time(now)
+            ends+=7.days if ends<now+6.days
+          end
+          ends+=duration while ArcadePeriod.exists?(ends_at:ends)
+        end
+        ArcadePeriod.create!(starts_at:starts,ends_at:ends,game:game,cadence:cadence,ordinal:number,
+          prizes:SiteSetting.rsc_arcade_rewards_enabled ? PRIZES : [])
+      end
+    end
+    def self.season_view(p)
+      { id:p.id,number:p.ordinal,game:p.game,name:NAMES[p.game],starts_at:p.starts_at,ends_at:p.ends_at,
+        cadence:p.cadence,prizes:p.prizes,next_game:NAMES.keys[(NAMES.keys.index(p.game)+1)%NAMES.size] }
+    end
+    def self.catalog(actor)
+      access!(actor)
+      { protocol:1,rules_version:1,games:NAMES.map { |id,name| {id:id,name:name} },
+        current:season_view(period),server_time:Time.current }
     end
     def self.randoms(n)
       Array.new(n) { SecureRandom.random_number(1_000_000_000) }
@@ -51,7 +88,7 @@ module DiscourseRsc
         initial=randoms(game=='2048' ? 8 : 20)
         state=engine('create',game,initial)
         run=ArcadeRun.create!(user_id:actor.id,period_id:p.id,game:game,start_key:request_id,state:state,inputs:[{'initial'=>initial,'version'=>1}],
-          expires_at:[Time.current+2.hours,p.ends_at].min)
+          expires_at:game==p.game ? [Time.current+2.hours,p.ends_at].min : Time.current+2.hours)
         view(run)
       end
     end
@@ -89,43 +126,58 @@ module DiscourseRsc
     def self.view(run)
       state=run.state.deep_dup
       state.delete('q') if run.game=='2048'
-      {id:run.id,game:run.game,version:run.version,state:state,status:run.status,expires_at:run.expires_at,period_id:run.period_id}
+      p=ArcadePeriod.find_by(id:run.period_id)
+      season_id=p&.game==run.game && p.starts_at && run.created_at>=p.starts_at ? p.id : nil
+      {id:run.id,game:run.game,version:run.version,state:state,status:run.status,expires_at:run.expires_at,
+        period_id:run.period_id,season_id:season_id,rules_version:state['version']}
     end
     def self.ranked(p,game)
-      # Best score per member; admins, suspended accounts and frozen wallets are not prize candidates.
-      ArcadeRun.where(period_id:p.id,game:game,status:'finished').where('score > 0')
-        .joins('JOIN users ON users.id = discourse_rsc_arcade_runs.user_id')
+      return [] if p&.game && p.game!=game
+      scope=ArcadeRun.where(game:game,status:'finished').where('score > 0')
+      if p
+        scope=scope.where(period_id:p.id)
+        scope=scope.where('discourse_rsc_arcade_runs.created_at >= ? AND finished_at < ?',p.starts_at,p.ends_at) if p.starts_at
+      end
+      scope.joins('JOIN users ON users.id = discourse_rsc_arcade_runs.user_id')
         .joins("JOIN discourse_rsc_accounts a ON a.key = 'wallet:' || users.id::text")
         .where("users.active AND NOT users.admin AND (users.suspended_till IS NULL OR users.suspended_till < CURRENT_TIMESTAMP) AND a.status = 'active'")
         .group(:user_id).maximum(:score).sort_by { |uid,score| [-score,uid] }
     end
-    def self.ranking(actor,game)
-      access!(actor);raise Error.new('invalid_game') unless NAMES.key?(game)
-      p=period
-      data=Rails.cache.fetch("rsc-arcade-rank:#{p.id}:#{game}",expires_in:20.seconds) do
+    def self.rank_rows(p,game)
+      Rails.cache.fetch("rsc-arcade-rank-v2:#{p&.id || 'all'}:#{game}",expires_in:20.seconds) do
         rank=0;prev=nil
         rows=ranked(p,game).each_with_index.map do |(uid,score),index|
           rank=index+1 if score!=prev;prev=score
           {user_id:uid,score:score,rank:rank}
-        end
-        selected=rows.first(20)
-        users=User.where(id:selected.map { |r| r[:user_id] }).index_by(&:id)
-        selected.map { |r| r.merge(user:UserIdentity.serialize(users[r[:user_id]])) }
+        end.first(20)
+        users=User.where(id:rows.map { |r| r[:user_id] }).index_by(&:id)
+        rows.map { |r| r.merge(user:UserIdentity.serialize(users[r[:user_id]])) }
       end
-      { ends_at:p.ends_at,prizes:p.prizes,rows:data,previous:ArcadePeriod.where.not(settled_at:nil).order(ends_at: :desc).first&.results&.fetch(game,[]) || [] }
+    end
+    def self.ranking(actor,game)
+      access!(actor);raise Error.new('invalid_game') unless NAMES.key?(game)
+      p=period
+      season=p.game==game ? season_view(p).merge(rows:rank_rows(p,game)) : nil
+      previous=ArcadePeriod.where(game:game).where.not(settled_at:nil).order(ordinal: :desc).first
+      { rows:rank_rows(nil,game),season:season,featured:season_view(p),
+        ends_at:season ? p.ends_at : nil,prizes:season ? p.prizes : [],
+        previous:previous ? {number:previous.ordinal,ends_at:previous.ends_at,rows:previous.results.fetch(game,[])} : nil }
     end
     def self.settle
       return if Safety.read_only?
+      period if SiteSetting.rsc_arcade_enabled
       ArcadePeriod.where(settled_at:nil).where('ends_at <= ?',Time.current).find_each do |p|
         p.with_lock do
           next if p.settled_at
           Commands.lock("arcade-period:#{p.id}")
           results={};credits=Hash.new(0)
-          NAMES.each_key do |game|
+          (p.game ? [p.game] : NAMES.keys).each do |game|
             index=0;rows=[]
             ranked(p,game).chunk { |_,score| score }.each do |score,members|
               rank=index+1
-              budget=(p.prizes[index,members.size] || []).sum * Amount::UNIT
+              # Pre-rotation trial periods never award seven games at once.
+              prizes=p.game ? p.prizes : []
+              budget=(prizes[index,members.size] || []).sum * Amount::UNIT
               each=budget/members.size
               members.each do |uid,_|
                 credits[Account.wallet(uid).id]+=each if each.positive?
@@ -140,7 +192,7 @@ module DiscourseRsc
           if total.positive?
             Ledger.post(operation:'arcade_prize',actor_user_id:0,request_id:"arcade-period-#{p.id}",
               postings:credits.merge(Account.issuance.id=>-total),settlement:true,
-              metadata:{reason:'休闲挑战每周排名奖励',arcade_period_id:p.id})
+              metadata:{reason: "休闲挑战赛季奖励 · #{NAMES[p.game]}",arcade_period_id:p.id,game:p.game,season_number:p.ordinal})
           end
           p.update!(results:results,settled_at:Time.current)
         end

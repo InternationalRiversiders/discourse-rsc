@@ -1,7 +1,8 @@
 zh_CN:
   site_settings:
     rsc_arcade_enabled: "启用免费的休闲挑战"
-    rsc_arcade_rewards_enabled: "新一期休闲挑战启用每款前五名奖励（100、60、40、25、15 RSC）；本期开赛后规则不变"
+    rsc_arcade_rewards_enabled: "新赛季为轮替中的一款游戏发放前五名奖励（100、60、40、25、15 RSC）；已开始赛季的奖金不变"
+    rsc_arcade_rotation_cadence: "休闲挑战轮替周期：weekly 每周，daily 每天；修改从下一赛季开始生效"
     rsc_lottery_enabled: "启用 Riverside 大乐透"
     rsc_games_enabled: "启用校园生活中的 RSC 游戏"
     rsc_games_max_stake: "每局游戏最大基础投入（RSC）；二十一点加倍可追加同额投入"
