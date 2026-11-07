@@ -7,6 +7,7 @@ class ArcadeTest < NativeBusinessTest
   def setup
     super
     R::ArcadeRun.delete_all;R::ArcadePeriod.delete_all
+    R::Arcade::NAMES.each_key { |game| Rails.cache.delete(R::Arcade.rank_cache_key(nil,game)) }
     SiteSetting.rsc_arcade_rotation_cadence='weekly'
     SiteSetting.rsc_games_enabled=true;SiteSetting.rsc_arcade_enabled=true;SiteSetting.rsc_arcade_rewards_enabled=false
     fund(@alice,'100');fund(@bob,'100')
@@ -60,6 +61,31 @@ class ArcadeTest < NativeBusinessTest
     assert_equal [[@alice.id,120],[@bob.id,120]].sort,R::Arcade.ranked(p,'2048').sort
     R::Account.wallet(@bob.id).update!(status:'frozen')
     assert_equal [[@alice.id,120]],R::Arcade.ranked(p,'2048')
+  end
+  def test_admin_finished_score_is_in_all_time_but_not_prize_season
+    fund(@admin,'100')
+    r=start(actor:@admin);advance(r,actor:@admin,finish:true)
+    R::ArcadeRun.find(r[:id]).update!(score:656)
+    assert_includes R::Arcade.rank_rows(nil,'2048').map { |row| [row[:user_id],row[:score]] },[@admin.id,656]
+    assert_empty R::Arcade.ranked(R::ArcadePeriod.find(r[:period_id]),'2048')
+  end
+  def test_finish_invalidates_cached_empty_boards_after_commit
+    r=start
+    row=R::ArcadeRun.find(r[:id]);state=row.state.deep_dup
+    state['board']=[2,2]+Array.new(14,0);row.update!(state:state)
+    p=R::ArcadePeriod.find(r[:period_id])
+    assert_empty R::Arcade.rank_rows(nil,'2048')
+    assert_empty R::Arcade.rank_rows(p,'2048')
+    result=advance(r,finish:true)
+    assert_equal 4,result[:state]['score']
+    [nil,p].each { |period| assert_equal [[@alice.id,4]],R::Arcade.rank_rows(period,'2048').map { |entry| [entry[:user_id],entry[:score]] } }
+    cached=R::Arcade.rank_rows(nil,'2048')
+    R::ArcadeRun.transaction do
+      row.reload.update!(score:999)
+      assert_equal cached,Rails.cache.read(R::Arcade.rank_cache_key(nil,'2048'))
+      raise ActiveRecord::Rollback
+    end
+    assert_equal cached,R::Arcade.rank_rows(nil,'2048')
   end
   def test_expiry_freeze_and_disabled_reject_actions
     r=start;R::ArcadeRun.find(r[:id]).update!(expires_at:1.second.ago)

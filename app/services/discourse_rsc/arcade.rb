@@ -138,13 +138,18 @@ module DiscourseRsc
         scope=scope.where(period_id:p.id)
         scope=scope.where('discourse_rsc_arcade_runs.created_at >= ? AND finished_at < ?',p.starts_at,p.ends_at) if p.starts_at
       end
-      scope.joins('JOIN users ON users.id = discourse_rsc_arcade_runs.user_id')
+      scope=scope.joins('JOIN users ON users.id = discourse_rsc_arcade_runs.user_id')
         .joins("JOIN discourse_rsc_accounts a ON a.key = 'wallet:' || users.id::text")
-        .where("users.active AND NOT users.admin AND (users.suspended_till IS NULL OR users.suspended_till < CURRENT_TIMESTAMP) AND a.status = 'active'")
-        .group(:user_id).maximum(:score).sort_by { |uid,score| [-score,uid] }
+        .where("users.active AND (users.suspended_till IS NULL OR users.suspended_till < CURRENT_TIMESTAMP) AND a.status = 'active'")
+      # Staff scores belong in the permanent board; prize seasons exclude staff.
+      scope=scope.where('NOT users.admin') if p
+      scope.group(:user_id).maximum(:score).sort_by { |uid,score| [-score,uid] }
+    end
+    def self.rank_cache_key(period_id,game)
+      "rsc-arcade-rank-v3:#{period_id || 'all'}:#{game}"
     end
     def self.rank_rows(p,game)
-      Rails.cache.fetch("rsc-arcade-rank-v2:#{p&.id || 'all'}:#{game}",expires_in:20.seconds) do
+      Rails.cache.fetch(rank_cache_key(p&.id,game),expires_in:20.seconds) do
         rank=0;prev=nil
         rows=ranked(p,game).each_with_index.map do |(uid,score),index|
           rank=index+1 if score!=prev;prev=score

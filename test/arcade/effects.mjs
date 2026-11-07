@@ -13,7 +13,7 @@ assert.equal(crypto.createHash('sha256').update(bundle).digest('hex'),manifest.s
 const context=vm.createContext({performance,window:{devicePixelRatio:2}});vm.runInContext(bundle,context);
 const SDK=context.RiversideArcade;assert.equal(SDK.rulesVersion,1);assert.equal(SDK.protocol,1);
 const fixtures=JSON.parse(fs.readFileSync(new URL('test/arcade/fixtures.json',root)));
-const ctx=new Proxy({},{get:(_target,key)=>key==='measureText'?()=>({width:20}):()=>{},set:()=>true});
+const ctx=new Proxy({},{get:(_target,key)=>key==='measureText'?()=>({width:20}):key==='createLinearGradient'?()=>({addColorStop(){}}):()=>{},set:()=>true});
 const canvas={width:0,height:0,style:{},getContext:()=>ctx};
 for(const f of fixtures){
  const actual=SDK.Core.advance(f.initial,f.frames,f.events);

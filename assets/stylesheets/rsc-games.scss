@@ -281,3 +281,9 @@
   .rg-ranking-status { padding: 18px 0; color: var(--primary-medium); font-size: 14px; }
   @media (max-width: 600px) { padding: 14px; .rg-ranking-heading { gap: 8px; h2 { font-size: 15px; white-space: nowrap; } } .rg-ranking-period button { font-size: 12px; padding: 5px 6px; } .rg-ranking-list { grid-template-columns: minmax(0,1fr); } li { gap: 8px; } }
 }
+
+// The hub owns the outer spacing, so both lobby banners share the same edges.
+.ra-hub > .rg-app { max-width:none; margin:0; padding:0 0 44px; }
+.rg-app .rg-brand { flex:1; }
+.rg-app .rg-brand h1 { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rg-app .rg-top-actions { flex:0 0 auto; }

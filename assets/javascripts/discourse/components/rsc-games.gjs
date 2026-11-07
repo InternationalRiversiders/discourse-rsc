@@ -149,7 +149,7 @@ export default class extends Component {
   get rows(){return this.history.map(r=>({...r,expanded:r.id===this.inspected?.id,name:GAMES.find(g=>g.id===r.game)?.name||r.name,time:formatDateTime(r.created_at),netLabel:r.net===null?"进行中":`${Number(r.net)>0?"+":""}${money(r.net)}`,tone:Number(r.net)>0?"win":Number(r.net)<0?"loss":"push"}));}
   spot(key,label,color=""){return {key,label,color,amount:this.bets[key]?money(this.bets[key]):null,selected:!!this.bets[key]};}
   @action open(id){if(this.busy||this.animating||this.pending){return;} this.game=id;this.round=id==="blackjack"?this.active:null;this.choice=id==="dice"?"small":"heads";this.rules=false;this.error="";this.revealed=false;}
-  @action back(){if(!this.busy&&!this.animating&&!this.pending){this.game=null;this.rules=false;this.error="";}}
+  @action back(){if(!this.busy&&!this.animating&&!this.pending){this.game=null;this.rules=false;this.error="";this.showHistory=false;}}
   @action editStake(e){this.stake=e.target.value;}
   @action chip(n){if(!this.locked){this.stake=String(n);}}
   @action pick(choice){if(!this.locked){this.choice=choice;}}
@@ -251,17 +251,17 @@ export default class extends Component {
   });
   <template>
     <section class="rg-app" aria-label="游戏">
-      <header class="rg-topbar">
-        <div class="rg-brand">{{#if this.game}}<button type="button" class="rg-icon-button" title="返回游戏" aria-label="返回游戏" disabled={{this.locked}} {{on "click" this.back}}>{{dIcon "arrow-left"}}</button>{{else}}<span class="rg-brand-icon">{{dIcon "dice"}}</span>{{/if}}<h1>{{if this.game this.name "游戏"}}</h1></div>
+      {{#if this.game}}<header class="rg-topbar">
+        <div class="rg-brand"><button type="button" class="rg-icon-button" title="返回游戏" aria-label="返回游戏" disabled={{this.locked}} {{on "click" this.back}}>{{dIcon "arrow-left"}}</button><h1 title={{this.name}}>{{this.name}}</h1></div>
         <div class="rg-top-actions"><span class="rg-balance">{{dIcon "coins"}}<strong>{{this.balanceLabel}}</strong><small>RSC</small></span><button type="button" class="rg-icon-button" title="刷新余额" aria-label="刷新余额" disabled={{this.busy}} {{on "click" this.refresh}}>{{dIcon "arrows-rotate"}}</button><button type="button" class="rg-icon-button" title="我的记录" aria-label="我的记录" aria-expanded={{this.showHistory}} {{on "click" this.toggleHistory}}>{{dIcon "clock-rotate-left"}}</button></div>
-      </header>
+      </header>{{/if}}
       {{#if this.error}}<div class="rg-error" role="alert">{{this.error}}{{#if this.pending}}<button type="button" disabled={{this.busy}} {{on "click" this.retry}}>重试同一请求</button>{{else}}<button type="button" disabled={{this.busy}} {{on "click" this.refresh}}>刷新</button>{{/if}}</div>{{/if}}
       {{#if this.readOnly}}<div class="rg-notice">游戏暂时维护中</div>{{else if (not (eq this.walletStatus "active"))}}<div class="rg-notice">钱包已冻结，暂不能参与游戏</div>{{/if}}
 
       {{#unless this.viewingLinkedHistory}}
       {{#unless this.game}}
-        {{#if this.active}}<button type="button" class="rg-resume" {{on "click" (fn this.open "blackjack")}}><span>♠</span>继续21点<strong>返回牌局 →</strong></button>{{/if}}
         {{#if this.lottery}}<LinkTo @route="rsc-lottery" class="rl-banner"><span class="rl-banner-title"><small>RIVERSIDE</small><strong>大乐透</strong><span>每日 20:00 开奖 · 北京时间</span></span><span class="rl-banner-pool"><small>当前奖池</small><strong>{{this.lotteryPool}} <small>RSC</small></strong></span><span class="rl-banner-cta">去选号 →</span></LinkTo>{{/if}}
+        {{#if this.active}}<button type="button" class="rg-resume" {{on "click" (fn this.open "blackjack")}}><span>♠</span>继续21点<strong>返回牌局 →</strong></button>{{/if}}
         <div class="rg-lobby">{{#each this.games as |game|}}<button type="button" class="rg-game-card rg-game-card--{{game.color}}" {{on "click" (fn this.open game.id)}}><span class="rg-card-number">{{game.mark}}</span><RscGameArt @game={{game.id}} /><div class="rg-card-bottom"><h2>{{game.name}}</h2><span class="rg-card-arrow">↗</span></div></button>{{/each}}</div>
       {{else}}
         <nav class="rg-tabs" aria-label="选择游戏">{{#each this.games as |game|}}<button type="button" class={{if (eq this.game game.id) "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.game game.id}} {{on "click" (fn this.open game.id)}}>{{game.name}}</button>{{/each}}</nav>
