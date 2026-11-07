@@ -9,6 +9,7 @@ import { ajax } from "discourse/lib/ajax";
 import { extractError } from "discourse/lib/ajax-error";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
 import RscGameArt from "./rsc-game-art";
+import RscScratchCard from "./rsc-scratch-card";
 import RscRouletteWheel from "./rsc-roulette-wheel";
 import { animateGame } from "../lib/game-motion";
 import { createGameScene, prefetchThree, supports3d } from "../lib/game-3d";
@@ -28,7 +29,7 @@ const RED=[1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
 const RULES={
   slots:["每轴 6 种图案，独立且等概率。左起两个相同返还 1 倍；三个相同时按下表返还，不叠加。","🍒 5 倍 · 🍋 8 倍 · 🔔 12 倍 · 🍀 20 倍 · 💎 40 倍 · 7 96 倍"],
   roulette:["单零轮盘，0–36 共 37 个数字等概率。点击投注格放入当前金额，可同时选多个位置。","单号 36 倍；每列为间隔 3 的 12 个数字，三个区间各含 12 个数字，均返还 3 倍；红黑、单双、大小 2 倍。开出 0 时，只有单号 0 获奖。"],
-  scratch:["刮出三个相同倍数，按该倍数返还；无三连则未中奖。购票即结算，刮开与刷新不改变结果。","0 倍 57% · 1 倍 19% · 2 倍 18% · 5 倍 5% · 10 倍 0.9% · 50 倍 0.09% · 250 倍 0.01%"],
+  scratch:["一张大卡含 10 个独立开奖位。输入金额为整张价格，每个位点按总价的 1/10 计算返还，奖金累加。购票即结算，刮开与刷新不改变结果。","0 倍 57% · 1 倍 19% · 2 倍 18% · 5 倍 5% · 10 倍 0.9% · 50 倍 0.09% · 250 倍 0.01%"],
   blackjack:["每局重新洗入 6 副牌。A 算 1 或 11，J/Q/K 算 10。比庄家更接近 21 点获胜，超过 21 点即输。","庄家软 17 点停牌，并在开局检查天然 21 点。天然 21 点返还 2.5 倍，普通胜利返还 2 倍，平局退还本金。","前两张牌可加倍：追加同额投入，只再取一张牌。不设分牌、保险和投降。断线后可继续原牌局。"],
   coin:["正面与反面各 50% 概率。猜中返还 1.96 倍。"],
   dice:["三颗公平六面骰。小为 4–10 点，大为 11–17 点。三个相同为豹子，大小都不获奖。","猜中返还 2 倍。"],
@@ -71,6 +72,8 @@ export default class extends Component {
   chips=[5,10,25,50];
   get name(){return GAMES.find(g=>g.id===this.game)?.name;}
   get rulesLines(){return RULES[this.game]||[];}
+  get scratchCards(){return [{key:this.round?.id||"preview"}];}
+  get largeScratch(){return !this.round||Array.isArray(this.round.state.spots);}
   get maxStake(){return this.args.model.max_stake;}
   get balanceLabel(){return money(this.balance);}
   get blocked(){return this.busy||this.animating||this.readOnly||this.walletStatus!=="active";}
@@ -83,7 +86,7 @@ export default class extends Component {
   get netLabel(){const n=Number(this.round?.net);return `${n>0?"+":""}${money(n)} RSC`;}
   get tone(){return Number(this.round?.net)>0?"win":Number(this.round?.net)<0?"loss":"push";}
   get outcomeTitle(){return {win:"获胜",lose:"未中奖",push:"平局",bust:"爆牌",blackjack:"Blackjack"}[this.round?.state.result]||"";}
-  get showResult(){return !this.animating&&!this.pending&&this.round?.status==="settled"&&(this.game!=="scratch"||this.revealed);}
+  get showResult(){return !this.animating&&!this.pending&&this.round?.status==="settled"&&(this.game!=="scratch"||(this.revealed&&!this.largeScratch));}
   get reels(){return (this.round?.state.symbols||["seven","seven","seven"]).map((x,i)=>({key:i,strip:this.animating ? [...Array.from({length:18+i*6},(_,j)=>SYMBOLS[Object.keys(SYMBOLS)[(j+i)%6]]),SYMBOLS[x]] : [SYMBOLS[x]]}));}
   get dice(){return (this.round?.state.dice||[1,3,5]).map((value,i)=>{const [x,y]=[[0,0],[-90,0],[0,-90],[0,90],[90,0],[0,180]][value-1];return {key:i,value,x,y,style:`transform: rotateX(${x}deg) rotateY(${y}deg)`};});}
   get dieFaces(){return [[1,[4]],[2,[0,8]],[3,[0,4,8]],[4,[0,2,6,8]],[5,[0,2,4,6,8]],[6,[0,2,3,5,6,8]]].map(([n,pips])=>({n,pips:Array.from({length:9},(_,i)=>({i,visible:pips.includes(i)}))}));}
@@ -209,7 +212,9 @@ export default class extends Component {
                 <div class="rg-outside">{{#each this.outside as |spot|}}<button type="button" class="rg-spot {{spot.color}} {{if spot.selected 'is-selected'}}" disabled={{this.locked}} {{on "click" (fn this.bet spot.key)}}>{{spot.label}}{{#if spot.amount}}<small>{{spot.amount}}</small>{{/if}}</button>{{/each}}</div>
               </div>
             {{else if (eq this.game "scratch")}}
+              {{#if this.largeScratch}}{{#each this.scratchCards key="key" as |card|}}<RscScratchCard @round={{this.round}} @price={{this.stake}} @onReveal={{this.reveal}} @revealed={{this.revealed}} />{{/each}}{{else}}
               <div class="rg-scratch-ticket"><div class="rg-ticket-top"><span>RIVERSIDE</span><strong>幸运刮刮乐</strong><small>最高 250 倍</small></div><div class="rg-scratch-area"><div class="rg-scratch-grid">{{#each this.tiles as |tile|}}<span class={{if tile.lucky "is-lucky"}} style={{tile.style}}>{{tile.value}}<small>倍</small></span>{{/each}}</div>{{#if (and this.round (not this.revealed))}}<canvas class="rg-scratch-cover" aria-label="刮开票面，或使用下方全部刮开按钮" {{this.scratch this.round.id}}></canvas>{{else unless this.round}}<div class="rg-scratch-placeholder">✦</div>{{/if}}</div><div class="rg-ticket-bottom">{{#if (and this.round (not this.revealed))}}<button type="button" {{on "click" this.reveal}}>全部刮开</button>{{else}}<span>三个相同即中奖</span>{{/if}}</div></div>
+              {{/if}}
             {{else if (eq this.game "blackjack")}}
               <div class="rg-felt"><div class="rg-hand-label">庄家 {{#if this.round}}<span>{{this.round.state.dealer_score}}</span>{{/if}}</div><div class="rg-hand rg-hand--dealer">{{#each this.dealer key="key" as |card|}}<div class="rg-playing-card {{if card.hidden 'is-hidden'}} {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face">{{#unless card.hidden}}<b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b>{{/unless}}</div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-felt-mark"><strong>BLACKJACK</strong><span>3 : 2</span></div><div class="rg-hand rg-hand--player">{{#each this.player key="key" as |card|}}<div class="rg-playing-card {{if card.red 'is-red'}}" style={{card.style}}><div class="rg-card-inner"><div class="rg-card-face"><b>{{card.rank}}</b><span>{{card.suit}}</span><b>{{card.rank}}</b></div><div class="rg-card-back"><span>R</span></div></div></div>{{/each}}</div><div class="rg-hand-label">你的手牌 {{#if this.round}}<span>{{this.round.state.player_score}}</span>{{/if}}</div></div>
             {{else if (eq this.game "coin")}}
@@ -224,7 +229,7 @@ export default class extends Component {
             {{#if this.playing}}
               <div class="rg-hand-stake"><strong>{{this.round.stake}}</strong><span>RSC</span></div><div class="rg-blackjack-actions"><button type="button" class="rg-primary" disabled={{this.locked}} {{on "click" (fn this.move "hit")}}>要牌</button><button type="button" class="rg-secondary" disabled={{this.locked}} {{on "click" (fn this.move "stand")}}>停牌</button><button type="button" class="rg-secondary" disabled={{this.doubleDisabled}} {{on "click" (fn this.move "double")}}>加倍 · +{{this.round.stake}} RSC</button></div>
             {{else}}
-              <label class="rg-amount-label" for="rg-stake">{{if (eq this.game "roulette") "每次放入" "金额"}}</label><div class="rg-amount"><input id="rg-stake" type="number" inputmode="decimal" min="1" max={{this.maxStake}} step="0.01" value={{this.stake}} disabled={{this.locked}} {{on "input" this.editStake}} /><span>RSC</span></div>
+              <label class="rg-amount-label" for="rg-stake">{{if (eq this.game "roulette") "每次放入" (if (eq this.game "scratch") "整张价格" "金额")}}</label><div class="rg-amount"><input id="rg-stake" type="number" inputmode="decimal" min="1" max={{this.maxStake}} step="0.01" value={{this.stake}} disabled={{this.locked}} {{on "input" this.editStake}} /><span>RSC</span></div>
               <div class="rg-chips">{{#each this.chips as |n|}}<button type="button" disabled={{this.locked}} class={{if (eq this.stake (concat n)) "is-selected"}} {{on "click" (fn this.chip n)}}>{{n}}</button>{{/each}}</div>
               {{#if (eq this.game "coin")}}<div class="rg-choices"><button type="button" class={{if (eq this.choice "heads") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "heads"}} {{on "click" (fn this.pick "heads")}}>正面</button><button type="button" class={{if (eq this.choice "tails") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "tails"}} {{on "click" (fn this.pick "tails")}}>反面</button></div>{{/if}}
               {{#if (eq this.game "dice")}}<div class="rg-choices"><button type="button" class={{if (eq this.choice "small") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "small"}} {{on "click" (fn this.pick "small")}}>小<small>4–10</small></button><button type="button" class={{if (eq this.choice "big") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "big"}} {{on "click" (fn this.pick "big")}}>大<small>11–17</small></button></div>{{/if}}

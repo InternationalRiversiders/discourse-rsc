@@ -137,12 +137,16 @@ module DiscourseRsc
         state['multiplier']=multiplier
         stake*multiplier
       when 'scratch'
-        ticket=SecureRandom.random_number(10000); running=0
-        multiplier=SCRATCH.find { |_,weight| running+=weight; ticket<running }.first
-        others=shuffle([1,2,5,10,50,250].reject { |n| n==multiplier }.flat_map { |n| [n,n] })
-        state['tiles']=shuffle(multiplier.positive? ? [multiplier]*3+others.first(6) : others.first(9))
-        state['multiplier']=multiplier
-        stake*multiplier
+        # One paid card, ten independent spots. All money remains integer units.
+        spot_stake=stake/10
+        state['rules_version']=2
+        state['spot_stake']=Amount.format(spot_stake)
+        state['spots']=Array.new(10) do
+          ticket=SecureRandom.random_number(10000); running=0
+          multiplier=SCRATCH.find { |_,weight| running+=weight; ticket<running }.first
+          { 'multiplier'=>multiplier, 'payout'=>Amount.format(spot_stake*multiplier) }
+        end
+        state['spots'].sum { |spot| Amount.parse(spot['payout']) }
       when 'roulette'
         number=SecureRandom.random_number(37); state['number']=number
         state['bets'].sum { |b| roulette_multiplier(b['choice'],number)*Amount.parse(b['stake']) }
@@ -176,7 +180,7 @@ module DiscourseRsc
       total
     end
     def self.view(round)
-      state=round.state.slice('choice','bets','result','symbols','multiplier','tiles','dice','total','landed','number','doubled')
+      state=round.state.slice('choice','bets','result','symbols','multiplier','tiles','dice','total','landed','number','doubled','spots','spot_stake','rules_version')
       if round.game=='blackjack'
         state['player']=round.state.fetch('player')
         state['dealer']=round.status=='settled' ? round.state.fetch('dealer') : [round.state.fetch('dealer').first,nil]

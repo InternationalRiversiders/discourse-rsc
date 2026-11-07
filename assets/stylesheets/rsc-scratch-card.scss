@@ -1,0 +1,28 @@
+.rg-app {
+  .rg-large-ticket { width: 540px; max-width: 100%; box-sizing: border-box; padding: 24px; border: 1px solid #f9edce; border-radius: 18px; background: #f3e6c0; color: #735b32; box-shadow: 0 16px 30px #352b2655; }
+  .rg-large-ticket-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:10px; letter-spacing:3px; }
+  .rg-ticket-price { font-weight:700; font-size:13px; letter-spacing:0; white-space:nowrap; }
+  .rg-large-ticket-title { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:16px 0 8px; strong {font-size:30px;letter-spacing:2px;} span {font-size:13px;white-space:nowrap;} }
+  .rg-large-ticket-meta {font-size:12px; margin-bottom:20px; color:#856d42;}
+  .rg-large-ticket-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+  .rg-ticket-spot {position:relative;min-width:0;padding:7px;border:1px solid #d4bd85;border-radius:10px;background:#eddbb1;}
+  .rg-ticket-spot-number {display:block;font:10px monospace;letter-spacing:1px;margin:0 0 5px 3px;color:#8b7248;}
+  .rg-ticket-spot-face {position:relative;height:66px;border-radius:6px;overflow:hidden;background:#fbf3da;}
+  .rg-ticket-spot-prize {height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;strong{font-size:21px;line-height:1.1;}small{font-size:9px;}span{font-size:11px;color:#8b7248;}}
+  .rg-ticket-no-prize {font-size:15px!important;font-weight:500;}
+  .rg-ticket-spot.is-open.has-prize .rg-ticket-spot-face {background:radial-gradient(ellipse at top,#fff9df,#f4d278);color:#85420e;}
+  .rg-ticket-spot-cover {position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;}
+  .rg-ticket-keyboard-reveal {position:absolute;left:0;top:0;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);&:focus-visible{width:100%;height:100%;clip-path:none;background:#ead8a4;color:#715c34;border:2px solid #735b32;}}
+  .rg-ticket-spot-preview {display:grid;place-items:center;height:100%;background:linear-gradient(125deg,#ead8a4,#b8a16a,#eee0b5);font-size:26px;color:#826b40;}
+  .rg-large-ticket-footer {min-height:36px;margin-top:18px;padding-top:14px;border-top:1px dashed #c4aa72;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;button{background:#735b32;color:#fff8e6;border:0;border-radius:7px;padding:9px 14px;font-weight:600;cursor:pointer;}}
+  .rg-ticket-totals {width:100%;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;strong{display:block;margin-top:5px;font-size:16px;}}
+  @media(max-width:720px) {
+    .rg-large-ticket {padding:16px;border-radius:13px;}
+    .rg-large-ticket-title strong {font-size:23px;}
+    .rg-large-ticket-title span {font-size:11px;}
+    .rg-large-ticket-grid {gap:8px;}
+    .rg-ticket-spot {padding:5px;}
+    .rg-ticket-spot-prize strong {font-size:17px;}
+    .rg-large-ticket-meta {margin-bottom:14px;font-size:11px;}
+  }
+}

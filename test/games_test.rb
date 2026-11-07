@@ -156,19 +156,52 @@ class GamesTest < NativeBusinessTest
       assert_equal 105,wins
     end
   end
-  def test_games_scratch_displays_exactly_the_awarded_match
+  def test_games_scratch_ten_independent_spots_at_every_prize_boundary
     cursor=0
     R::Games::SCRATCH.each do |multiplier,weight|
       [cursor,cursor+weight-1].each do |draw|
-        first=true;round=R::GameRound.new(game:'scratch',stake_units:100,state:{})
-        payout=stub_method(SecureRandom,:random_number,->(_){ if first;first=false;draw;else;0;end }) { R::Games.instant(round) }
-        assert_equal multiplier*100,payout
-        assert_equal 9,round.state['tiles'].length
-        triples=round.state['tiles'].tally.select { |_,count|count==3 }.keys
-        assert_equal multiplier.zero? ? [] : [multiplier],triples
+        round=R::GameRound.new(game:'scratch',stake_units:1000,state:{})
+        calls=0
+        payout=stub_method(SecureRandom,:random_number,->(bound){ assert_equal 10000,bound;calls+=1;draw }) { R::Games.instant(round) }
+        assert_equal 10,calls
+        assert_equal multiplier*1000,payout
+        assert_equal 10,round.state['spots'].length
+        assert_equal [multiplier],round.state['spots'].map { |spot| spot['multiplier'] }.uniq
+        assert_equal payout,round.state['spots'].sum { |spot| R::Amount.parse(spot['payout']) }
       end
       cursor+=weight
     end
+  end
+  def test_games_scratch_card_total_price_scaling_and_one_debit
+    [10,20].each do |price|
+      draws=[0,5699,5700,7599,7600,9399,9400,9899,9900,9999]
+      key=SecureRandom.uuid
+      r=stub_method(SecureRandom,:random_number,->(_){draws.shift}) { play('scratch',stake:price.to_s,request_id:key) }
+      assert_equal price.to_s,r[:stake]
+      assert_equal (price/10).to_s,r[:state]['spot_stake']
+      assert_equal [0,0,1,1,2,2,5,5,10,250],r[:state]['spots'].map { |spot|spot['multiplier'] }
+      assert_equal (276*price/10).to_s,r[:payout]
+      assert_equal 2,r[:state]['rules_version']
+      assert_equal 1,R::Journal.where(operation:'game_stake',metadata:{game_round_id:r[:id],game:'scratch',reason:'刮刮乐'}).count
+      repeat=play('scratch',stake:price.to_s,request_id:key)
+      assert repeat[:replayed]
+      assert_equal r[:state],repeat[:state]
+      consistent
+    end
+  end
+  def test_games_scratch_fractional_card_price_preserves_exact_money
+    r=stub_method(SecureRandom,:random_number,5700) { play('scratch',stake:'1.01') }
+    assert_equal '0.101',r[:state]['spot_stake']
+    assert_equal '1.01',r[:payout]
+    assert_equal '0',r[:net]
+    consistent
+  end
+  def test_games_scratch_legacy_history_keeps_original_result
+    round=R::GameRound.create!(user_id:@alice.id,game:'scratch',status:'settled',stake_units:R::Amount.parse('10'),payout_units:R::Amount.parse('20'),state:{'tiles'=>[2,2,2,1,1,5,5,10,10],'multiplier'=>2,'rules_version'=>1})
+    view=R::Games.view(round)
+    assert_equal 9,view[:state]['tiles'].length
+    refute view[:state].key?('spots')
+    assert_equal '20',view[:payout]
   end
   def test_games_rollback_if_settlement_fails
     n=R::Journal.count

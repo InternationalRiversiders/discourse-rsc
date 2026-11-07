@@ -31,7 +31,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
        const action=page.waitForResponse(r=>r.url().includes(`/games/${round.id}/action.json`));await page.getByRole('button',{name:'停牌',exact:true}).click();const ar=await action;assert.equal(ar.status(),200,await ar.text());round=await ar.json();
       }
       if(name==='scratch')await page.getByRole('button',{name:'全部刮开',exact:true}).click();
-      await page.locator('.rg-result').waitFor();assert.equal(round.status,'settled');
+      await page.locator(name==='scratch'?'.rg-ticket-totals':'.rg-result').waitFor();assert.equal(round.status,'settled');
      }
      await page.locator('.rg-app').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/${name}-${scheme}-${width}.png`});
      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${name} fits ${width}`);
