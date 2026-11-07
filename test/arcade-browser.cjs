@@ -30,7 +30,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
    await page.setViewportSize({width:320,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' overflow');await page.locator('.ra-play').screenshot({path:`${out}/arcade-${name}-mobile.png`});await page.setViewportSize({width:1360,height:1100});
    await page.getByRole('button',{name:'返回挑战',exact:false}).click();await page.locator('.ra-card').first().waitFor();
   }
-  await page.getByRole('button',{name:'幸运游戏',exact:true}).click();assert.equal(await page.locator('.rg-game-card').count(),6);await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('.rg-game-card').count(),6);
+  await page.getByRole('button',{name:'博弈区',exact:true}).click();assert.equal(await page.locator('.rg-game-card').count(),6);await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('.rg-game-card').count(),6);
   await page.locator('.rg-game-card').filter({hasText:'抛硬币'}).click();await page.getByRole('button',{name:'玩法与赔率',exact:true}).click();assert((await page.locator('.rg-rules').innerText()).includes('返还 2 倍'));
   assert.equal(errors.length,0,errors.join('\n'));
   console.log('PASS seven live games, shared server validation, lost-response idempotency, bounded 2048 prefetch, mobile layouts, keyboard/touch controls and lucky-game regression');

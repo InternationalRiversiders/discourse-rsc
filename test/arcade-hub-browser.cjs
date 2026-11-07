@@ -14,14 +14,14 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
    return {bannerX:banner.x,bannerY:banner.y,bannerW:banner.width,bannerH:banner.height,cardX:card.x,cardY:card.y,cardW:card.width,cardH:card.height,artH:art.height};
   });
   for(const width of [1360,900,700,390,320]){
-   await p.setViewportSize({width,height:1000});await p.getByRole('button',{name:'休闲挑战',exact:true}).click();await p.mouse.move(0,0);await p.waitForTimeout(250);const a=await sizes();
+   await p.setViewportSize({width,height:1000});await p.getByRole('button',{name:'街机区',exact:true}).click();await p.mouse.move(0,0);await p.waitForTimeout(250);const a=await sizes();
    await p.locator('.ra-hub').screenshot({path:`${out}/challenge-hub-${width}.png`});
-   await p.getByRole('button',{name:'幸运游戏',exact:true}).click();await p.mouse.move(0,0);await p.waitForTimeout(250);const b=await sizes();
+   await p.getByRole('button',{name:'博弈区',exact:true}).click();await p.mouse.move(0,0);await p.waitForTimeout(250);const b=await sizes();
    for(const key of Object.keys(a))assert(Math.abs(a[key]-b[key])<1,`${width} ${key}: ${a[key]} vs ${b[key]}`);
    assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await p.locator('.ra-hub').screenshot({path:`${out}/lucky-hub-${width}.png`});
   }
   assert.equal(catalogs,1,'tab changes reuse the loaded season');
-  await p.getByRole('button',{name:'休闲挑战',exact:true}).click();await p.setViewportSize({width:1360,height:1000});
+  await p.getByRole('button',{name:'街机区',exact:true}).click();await p.setViewportSize({width:1360,height:1000});
   await p.locator('.ra-card').filter({hasText:'2048'}).click();await p.locator('.ra-rank-tabs button.is-active').filter({hasText:'赛季排行'}).waitFor();
   assert.equal(await p.locator('.ra-free').count(),0);assert.equal(await p.locator('.ra-rank-popover').isVisible(),false);
   await p.getByLabel('排行说明',{exact:true}).click();assert(await p.locator('.ra-rank-popover').isVisible());await p.getByLabel('排行说明',{exact:true}).click();
