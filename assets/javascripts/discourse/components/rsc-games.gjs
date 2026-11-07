@@ -191,7 +191,7 @@ export default class extends Component {
     const s=this.record?.state;if(!s){return "";}
     const labels={heads:"正面",tails:"反面",small:"小",big:"大",red:"红",black:"黑",odd:"单",even:"双",low:"1–18",high:"19–36",dozen1:"1–12",dozen2:"13–24",dozen3:"25–36",column1:"第 1 列",column2:"第 2 列",column3:"第 3 列"};
     if(s.bets?.length){return s.bets.map(b=>`${labels[b.choice]||b.choice.replace(/^n/,"")}：${b.stake} RSC`).join(" · ");}
-    return labels[s.choice]||"";
+    return ["coin","dice"].includes(this.record.game)?labels[s.choice]||"":"";
   }
   @action toggleRules(){this.rules=!this.rules;}
   @action toggleHistory(){this.showHistory=!this.showHistory;if(this.showHistory){this.loadHistoryPage(this.historyPage);}}

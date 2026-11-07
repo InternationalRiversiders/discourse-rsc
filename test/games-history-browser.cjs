@@ -56,6 +56,10 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
    for(const width of [1360,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.locator('.rg-history').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/blackjack-history-${playing?'active':'settled'}-${width}.png`});}
    await page.unroute('**/rsc/games/state.json*');
   }
+  const slots={id:90002,game:'slots',status:'settled',stake:'5',payout:'0',net:'-5',created_at:new Date().toISOString(),state:{choice:'heads',bets:[],symbols:['cherry','bell','seven']}};
+  await page.route('**/rsc/games/state.json*',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({...base,history:[slots],selected_round:slots,history_page:1,history_pages:1,history_total:1})}));
+  await page.reload({waitUntil:'domcontentloaded'});await page.locator('.rg-record').waitFor();
+  assert.equal(await page.locator('.rg-record').innerText(),'樱桃 · 铃铛 · 7','Only games with a selection show a bet choice');
   assert.equal(errors.length,0,errors.join('\n'));
   console.log('PASS: inline expand/collapse without scroll or navigation, 20/20/5 pages, previous/next/jump, page validation, wallet link to older page, reload, 390/320px layout');
  }catch(e){console.error(e.message,errors);throw e;}finally{await browser.close();}
