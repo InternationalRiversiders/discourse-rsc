@@ -6,13 +6,13 @@
 
 | 实现 | 参考点 | 本次处理 |
 | --- | --- | --- |
-| [2048](https://github.com/gabrielecirulli/2048)（MIT） | 移动、合并、新方块分别反馈 | 自行实现移动轨迹、合并弹出与加分提示 |
-| [JavaScript Tetris](https://github.com/jakesgordon/javascript-tetris)（MIT） | 输入队列与显示层分离 | 保留已有输入队列，增加落点投影 |
-| [JavaScript Snake](https://github.com/patorjk/JavaScript-Snake)（MIT） | 方向反馈、触控 | 蛇身插值、头部朝向、进食反馈 |
-| [Floppy Bird](https://github.com/nebez/floppybird) | 拍翅和倾斜反馈 | 原创 Canvas 图形；不采用其声明未获授权的原作素材 |
-| [Hextris](https://github.com/Hextris/hextris)（GPLv3） | 旋转过渡、消除反馈 | 只参考交互，自行实现动画；未复制源码或素材 |
-| [JavaScript Breakout](https://github.com/jakesgordon/javascript-breakout) | 触控与碰撞反馈 | 球轨迹、碎块、丢球反馈 |
-| [合成大西瓜](https://github.com/liyupi/daxigua) | 落点与合成反馈 | 自有整数物理保持不变，增加瞄准线与合成反馈 |
+| [2048](https://github.com/gabrielecirulli/2048)（MIT） | 移动、合并、新方块分别反馈 | 自行实现移动轨迹、合并弹出、暖色色阶与加分提示 |
+| [JavaScript Tetris](https://github.com/jakesgordon/javascript-tetris)（MIT） | 输入队列与显示层分离 | 保留已有输入队列，十列实边框、格线与空心落点投影 |
+| [JavaScript Snake](https://github.com/patorjk/JavaScript-Snake)（MIT） | 方向反馈、触控 | 蛇身插值、头部朝向、棋盘底色、独立障碍与食物轮廓 |
+| [Floppy Bird](https://github.com/nebez/floppybird) | 拍翅和倾斜反馈 | 原创天空、云层和管道层次；不采用其声明未获授权的原作素材 |
+| [Hextris](https://github.com/Hextris/hextris)（GPLv3） | 旋转过渡、消除反馈 | 只参考交互和扇形排布，自行实现梯形环与完整视野；未复制源码或素材 |
+| [JavaScript Breakout](https://github.com/jakesgordon/javascript-breakout) | 触控与碰撞反馈 | 球轨迹、砖块高光、挡板与墙体区分、丢球反馈 |
+| [合成大西瓜](https://github.com/liyupi/daxigua) | 落点与合成反馈 | 自有整数物理保持不变，增加投放轨道、容器实边界、瞄准线、图案边缘和合成反馈 |
 
 效果只读取游戏状态，不参与得分或碰撞。支持 `prefers-reduced-motion`。尚未加入改变规则的旋转踢墙、物理引擎替换等内容，避免总榜的历史成绩失去可比性。
 
@@ -44,7 +44,7 @@ const request = playback.checkpoint(crypto.randomUUID());
 // playback.acknowledge(response)
 ```
 
-不要在每帧调用接口。实时类通常每 120 帧同步，最多 180 帧尾缓冲；2048 每步需服务端新方块，可以排队手势，不能自行猜下一块。随机种子不公开，但少量前瞻及机器人策略仍可能存在；服务器复核的是规则合法性，不保证操作者是人。
+不要在每帧调用接口。实时类通常每 120 帧同步，最多 180 帧尾缓冲；2048 使用服务端预发的最多 20 个随机数（最多约 9 步），每 4 步或停手 250ms 后同步，单批最多 16 步。完整种子不下发；预取耗尽时等待补充，不能自行生成随机值。旧版逐步客户端仍兼容。随机种子不公开，但少量前瞻及机器人策略仍可能存在；服务器复核的是规则合法性，不保证操作者是人。
 
 ## App 集成方式
 
@@ -74,7 +74,7 @@ const request = playback.checkpoint(crypto.randomUUID());
 - 默认一周一个游戏，顺序：2048 → 方块堆叠 → 贪吃蛇 → 河畔飞鸟 → 六角消除 → 打砖块 → 合成大河畔。
 - 后台 `rsc_arcade_rotation_cadence` 可切 `daily`；从下一期生效，不中途缩短当前赛季。默认周日北京时间 20:00 换期，日赛沿用北京时间 20:00。
 - 首期给足至少六天，之后每期七天。所有游戏始终可玩，只有轮到的游戏显示赛季榜并发奖。
-- 管理员成绩进入总榜，不参与赛季奖励排名。成绩提交成功后刷新对应榜单缓存。
+- 管理员与普通用户使用相同的总榜、赛季榜和奖励规则。成绩提交成功后刷新对应榜单缓存。
 - 每人每游戏取最高成绩。前五名预算 100/60/40/25/15 RSC；并列平分占用名次的奖励。总榜永久保留；试玩历史不追发。
 - 赛季局须在本期开始并在截止前保存。`season_id` 表示该局资格；跨期恢复的普通局仍可记入总榜，但不能进入新赛季榜。
 - 截止后后台任务通常五分钟内自动结算，幂等，不能重复发奖。
@@ -84,6 +84,6 @@ const request = playback.checkpoint(crypto.randomUUID());
 
 `test/arcade/core.mjs`、`playback.mjs`、`effects.mjs` 覆盖 JS 规则、弱网重放、SDK一致性及显示不改分；`test/arcade_test.rb` 覆盖同样样例在服务端运行、赛季资格、并列/重复结算、周日切换。浏览器测试另覆盖触控与实际 API。
 
-Flutter 原生包尚未集成或真机验收；后续至少测 Android WebView、iOS WKWebView、Flutter Web 各一套，尤其触控抢占、后台恢复、丢回包重试、版本升级、弱网 2048 与飞鸟。
+Flutter 原生包尚未集成或真机验收；后续至少测 Android WebView、iOS WKWebView、Flutter Web 各一套，尤其触控抢占、后台恢复、丢回包重试、版本升级、弱网 2048 预取耗尽、补充、重试与飞鸟。
 
 本次 schema 是加字段/索引，旧版本可短暂共存；但旧版本按七款分别派奖。首次上线时先保持奖励关闭，等旧槽位后台任务排空后才启用新赛季奖励并设置首期快照。若回滚到旧版本，先关闭奖励并清空尚未结算的新赛季奖励快照，再恢复旧任务，防止旧结算器将单赛季预算用于七款游戏。

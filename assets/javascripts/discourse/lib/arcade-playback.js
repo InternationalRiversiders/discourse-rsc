@@ -15,11 +15,12 @@ export default class ArcadePlayback {
   }
 
   get grid() { return this.run.game === "2048"; }
+  get privateGrid() { return this.grid && !Array.isArray(this.state.q); }
   get blocked() {
-    return this.grid ? !!this.pending || this.frames > 0 : this.frames >= 180 || this.state.q.length < 4;
+    return this.privateGrid ? !!this.pending || this.frames > 0 : this.frames >= (this.grid ? 16 : 180) || this.state.q.length < 4;
   }
   get needsSync() {
-    return this.frames > 0 && (this.grid || this.frames >= 120 || this.state.over || this.state.q.length < 8);
+    return this.frames > 0 && (this.privateGrid || this.frames >= (this.grid ? 4 : 120) || this.state.over || this.state.q.length < 8);
   }
 
   input(key) {
@@ -48,9 +49,9 @@ export default class ArcadePlayback {
       const key = this.keys.shift();
       if (!key) { return false; }
       this.visualMove = {direction:key,board:this.state.board.slice(),tick:this.state.tick+1};
-      this.state = Core.preview(this.state, key);
-      this.events = [[0, key]];
-      this.frames = 1;
+      if(this.privateGrid){this.state=Core.preview(this.state,key);}else{Core.step(this.state,[key]);}
+      this.events.push([this.frames,key]);
+      this.frames++;
       return true;
     }
     const keys = [];

@@ -85,7 +85,7 @@ module DiscourseRsc
         active=ArcadeRun.find_by(user_id:actor.id,game:game,status:'playing')
         next view(active) if active
         p=period
-        initial=randoms(game=='2048' ? 8 : 20)
+        initial=randoms(game=='2048' ? 24 : 20)
         state=engine('create',game,initial)
         run=ArcadeRun.create!(user_id:actor.id,period_id:p.id,game:game,start_key:request_id,state:state,inputs:[{'initial'=>initial,'version'=>1}],
           expires_at:game==p.game ? [Time.current+2.hours,p.ends_at].min : Time.current+2.hours)
@@ -112,7 +112,7 @@ module DiscourseRsc
         raise Error.new('arcade_invalid_actions') if frames.zero? && !finish
         state=engine('advance',run.state,frames,events)
         # Only the next bounded window is disclosed; no complete seed ever leaves the server.
-        target=run.game=='2048' ? 4 : 20
+        target=20
         refill=randoms([target-state['q'].size,0].max)
         state['q'].concat(refill)
         run.inputs << { 'frames'=>frames, 'events'=>events, 'refill'=>refill }
@@ -125,7 +125,6 @@ module DiscourseRsc
     end
     def self.view(run)
       state=run.state.deep_dup
-      state.delete('q') if run.game=='2048'
       p=ArcadePeriod.find_by(id:run.period_id)
       season_id=p&.game==run.game && p.starts_at && run.created_at>=p.starts_at ? p.id : nil
       {id:run.id,game:run.game,version:run.version,state:state,status:run.status,expires_at:run.expires_at,
@@ -141,12 +140,10 @@ module DiscourseRsc
       scope=scope.joins('JOIN users ON users.id = discourse_rsc_arcade_runs.user_id')
         .joins("JOIN discourse_rsc_accounts a ON a.key = 'wallet:' || users.id::text")
         .where("users.active AND (users.suspended_till IS NULL OR users.suspended_till < CURRENT_TIMESTAMP) AND a.status = 'active'")
-      # Staff scores belong in the permanent board; prize seasons exclude staff.
-      scope=scope.where('NOT users.admin') if p
       scope.group(:user_id).maximum(:score).sort_by { |uid,score| [-score,uid] }
     end
     def self.rank_cache_key(period_id,game)
-      "rsc-arcade-rank-v3:#{period_id || 'all'}:#{game}"
+      "rsc-arcade-rank-v4:#{period_id || 'all'}:#{game}"
     end
     def self.rank_rows(p,game)
       Rails.cache.fetch(rank_cache_key(p&.id,game),expires_in:20.seconds) do

@@ -12,9 +12,9 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   assert((await page.locator('.ra-season-banner').innerText()).includes('100 / 60 / 40 / 25 / 15'));
   assert.equal(await page.locator('.ra-intro').count(),0);assert.equal(await page.getByText('玩一局，刷新自己',{exact:true}).count(),0);assert.equal(await page.locator('.ra-featured-tag').count(),1);assert.equal(await page.locator('.ra-card-label p').count(),0,'cards have no subtitles');
   for(const width of [1360,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.locator('.ra-app').screenshot({path:`${out}/season-lobby-${width}.png`});}
-  await page.locator('.ra-season-banner').click();await page.locator('.ra-rank-tabs button').nth(1).waitFor();
+  await page.locator('.ra-season-banner').click();await page.getByRole('button',{name:'赛季排行',exact:true}).waitFor();
   assert.equal(await page.locator('.ra-rank-tabs .is-active').innerText(),'赛季排行');
-  await page.getByRole('button',{name:'总排行',exact:true}).click();assert((await page.locator('.ra-rank').innerText()).includes('历史最高分永久保留'));
+  await page.getByRole('button',{name:'总排行',exact:true}).click();await page.getByLabel('排行说明',{exact:true}).click();assert((await page.locator('.ra-rank-popover').innerText()).includes('历史最高分永久保留'));await page.getByLabel('排行说明',{exact:true}).click();
   await page.getByRole('button',{name:'返回挑战',exact:false}).click();
   await page.locator('.ra-card').filter({hasText:'河畔飞鸟'}).click();await page.waitForTimeout(250);
   assert.equal(await page.getByRole('button',{name:'赛季排行',exact:true}).count(),0);

@@ -260,7 +260,7 @@ export default class extends Component {
 
       {{#unless this.viewingLinkedHistory}}
       {{#unless this.game}}
-        {{#if this.lottery}}<LinkTo @route="rsc-lottery" class="rl-banner"><span class="rl-banner-title"><small>RIVERSIDE</small><strong>大乐透</strong><span>每日 20:00 开奖 · 北京时间</span></span><span class="rl-banner-pool"><small>当前奖池</small><strong>{{this.lotteryPool}} <small>RSC</small></strong></span><span class="rl-banner-cta">去选号 →</span></LinkTo>{{/if}}
+        {{#if this.lottery}}<LinkTo @route="rsc-lottery" class="rl-banner rh-banner"><span class="rl-banner-title rh-banner-title"><small>RIVERSIDE</small><strong>大乐透</strong><span>每日 20:00 开奖 · 北京时间</span></span><span class="rl-banner-pool rh-banner-metric"><small>当前奖池</small><strong>{{this.lotteryPool}} <small>RSC</small></strong></span><span class="rl-banner-cta rh-banner-cta">去选号 →</span></LinkTo>{{/if}}
         {{#if this.active}}<button type="button" class="rg-resume" {{on "click" (fn this.open "blackjack")}}><span>♠</span>继续21点<strong>返回牌局 →</strong></button>{{/if}}
         <div class="rg-lobby">{{#each this.games as |game|}}<button type="button" class="rg-game-card rg-game-card--{{game.color}}" {{on "click" (fn this.open game.id)}}><span class="rg-card-number">{{game.mark}}</span><RscGameArt @game={{game.id}} /><div class="rg-card-bottom"><h2>{{game.name}}</h2><span class="rg-card-arrow">↗</span></div></button>{{/each}}</div>
       {{else}}

@@ -12,3 +12,37 @@
 // Visible frame follows the actual ten-column well, without false side lanes.
 .ra-canvas[data-game="blocks"]{width:min(100%,296px);border-radius:6px}
 .ra-canvas[data-game="merge"]{border-radius:8px;box-shadow:0 0 0 1px #aa8b6150}
+
+// One layout for both game collections; scene art remains independent.
+.ra-hub {
+  --rh-art-height:195px; --rh-label-height:68px;
+  .rh-banner,.rh-banner:visited,.rh-banner-placeholder {box-sizing:border-box;width:100%;height:176px;margin:0 0 24px;padding:24px 28px;border-radius:20px;border:1px solid #ffffff20;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:24px;text-align:left;color:#fff;text-decoration:none;}
+  .rh-banner {background:radial-gradient(ellipse at 85% 0%,#8878da80,transparent 60%),linear-gradient(120deg,#252441,#45367a);cursor:pointer;transition:box-shadow .18s;}
+  .ra-season-banner.rh-banner {background:radial-gradient(ellipse at 85% 0%,#57a89e70,transparent 60%),linear-gradient(120deg,#193b40,#30596b);}
+  .rh-banner:hover {transform:none;box-shadow:0 7px 22px #17294420;}
+  .rh-banner-title {display:grid;gap:5px;min-width:0;flex-basis:auto;}
+  .rh-banner-title>small {font-size:11px;letter-spacing:.12em;color:#e2e7ef;}
+  .rh-banner-title>strong {font-size:28px;line-height:1.3;letter-spacing:0;}
+  .rh-banner-title>span {font-size:12px;line-height:1.5;color:#e2e7ef;}
+  .rh-banner-metric {display:grid;gap:6px;text-align:right;}
+  .rh-banner-metric>small {color:#e2e7ef;font-size:12px;}
+  .rh-banner-metric>strong {font-size:24px;line-height:1.3;color:#ffe5a1;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .rh-banner-metric strong small {font-size:12px;}
+  .rh-banner-cta {padding:10px 16px;margin:0;border:1px solid #ffffff50;border-radius:12px;white-space:nowrap;font-size:14px;}
+  .rh-banner-placeholder {background:var(--primary-very-low);color:var(--primary-medium);}
+  .ra-catalog,.rg-lobby {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;}
+  .ra-card,.rg-game-card {display:grid;grid-template-rows:var(--rh-art-height) var(--rh-label-height);border-radius:20px;min-width:0;}
+  .ra-card-art,.rg-art {height:var(--rh-art-height);}
+  .ra-card-label,.rg-card-bottom {box-sizing:border-box;height:var(--rh-label-height);padding:16px 20px;margin:0;}
+  .ra-card-label h3,.rg-card-bottom h2 {font-size:17px;line-height:1.3;font-weight:650;margin:0;}
+  .ra-card-label>span,.rg-card-arrow {display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--primary-very-low);font-size:18px;flex-shrink:0;}
+  .ra-art {height:170px;width:255px;filter:drop-shadow(0 8px 7px #23364d1a);}
+}
+.ra-rank-tools{display:flex;align-items:center;gap:6px}.ra-rank-info{position:relative}.ra-rank-info summary{display:grid;place-items:center;list-style:none;border:1.5px solid var(--primary-medium);border-radius:50%;width:19px;height:19px;font:italic 700 13px Georgia;cursor:pointer;color:var(--primary-medium)}.ra-rank-info summary::-webkit-details-marker{display:none}.ra-rank-info summary:focus-visible{outline:2px solid var(--tertiary);outline-offset:3px}.ra-rank-popover{position:absolute;right:-36px;top:30px;width:240px;max-width:70vw;padding:14px;border:1px solid var(--primary-low);border-radius:12px;background:var(--secondary);box-shadow:0 8px 30px #0002;z-index:5;font-size:.8rem;line-height:1.65}.ra-rank-popover p{margin:0 0 8px}.ra-rank-popover p:last-child{margin-bottom:0}.ra-rank-refresh{padding:4px 6px!important;font-size:21px;line-height:1}.ra-rank-heading{gap:8px}.ra-rank-tabs button{white-space:nowrap;padding:8px 6px}
+@media(max-width:1000px){.ra-hub{.ra-catalog,.rg-lobby{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.rh-banner,.rh-banner:visited{gap:16px;padding:22px}.rh-banner-metric>strong{font-size:21px}}}
+@media(max-width:700px){.ra-hub{--rh-art-height:150px;--rh-label-height:52px;.ra-catalog,.rg-lobby{gap:12px}.rh-banner,.rh-banner:visited,.rh-banner-placeholder{height:190px;padding:18px;gap:12px;grid-template-columns:minmax(0,1fr) auto}.rh-banner-title{grid-column:1/-1}.rh-banner-title>strong{font-size:25px}.rh-banner-title>span{font-size:11px}.rh-banner-metric{text-align:left;grid-row:2;min-width:0}.rh-banner-metric>strong{font-size:18px}.rh-banner-metric>small{font-size:11px}.rh-banner-cta{grid-row:2;font-size:12px;padding:8px 10px}.ra-card-label,.rg-card-bottom{padding:12px}.ra-card-label h3,.rg-card-bottom h2{font-size:14px}.ra-card-label>span,.rg-card-arrow{width:24px;height:24px;font-size:16px}.ra-art{height:140px;width:210px}}}
+@media(max-width:370px){.ra-hub{--rh-art-height:133px;--rh-label-height:48px;.ra-card-label h3,.rg-card-bottom h2{font-size:13px}.ra-card-label>span,.rg-card-arrow{display:none}.rh-banner-metric>strong{font-size:16px}.rh-banner,.rh-banner:visited{padding:15px;gap:8px}}}
+
+.ra-hub .ra-card-art .ra-cover{width:100%;max-width:none;height:100%;object-fit:cover;filter:none;border-radius:0;position:absolute;inset:0}
+.ra-cover[data-game="blocks"],.ra-cover[data-game="merge"]{object-position:center bottom}
+.ra-card-art>i{display:none}

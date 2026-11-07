@@ -12,7 +12,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   for(const width of [1360,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`catalog overflow ${width}`);await page.locator('.ra-hub').screenshot({path:`${out}/arcade-lobby-${width}.png`});}
   await page.setViewportSize({width:1360,height:1100});
   await page.locator('.ra-card').filter({hasText:'2048'}).click();
-  let response=page.waitForResponse(r=>r.url().includes('/arcade/start')&&r.status()===200);await page.getByRole('button',{name:'开始挑战',exact:true}).click();let run=await(await response).json();assert(!('q' in run.state));assert(!JSON.stringify(run).includes('seed'));
+  let response=page.waitForResponse(r=>r.url().includes('/arcade/start')&&r.status()===200);await page.getByRole('button',{name:'开始挑战',exact:true}).click();let run=await(await response).json();assert(run.state.q.length<=20);assert(!JSON.stringify(run).includes('seed'));
   for(const key of ['ArrowLeft','ArrowDown','ArrowRight','ArrowUp','ArrowLeft','ArrowDown']){response=page.waitForResponse(r=>r.url().includes('/advance')&&r.status()===200);await page.locator('canvas.ra-canvas').press(key);run=await(await response).json();await page.waitForFunction(()=>document.querySelector('.ra-scorebar [role=status]').textContent!=='同步进度');}
   // Lose a response AFTER the server committed it, then replay the exact request.
   let committed,body;
@@ -33,6 +33,6 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   await page.getByRole('button',{name:'幸运游戏',exact:true}).click();assert.equal(await page.locator('.rg-game-card').count(),6);await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('.rg-game-card').count(),6);
   await page.locator('.rg-game-card').filter({hasText:'抛硬币'}).click();await page.getByRole('button',{name:'玩法与赔率',exact:true}).click();assert((await page.locator('.rg-rules').innerText()).includes('返还 2 倍'));
   assert.equal(errors.length,0,errors.join('\n'));
-  console.log('PASS seven live games, shared server validation, lost-response idempotency, no 2048 future randomness, mobile layouts, keyboard/touch controls and lucky-game regression');
+  console.log('PASS seven live games, shared server validation, lost-response idempotency, bounded 2048 prefetch, mobile layouts, keyboard/touch controls and lucky-game regression');
  }catch(e){await page.screenshot({path:`${out}/failure.png`,fullPage:true});console.log('Browser errors',errors);console.log('Page', (await page.locator('body').innerText()).slice(-2300));console.log(e.stack?.split('\n').slice(-4).join('\n'));throw e;}finally{await browser.close();}
 })().catch(e=>{console.error(String(e.message).split('Call log:')[0]);process.exit(1);});

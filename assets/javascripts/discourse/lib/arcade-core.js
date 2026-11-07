@@ -101,7 +101,7 @@ function advance(state,frames,events){
  if(!Number.isInteger(frames)||frames<0||frames>180||!Array.isArray(events)||events.length>360){throw new Error('invalid_actions');}
  const s=clone(state), grouped={};let previous=-1;
  for(const e of events){if(!Array.isArray(e)||e.length!==2||!Number.isInteger(e[0])||e[0]<0||e[0]>=frames||e[0]<previous||typeof e[1]!=='string'||!(/^(l|r|u|d|drop|tap|x:[0-9]{1,4})$/).test(e[1])){throw new Error('invalid_actions');}previous=e[0];(grouped[e[0]]||= []).push(e[1]);if(grouped[e[0]].length>2){throw new Error('invalid_actions');}}
- if(s.game==='2048'&&(frames>1||events.length>1)){throw new Error('invalid_actions');}
+ if(s.game==='2048'&&(frames>16||Object.values(grouped).some(keys=>keys.length>1||!['l','r','u','d'].includes(keys[0])))){throw new Error('invalid_actions');}
  for(let i=0;i<frames;i++){if(s.over){throw new Error('already_over');}step(s,grouped[i]||[]);}return s;
 }
 function preview(state,dir){const s=clone(state);slide(s,dir,false);s.tick++;return s;}

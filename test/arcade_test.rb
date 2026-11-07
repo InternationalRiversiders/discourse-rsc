@@ -23,7 +23,7 @@ class ArcadeTest < NativeBusinessTest
     assert_equal '100',R::Account.wallet(@alice.id).balance
     assert_equal 1,R::ArcadeRun.count
     assert_raises(R::Error) {start('bird',key:key)}
-    refute r[:state].key?('q')
+    assert_equal 20,r[:state]['q'].length
     refute JSON.generate(r).include?('seed')
   end
   def test_verified_score_and_duplicate_checkpoint
@@ -62,12 +62,17 @@ class ArcadeTest < NativeBusinessTest
     R::Account.wallet(@bob.id).update!(status:'frozen')
     assert_equal [[@alice.id,120]],R::Arcade.ranked(p,'2048')
   end
-  def test_admin_finished_score_is_in_all_time_but_not_prize_season
+  def test_admin_finished_score_is_in_both_boards_and_season_settlement
+    @group.add(@admin);@admin.reload
     fund(@admin,'100')
+    SiteSetting.rsc_arcade_rewards_enabled=true
     r=start(actor:@admin);advance(r,actor:@admin,finish:true)
     R::ArcadeRun.find(r[:id]).update!(score:656)
     assert_includes R::Arcade.rank_rows(nil,'2048').map { |row| [row[:user_id],row[:score]] },[@admin.id,656]
-    assert_empty R::Arcade.ranked(R::ArcadePeriod.find(r[:period_id]),'2048')
+    p=R::ArcadePeriod.find(r[:period_id])
+    assert_equal [[@admin.id,656]],R::Arcade.ranked(p,'2048')
+    travel_to(p.ends_at+1.second) { R::Arcade.settle }
+    assert_equal '200',R::Account.wallet(@admin.id).balance
   end
   def test_finish_invalidates_cached_empty_boards_after_commit
     r=start
@@ -86,6 +91,18 @@ class ArcadeTest < NativeBusinessTest
       raise ActiveRecord::Rollback
     end
     assert_equal cached,R::Arcade.rank_rows(nil,'2048')
+  end
+  def test_grid_batch_replay_and_untrusted_scores
+    r=start
+    events=%w[l d r u].each_with_index.map { |key,i| [i,key] }
+    row=R::ArcadeRun.find(r[:id]);expected=R::Arcade.engine('advance',row.state,4,events)
+    result=advance(r,frames:4,events:events)
+    assert_equal expected['board'],result[:state]['board']
+    assert_equal expected['score'],result[:state]['score']
+    assert_equal 20,result[:state]['q'].length
+    assert_raises(R::Error) { advance(result,frames:17,events:[]) }
+    assert_raises(R::Error) { advance(result,frames:1,events:[[0,'l'],[0,'r']]) }
+    assert_raises(R::Error) { advance(result,frames:1,events:[[0,'x:9999']]) }
   end
   def test_expiry_freeze_and_disabled_reject_actions
     r=start;R::ArcadeRun.find(r[:id]).update!(expires_at:1.second.ago)

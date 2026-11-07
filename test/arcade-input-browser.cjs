@@ -27,9 +27,9 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   async function finish(){await page.getByRole('button',{name:'结束并保存',exact:true}).click();await page.getByRole('button',{name:'再来一局',exact:true}).waitFor();await page.getByRole('button',{name:'返回挑战',exact:false}).click();await page.locator('.ra-card').first().waitFor();}
   latency=350;await open('2048');
   for(const key of ['ArrowLeft','ArrowDown','ArrowRight','ArrowUp','ArrowLeft','ArrowDown'])await page.locator('canvas.ra-canvas').press(key);
-  await page.waitForFunction(()=>window.arcadeUnderTest.run.version===6);
+  await page.waitForFunction(()=>window.arcadeUnderTest.run.state.tick===6);
   assert.equal(await page.evaluate(()=>window.arcadeUnderTest.playback.keys.length),0,'all rapid swipes consumed');
-  assert.equal(requests.length,6);assert(requests.every(r=>r.frames===1));
+  assert(requests.length<6,'rapid moves are batched');assert.equal(requests.reduce((sum,r)=>sum+r.frames,0),6);
   await finish();
   // Hold right without relying on browser key-repeat. Release outside the button.
   latency=0;await open('方块堆叠');const right=page.locator('.ra-controls button[aria-label="→"]');

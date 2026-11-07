@@ -39,6 +39,23 @@ for(const game of Core.games.filter(g=>g!=='2048')){
  assert.equal(r.state.tick,6);assert.equal(p.keys.length,0);
 }
 {
+ let r=run('2048');const p=new Playback(r);
+ for(const key of ['l','d','r','u']){p.input(key);assert(p.advance());}
+ const req=p.checkpoint('grid-window');
+ for(const key of ['l','d']){p.input(key);assert(p.advance(),'prefetched moves remain playable during network latency');}
+ const predicted=comparable(p.state);assert.equal(p.state.tick,6);
+ r=server(r,req);p.acknowledge(structuredClone(r));assert.deepEqual(comparable(p.state),predicted);
+ const finish=p.checkpoint('grid-finish',true);r=server(r,finish);p.acknowledge(structuredClone(r));assert.deepEqual(comparable(p.state),comparable(r.state));
+ assert.equal(r.state.tick,6);assert.equal(r.status,'finished');
+}
+{
+ let r=run('2048');const p=new Playback(r);
+ for(let i=0;i<50;i++){p.input(['l','d','r','u'][i%4]);p.advance();}
+ assert(p.blocked,'empty window pauses without inventing random tiles');assert(p.state.tick<16);
+ const req=p.checkpoint('bounded-grid'),score=p.state.score;
+ r=server(r,req);p.acknowledge(structuredClone(r));assert.equal(p.state.score,score);assert(p.advance(),'refill resumes queued gestures');
+}
+{
  const p=new Playback(run('blocks'));p.advance();const req=p.checkpoint('retry-key');
  for(let i=0;i<200;i++)p.advance();assert.equal(p.frames,180);p.input('u');
  assert.strictEqual(p.checkpoint('different-key'),req,'retry exact immutable payload');
@@ -89,4 +106,4 @@ async function settle(c,r){const req=requests.shift();assert(req);const response
  r=await settle(c,r);await retry;assert(!c.paused);assert.equal(c.playback.frames,0);assert.deepEqual(comparable(c.state),comparable(r.state));
 }
 assert.equal(requests.length,0);
-console.log('PASS seven-game reconciliation, private 2048 queue, bounded backlog, held controls, snake turns, delayed sync, finish drain and lost-response retry');
+console.log('PASS seven-game reconciliation, legacy private 2048 and prefetched window, bounded backlog, held controls, snake turns, delayed sync, finish drain and lost-response retry');
