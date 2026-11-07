@@ -1,3 +1,3 @@
 import { array } from "@ember/helper";
-import RscGames from "../components/rsc-games";
-export default <template>{{#each (array @controller.model) key="@identity" as |model|}}<RscGames @model={{model}} />{{/each}}</template>;
+import RscGameHub from "../components/rsc-game-hub";
+export default <template>{{#each (array @controller.model) key="@identity" as |model|}}<RscGameHub @model={{model}} />{{/each}}</template>;

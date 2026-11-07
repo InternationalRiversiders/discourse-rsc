@@ -16,6 +16,7 @@ register_svg_icon "award"
 register_svg_icon "triangle-exclamation"
 register_asset "stylesheets/rsc.scss"
 register_asset "stylesheets/rsc-games.scss"
+register_asset "stylesheets/rsc-arcade.scss"
 register_asset "stylesheets/rsc-game-controls.scss"
 register_asset "stylesheets/rsc-lottery.scss"
 register_asset "stylesheets/rsc-scratch-card.scss"
@@ -33,6 +34,7 @@ after_initialize do
   %w[
     app/models/discourse_rsc/lottery_draw
     app/models/discourse_rsc/lottery_ticket
+    app/models/discourse_rsc/arcade_run
     app/models/discourse_rsc/game_round
     app/models/discourse_rsc/account
     app/models/discourse_rsc/journal
@@ -65,6 +67,7 @@ after_initialize do
     app/services/discourse_rsc/wallet
     app/services/discourse_rsc/commands
     app/services/discourse_rsc/games
+    app/services/discourse_rsc/arcade
     app/services/discourse_rsc/game_ranking
     app/services/discourse_rsc/lottery
     app/services/discourse_rsc/red_packets
@@ -114,6 +117,7 @@ after_initialize do
     app/services/discourse_rsc/rewards
     app/services/discourse_rsc/notification_delivery
     app/controllers/discourse_rsc/wallet_controller
+    app/controllers/discourse_rsc/arcade_controller
     app/controllers/discourse_rsc/games_controller
     app/controllers/discourse_rsc/lottery_controller
     app/controllers/discourse_rsc/forecast_controller
@@ -130,6 +134,7 @@ after_initialize do
     app/jobs/scheduled/discourse_rsc_forecast_discover
     app/jobs/scheduled/discourse_rsc_forecast_tick
     app/jobs/scheduled/discourse_rsc_business_tick
+    app/jobs/scheduled/discourse_rsc_arcade_tick
     app/jobs/scheduled/discourse_rsc_lottery_tick
     app/jobs/scheduled/discourse_rsc_trading_tick
     app/jobs/scheduled/discourse_rsc_deliver_notifications

@@ -1,5 +1,7 @@
 zh_CN:
   site_settings:
+    rsc_arcade_enabled: "启用免费的休闲挑战"
+    rsc_arcade_rewards_enabled: "新一期休闲挑战启用每款前五名奖励（100、60、40、25、15 RSC）；本期开赛后规则不变"
     rsc_lottery_enabled: "启用 Riverside 大乐透"
     rsc_games_enabled: "启用校园生活中的 RSC 游戏"
     rsc_games_max_stake: "每局游戏最大基础投入（RSC）；二十一点加倍可追加同额投入"
@@ -86,6 +88,10 @@ zh_CN:
       stock_refunded: 委托结束，退回 %{amount} RSC
       red_packet_claimed_by: 领取了你的红包 %{amount} RSC
     errors:
+      arcade_disabled: "休闲挑战暂未开放。"
+      arcade_invalid_actions: "操作记录无效，请恢复服务器进度后重试。"
+      arcade_expired: "本局已结束或超过有效期，请开始新的一局。"
+      arcade_version: "进度已在另一页面更新，请重新进入游戏继续。"
       lottery_disabled: 大乐透暂未开放。
       lottery_number: 请输入四位数字，范围为 0000–9999。
       lottery_quantity: 每次可购买 1–20 注。
