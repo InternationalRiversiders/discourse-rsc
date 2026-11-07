@@ -33,16 +33,21 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   await finish();
   // Hold right without relying on browser key-repeat. Release outside the button.
   latency=0;await open('方块堆叠');const right=page.locator('.ra-controls button[aria-label="→"]');
-  const box=await right.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.waitForTimeout(450);await page.mouse.move(5,5);await page.mouse.up();
+  await right.scrollIntoViewIfNeeded();const box=await right.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.waitForTimeout(450);await page.mouse.move(5,5);await page.mouse.up();
   const held=await page.evaluate(()=>({x:window.arcadeUnderTest.state.piece.x,held:window.arcadeUnderTest.playback.held.size}));
   assert(held.x>4,'held touch/pointer moves several columns');assert.equal(held.held,0);
   await finish();
   latency=900;requests=[];await open('河畔飞鸟');
-  const flap=await page.getByRole('button',{name:'起飞',exact:true}).boundingBox();
   const cdp=await page.context().newCDPSession(page);
-  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:flap.x+flap.width/2,y:flap.y+flap.height/2}]});
-  assert(await page.evaluate(()=>{const p=window.arcadeUnderTest.playback;return p.keys.includes('tap')||p.events.some(e=>e[1]==='tap');}),'touch-down flaps before finger release');
-  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  // Touch the actual picture and then the panel padding, not only a small button.
+  const canvas=page.locator('canvas.ra-canvas');await canvas.scrollIntoViewIfNeeded();
+  const rect=await canvas.boundingBox();
+  for(const point of [{x:rect.x+rect.width/2,y:rect.y+rect.height/2},{x:rect.x-5,y:rect.y+20}]){
+   const count=await page.evaluate(()=>window.arcadeUnderTest.playback.events.filter(e=>e[1]==='tap').length+window.arcadeUnderTest.playback.keys.filter(k=>k==='tap').length);
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});
+   assert.equal(await page.evaluate(()=>window.arcadeUnderTest.playback.events.filter(e=>e[1]==='tap').length+window.arcadeUnderTest.playback.keys.filter(k=>k==='tap').length),count+1,'touch-down anywhere in play area flaps exactly once');
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  }
 
   // Steer by reading the displayed local position, clicking the actual button.
   // This keeps the bird alive through multiple delayed acknowledgements.
@@ -66,7 +71,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   await page.evaluate(()=>clearInterval(window.pilot));
   // Click while the response is held, then finish before it returns. All tail
   // inputs must reach the server before the final finished response.
-  await page.getByRole('button',{name:'暂停',exact:true}).click();await page.waitForFunction(()=>!window.arcadeUnderTest.syncing);
+  await page.getByRole('button',{name:'暂停并保存',exact:true}).click();await page.waitForFunction(()=>!window.arcadeUnderTest.syncing);
   await page.locator('.ra-play').screenshot({path:out+'/arcade-slow-network.png'});
   latency=0;await finish();
   // Lost ACK after commit: replay the same request, preserve its live tail.

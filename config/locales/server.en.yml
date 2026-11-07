@@ -89,6 +89,7 @@ en:
       stock_refunded: 'Order reservation refunded: %{amount} RSC'
       red_packet_claimed_by: claimed %{amount} RSC from your packet
     errors:
+      arcade_upgrade: "This save requires the current game client. Refresh to continue."
       lottery_disabled: 大乐透暂未开放。
       lottery_number: 请输入四位数字，范围为 0000–9999。
       lottery_quantity: 每次可购买 1–20 注。

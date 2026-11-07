@@ -294,7 +294,7 @@ export default class extends Component {
             {{#if this.showResult}}<div class="rg-result rg-result--{{this.tone}}" role="status"><span>{{this.outcomeTitle}}</span><strong>{{this.netLabel}}</strong></div>{{/if}}
           </div>
           <aside class="rg-controls">
-            <div class="rg-controls-heading"><h2>{{if this.playing "当前牌局" "本轮投入"}}</h2><button type="button" class="rg-icon-button" title="玩法与赔率" aria-label="玩法与赔率" aria-expanded={{this.rules}} {{on "click" this.toggleRules}}>{{dIcon "circle-info"}}</button></div>
+            <div class="rg-controls-heading"><h2>{{if this.playing "当前牌局" "本轮投入"}}</h2><button type="button" class="rg-icon-button" title="玩法与赔率" aria-label="玩法与赔率" aria-expanded={{if this.rules "true" "false"}} {{on "click" this.toggleRules}}>{{dIcon "circle-info"}}</button></div>
             {{#if this.playing}}
               <div class="rg-hand-stake"><strong>{{this.round.stake}}</strong><span>RSC</span></div><div class="rg-blackjack-actions"><button type="button" class="rg-primary" disabled={{this.locked}} {{on "click" (fn this.move "hit")}}>要牌</button><button type="button" class="rg-secondary" disabled={{this.locked}} {{on "click" (fn this.move "stand")}}>停牌</button><button type="button" class="rg-secondary" disabled={{this.doubleDisabled}} {{on "click" (fn this.move "double")}}>加倍 · +{{this.round.stake}} RSC</button></div>
             {{else}}

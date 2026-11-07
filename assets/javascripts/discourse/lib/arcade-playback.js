@@ -93,10 +93,10 @@ export default class ArcadePlayback {
     if (!this.pending || run.id !== this.run.id || run.version !== this.pending.version + 1) {
       throw new Error("进度版本发生变化，请读取已保存进度。");
     }
-    const state = Core.advance(run.state, this.frames, this.events);
+    const state = Core.advance(run.state, run.status === "playing" ? this.frames : 0, run.status === "playing" ? this.events : []);
     this.run = run;
     this.state = state;
     this.pending = null;
-    if (run.status !== "playing") { this.keys = []; this.release(); }
+    if (run.status !== "playing") { this.frames=0;this.events=[];this.keys = []; this.release(); }
   }
 }

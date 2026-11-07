@@ -89,6 +89,7 @@ zh_CN:
       stock_refunded: 委托结束，退回 %{amount} RSC
       red_packet_claimed_by: 领取了你的红包 %{amount} RSC
     errors:
+      arcade_upgrade: "此存档需要新版游戏，请刷新页面后继续。"
       arcade_disabled: "休闲挑战暂未开放。"
       arcade_invalid_actions: "操作记录无效，请恢复服务器进度后重试。"
       arcade_expired: "本局已结束或超过有效期，请开始新的一局。"

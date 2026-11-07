@@ -38,7 +38,7 @@
   .ra-card-label>span,.rg-card-arrow {display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--primary-very-low);font-size:18px;flex-shrink:0;}
   .ra-art {height:170px;width:255px;filter:drop-shadow(0 8px 7px #23364d1a);}
 }
-.ra-rank-tools{display:flex;align-items:center;gap:6px}.ra-rank-info{position:relative}.ra-rank-info summary{display:grid;place-items:center;list-style:none;border:1.5px solid var(--primary-medium);border-radius:50%;width:19px;height:19px;font:italic 700 13px Georgia;cursor:pointer;color:var(--primary-medium)}.ra-rank-info summary::-webkit-details-marker{display:none}.ra-rank-info summary:focus-visible{outline:2px solid var(--tertiary);outline-offset:3px}.ra-rank-popover{position:absolute;right:-36px;top:30px;width:240px;max-width:70vw;padding:14px;border:1px solid var(--primary-low);border-radius:12px;background:var(--secondary);box-shadow:0 8px 30px #0002;z-index:5;font-size:.8rem;line-height:1.65}.ra-rank-popover p{margin:0 0 8px}.ra-rank-popover p:last-child{margin-bottom:0}.ra-rank-refresh{padding:4px 6px!important;font-size:21px;line-height:1}.ra-rank-heading{gap:8px}.ra-rank-tabs button{white-space:nowrap;padding:8px 6px}
+.ra-rank-tools{display:flex;align-items:center;gap:2px;flex-shrink:0}.ra-rank-heading{gap:6px}.ra-rank-tabs{min-width:0}.ra-rank-tabs button{white-space:nowrap;padding:8px 6px}.ra-rank .ra-rank-help{margin-top:12px;padding-top:12px;overflow-wrap:anywhere}
 @media(max-width:1000px){.ra-hub{.ra-catalog,.rg-lobby{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.rh-banner,.rh-banner:visited{gap:16px;padding:22px}.rh-banner-metric>strong{font-size:21px}}}
 @media(max-width:700px){.ra-hub{--rh-art-height:150px;--rh-label-height:52px;.ra-catalog,.rg-lobby{gap:12px}.rh-banner,.rh-banner:visited,.rh-banner-placeholder{height:190px;padding:18px;gap:12px;grid-template-columns:minmax(0,1fr) auto}.rh-banner-title{grid-column:1/-1}.rh-banner-title>strong{font-size:25px}.rh-banner-title>span{font-size:11px}.rh-banner-metric{text-align:left;grid-row:2;min-width:0}.rh-banner-metric>strong{font-size:18px}.rh-banner-metric>small{font-size:11px}.rh-banner-cta{grid-row:2;font-size:12px;padding:8px 10px}.ra-card-label,.rg-card-bottom{padding:12px}.ra-card-label h3,.rg-card-bottom h2{font-size:14px}.ra-card-label>span,.rg-card-arrow{width:24px;height:24px;font-size:16px}.ra-art{height:140px;width:210px}}}
 @media(max-width:370px){.ra-hub{--rh-art-height:133px;--rh-label-height:48px;.ra-card-label h3,.rg-card-bottom h2{font-size:13px}.ra-card-label>span,.rg-card-arrow{display:none}.rh-banner-metric>strong{font-size:16px}.rh-banner,.rh-banner:visited{padding:15px;gap:8px}}}
@@ -46,3 +46,19 @@
 .ra-hub .ra-card-art .ra-cover{width:100%;max-width:none;height:100%;object-fit:cover;filter:none;border-radius:0;position:absolute;inset:0}
 .ra-cover[data-game="blocks"],.ra-cover[data-game="merge"]{object-position:center bottom}
 .ra-card-art>i{display:none}
+
+@media(max-width:767px){
+ .ra-controls{width:100%;gap:12px;margin-top:18px;align-items:stretch}
+ .ra-controls button{min-height:58px;flex:1;font-size:1.35rem;touch-action:none}
+ .ra-controls[data-game="bricks"],.ra-controls[data-game="hex"]{justify-content:space-between;gap:clamp(30px,18vw,100px)}
+ .ra-controls[data-game="bricks"] button,.ra-controls[data-game="hex"] button{max-width:42%;min-height:68px}
+ .ra-controls[data-game="blocks"]{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+ .ra-controls[data-game="blocks"] [data-key="l"]{grid-column:1;grid-row:1/3}
+ .ra-controls[data-game="blocks"] [data-key="r"]{grid-column:4;grid-row:1/3}
+ .ra-controls[data-game="blocks"] [data-key="u"]{grid-column:2;grid-row:1}
+ .ra-controls[data-game="blocks"] [data-key="d"]{grid-column:3;grid-row:1}
+ .ra-controls[data-game="blocks"] button:last-child{grid-column:2/4;grid-row:2}
+ .ra-controls[data-game="merge"] [data-key="l"]{order:0}.ra-controls[data-game="merge"] [data-key="r"]{order:2}.ra-controls[data-game="merge"] button:last-child{order:1}
+}
+
+.ra-play[data-game="bird"]{touch-action:manipulation}

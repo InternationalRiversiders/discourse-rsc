@@ -23,9 +23,19 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   assert.equal(catalogs,1,'tab changes reuse the loaded season');
   await p.getByRole('button',{name:'街机区',exact:true}).click();await p.setViewportSize({width:1360,height:1000});
   await p.locator('.ra-card').filter({hasText:'2048'}).click();await p.locator('.ra-rank-tabs button.is-active').filter({hasText:'赛季排行'}).waitFor();
-  assert.equal(await p.locator('.ra-free').count(),0);assert.equal(await p.locator('.ra-rank-popover').isVisible(),false);
-  await p.getByLabel('排行说明',{exact:true}).click();assert(await p.locator('.ra-rank-popover').isVisible());await p.getByLabel('排行说明',{exact:true}).click();
-  await p.getByRole('button',{name:'开始挑战',exact:true}).click();await p.getByRole('button',{name:'暂停',exact:true}).waitFor();
+  assert.equal(await p.locator('.ra-free').count(),0);assert.equal(await p.locator('.ra-rank-help').isVisible(),false);
+  await p.getByLabel('排行说明',{exact:true}).click();assert(await p.locator('.ra-rank-help').isVisible());await p.getByLabel('排行说明',{exact:true}).click();
+  for(const width of [320,390,900,1360]){
+   await p.setViewportSize({width,height:1000});
+   const info=p.getByRole('button',{name:'排行说明',exact:true}),refresh=p.getByRole('button',{name:'刷新排行',exact:true});
+   assert.equal(await info.locator('svg.d-icon-circle-info').count(),1,'use the shared Discourse info icon');
+   const i=await info.boundingBox(),r=await refresh.boundingBox(),tabs=await p.locator('.ra-rank-tabs').boundingBox();
+   assert(Math.abs(i.y+i.height/2-r.y-r.height/2)<1,'info and refresh align');assert(i.x>=tabs.x+tabs.width,'rank tools do not overlap tabs');
+   await info.click();assert.equal(await info.getAttribute('aria-expanded'),'true');
+   assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+   await p.locator('.ra-rank').screenshot({path:`${out}/rank-info-${width}.png`});await info.click();
+  }
+  await p.getByRole('button',{name:'开始挑战',exact:true}).click();await p.getByRole('button',{name:'暂停并保存',exact:true}).waitFor();
   let delayed=false;
   await p.route('**/rsc/arcade/*/advance.json',async route=>{
    const response=await route.fetch({url:route.request().url().replace('rsc.test','127.0.0.1'),headers:{...await route.request().allHeaders(),host:'rsc.test:3000'}});
@@ -33,7 +43,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
    await route.fulfill({response});
   });
   for(const key of ['ArrowLeft','ArrowDown','ArrowRight','ArrowUp','ArrowLeft','ArrowDown'])await p.locator('canvas.ra-canvas').press(key);
-  await p.waitForFunction(()=>document.querySelector('.ra-scorebar').textContent.includes('6 /'),{},{timeout:800});
+  await p.waitForFunction(()=>document.querySelector('.ra-scorebar').textContent.includes('6 步'),{},{timeout:800});
   await p.getByRole('button',{name:'结束并保存',exact:true}).click();await p.getByRole('button',{name:'再来一局',exact:true}).waitFor();
   await p.waitForFunction(name=>Array.from(document.querySelectorAll('.ra-rank li')).some(e=>e.textContent.includes(name)),c.username);
   assert.equal(await p.locator('.ra-rank-tabs .is-active').innerText(),'赛季排行');

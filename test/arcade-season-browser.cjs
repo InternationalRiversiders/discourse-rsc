@@ -20,7 +20,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   assert.equal(await page.getByRole('button',{name:'赛季排行',exact:true}).count(),0);
   // Public, framework-independent bundle: fetch through its real plugin URL.
   const manifest=await page.evaluate(async()=>await(await fetch('/plugins/discourse-rsc/arcade/manifest.json')).json());
-  assert.equal(manifest.rules_version,1);await page.addScriptTag({url:base+manifest.script});
+  assert.equal(manifest.rules_version,2);await page.addScriptTag({url:base+manifest.script});
   const result=await page.evaluate(()=>{
    const {Core,Effects,draw}=RiversideArcade,canvas=document.createElement('canvas'),q=Array(20).fill(3733);
    const effect=new Effects();let s=Core.create('2048',q);s.board=[2,0,0,0,0,2,0,0,...Array(8).fill(0)];
@@ -36,7 +36,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   });assert.equal(loaded.length,11);assert(loaded.every(Boolean),'all original merge artwork loads');
   await page.getByRole('button',{name:'返回挑战',exact:false}).click();await page.locator('.ra-card').filter({hasText:'合成大河畔'}).click();
   await page.waitForTimeout(400);await page.locator('.ra-play').screenshot({path:`${out}/merge-original-artwork.png`});
-  assert(result.animations,'2048 actually moves between display frames');assert.equal(result.version,1);
+  assert(result.animations,'2048 actually moves between display frames');assert.equal(result.version,2);
   assert.deepEqual(errors,[]);console.log('PASS responsive season banner, separate lifetime/season ranks, real SDK URL, seven renderers, animated 2048 frames and all eleven original merge sprites');
  }catch(e){await page.screenshot({path:out+'/season-failure.png',fullPage:true}).catch(()=>{});throw e;}finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1);});

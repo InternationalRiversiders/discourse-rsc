@@ -13,10 +13,10 @@ class ArcadeTest < NativeBusinessTest
     fund(@alice,'100');fund(@bob,'100')
   end
   def start(game='2048',actor:@alice,key:SecureRandom.uuid)
-    R::Arcade.start(actor:actor,game:game,request_id:key)
+    R::Arcade.start(actor:actor,game:game,request_id:key,rules_version:2)
   end
   def advance(run,**args)
-    R::Arcade.advance(**{actor:@alice,id:run[:id],version:run[:version],request_id:SecureRandom.uuid,frames:1,events:[[0,'l']]}.merge(args))
+    R::Arcade.advance(**{actor:@alice,id:run[:id],version:run[:version],request_id:SecureRandom.uuid,frames:1,events:[[0,'l']],rules_version:2}.merge(args))
   end
   def test_start_resume_and_duplicate_do_not_charge_or_reset
     key=SecureRandom.uuid;r=start(key:key);assert_equal r,start(key:key);assert_equal r,start
@@ -28,7 +28,7 @@ class ArcadeTest < NativeBusinessTest
   end
   def test_verified_score_and_duplicate_checkpoint
     r=start;key=SecureRandom.uuid
-    s=advance(r,request_id:key);again=advance(r,request_id:key)
+    s=advance(r,request_id:key,rules_version:2);again=advance(r,request_id:key,rules_version:2)
     assert_equal s,again
     assert_equal 1,R::ArcadeRun.find(r[:id]).version
     assert_raises(R::Error) {advance(r,request_id:key,events:[[0,'r']])}
@@ -42,7 +42,7 @@ class ArcadeTest < NativeBusinessTest
     R::Arcade::NAMES.each_key do |game|
       r=start(game)
       r=advance(r,frames:game=='2048' ? 1 : 20,events:game=='2048' ? [[0,'l']] : [])
-      row=R::ArcadeRun.find(r[:id]);replay=R::Arcade.engine('create',game,row.inputs.first['initial'])
+      row=R::ArcadeRun.find(r[:id]);replay=R::Arcade.engine('create',game,row.inputs.first['initial'],row.inputs.first['version'])
       row.inputs.drop(1).each do |batch|
         replay=R::Arcade.engine('advance',replay,batch['frames'],batch['events']);replay['q'].concat(batch['refill'])
       end
@@ -128,7 +128,7 @@ class ArcadeTest < NativeBusinessTest
     assert_equal 1,R::Journal.where(operation:'arcade_prize').count
   end
   def test_node_and_embedded_v8_match_exactly
-    JSON.parse(File.read("/rsc/test/arcade/fixtures.json")).each do |f|
+    (%w[fixtures.json fixtures-v2.json].flat_map { |name| JSON.parse(File.read("/rsc/test/arcade/#{name}")) }).each do |f|
       assert_equal f["expected"],R::Arcade.engine("advance",f["initial"],f["frames"],f["events"]),f["game"]
     end
   end
@@ -195,6 +195,77 @@ class ArcadeTest < NativeBusinessTest
     count=R::Journal.count;R::Arcade.settle
     assert_equal count,R::Journal.count
     assert_equal [[@alice.id,99]],R::Arcade.ranked(nil,'2048')
+  end
+
+  def test_trial_scores_join_current_ranking_and_current_season_uses_new_rules
+    p=R::Arcade.period;p.update!(results:{})
+    old_state=R::Arcade.engine('create','2048',Array.new(24,333),1)
+    old=R::ArcadeRun.create!(user_id:@bob.id,period_id:p.id,game:'2048',start_key:SecureRandom.uuid,
+      state:old_state,inputs:[],status:'finished',score:600,finished_at:Time.current,expires_at:1.hour.from_now)
+    modern=start;assert_equal 2,modern[:rules_version];assert_equal p.id,modern[:season_id]
+    assert_nil modern[:state]['limit'];assert_equal 2,R::Arcade.season_view(p)[:rules_version]
+    assert_raises(R::Error) { R::Arcade.start(actor:@alice,game:'2048',request_id:SecureRandom.uuid) }
+    assert_raises(R::Error) { R::Arcade.advance(actor:@alice,id:modern[:id],version:modern[:version],request_id:SecureRandom.uuid,frames:1,events:[]) }
+    advance(modern,finish:true);R::ArcadeRun.find(modern[:id]).update!(score:900)
+    expected=[[@alice.id,900],[@bob.id,600]]
+    assert_equal expected,R::Arcade.ranked(p,'2048')
+    assert_equal expected,R::Arcade.ranked(nil,'2048')
+  end
+  def test_resume_upgrades_trial_save_without_losing_progress
+    p=R::Arcade.period
+    state=R::Arcade.engine('create','bricks',Array.new(20,333),1)
+    state['score']=100;state['board'][0]=0
+    row=R::ArcadeRun.create!(user_id:@alice.id,period_id:p.id,game:'bricks',start_key:SecureRandom.uuid,
+      state:state,inputs:[],score:100,expires_at:1.hour.from_now)
+    resumed=start('bricks');assert_equal row.id,resumed[:id]
+    assert_equal 2,resumed[:rules_version];assert_equal 1,resumed[:version]
+    assert_equal 100,resumed[:state]['score'];assert_equal 0,resumed[:state]['board'][0]
+    assert_equal 1,resumed[:state]['wave'];assert_nil resumed[:state]['limit']
+    assert row.reload.inputs.first['checkpoint']
+    assert_raises(R::Error) { advance(resumed,version:0,events:[]) }
+    assert_equal 100,advance(resumed,events:[])[:state]['score']
+  end
+  def test_checkpoint_tail_is_bounded_and_resume_renews_retention
+    r=start('2048')
+    70.times { r=advance(r,events:[]) }
+    row=R::ArcadeRun.find(r[:id]);assert_operator row.inputs.length,:<=,65
+    assert row.inputs.first['checkpoint'];assert row.inputs.first['digest']
+    replay=row.inputs.first['checkpoint'].deep_dup
+    row.inputs.drop(1).each do |b|
+      replay=R::Arcade.engine('advance',replay,b['frames'],b['events']);replay['q'].concat(b['refill'])
+    end
+    assert_equal row.state,replay
+    before=row.expires_at
+    travel_to(3.hours.from_now) do
+      resumed=start;assert_equal row.id,resumed[:id]
+      after=advance(resumed,events:[]);assert_operator after[:expires_at],:>,before
+    end
+  end
+  def test_season_deadline_banks_checkpoint_and_rejects_late_score
+    SiteSetting.rsc_arcade_rewards_enabled=true
+    r=start;p=R::ArcadePeriod.find(r[:period_id]);row=R::ArcadeRun.find(r[:id])
+    state=row.state.deep_dup;state['score']=40;state['board']=[2,2]+Array.new(14,0);row.update!(state:state,score:40)
+    travel_to(p.ends_at+1.second) do
+      result=advance(r,events:[[0,'l']])
+      assert_equal 'finished',result[:status];assert_equal 40,result[:state]['score']
+      R::Arcade.settle;R::Arcade.settle
+      assert_equal '200',R::Account.wallet(@alice.id).balance
+      assert_equal 40,p.reload.results['2048'].first['score']
+      assert_equal 2,R::Arcade.period_rules(p)
+    end
+  end
+  def test_unfinished_new_season_save_is_settled_without_client_return
+    SiteSetting.rsc_arcade_rewards_enabled=true
+    r=start;p=R::ArcadePeriod.find(r[:period_id]);row=R::ArcadeRun.find(r[:id])
+    state=row.state.deep_dup;state['score']=77;row.update!(state:state,score:77)
+    travel_to(p.ends_at+1.second) { R::Arcade.settle }
+    assert_equal 'finished',row.reload.status
+    late=advance(r,events:[[0,'r']]);assert_equal 'finished',late[:status];assert_equal 77,late[:state]['score']
+    assert_equal '200',R::Account.wallet(@alice.id).balance
+  end
+  def test_large_score_storage
+    r=start;row=R::ArcadeRun.find(r[:id]);row.update!(score:3_000_000_000)
+    assert_equal 3_000_000_000,row.reload.score
   end
 
 end

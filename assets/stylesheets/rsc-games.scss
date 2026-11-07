@@ -10,8 +10,6 @@
   .rg-topbar { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:24px; }
   .rg-brand,.rg-top-actions { display:flex; align-items:center; gap:12px; min-width:0; }
   .rg-brand-icon { width:42px; height:42px; border-radius:14px; background:#edeaff; color:#655ac4; display:grid; place-items:center; font-size:22px; }
-  .rg-icon-button { background:transparent; border:1px solid transparent; color:var(--rg-muted); width:36px; height:36px; border-radius:10px; display:inline-grid; place-items:center; padding:0; flex-shrink:0; }
-  .rg-icon-button:hover { background:var(--rg-soft); color:var(--rg-ink); }
   .rg-balance { display:flex; align-items:center; gap:8px; font-variant-numeric:tabular-nums; white-space:nowrap; strong {font-size:17px;} .d-icon {color:#b38d42;} small{color:var(--rg-muted);font-size:11px;letter-spacing:1px;} }
   .rg-lobby { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
   .rg-game-card { border:1px solid var(--rg-line); background:var(--rg-surface); border-radius:22px; min-width:0; padding:0; overflow:hidden; text-align:left; position:relative; color:var(--rg-ink); box-shadow:0 3px 12px #17294403; }
@@ -56,7 +54,6 @@
   .rg-primary {background:#7062c6;color:#fff;box-shadow:0 4px 10px #6960c81a;&:hover:not(:disabled){background:#5c50b0;}}
   .rg-secondary {background:var(--rg-soft);border-color:var(--rg-line);color:var(--rg-ink);}
   .rg-play {width:100%;min-height:48px;}
-  .rg-rules {font-size:12px;line-height:1.8;color:var(--rg-muted);border-top:1px solid var(--rg-line);margin-top:20px;padding-top:15px;p+p{margin-top:10px;}}
   .rg-error,.rg-notice {padding:12px 15px;border-radius:10px;margin-bottom:16px;font-size:13px;background:#b1474712;color:#b65c63;display:flex;align-items:center;gap:12px;flex-wrap:wrap;button{border:1px solid currentColor;background:transparent;color:inherit;border-radius:6px;padding:4px 10px;}}
   .rg-notice {background:var(--rg-soft);color:var(--rg-muted);}
   .rg-result {position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:15px;padding:9px 18px;background:#10221c77;border:1px solid #ffffff18;border-radius:100px;white-space:nowrap;font-size:13px;strong{font-size:18px;font-variant-numeric:tabular-nums;}}
@@ -287,3 +284,13 @@
 .rg-app .rg-brand { flex:1; }
 .rg-app .rg-brand h1 { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .rg-app .rg-top-actions { flex:0 0 auto; }
+
+// Shared information controls in both game sections.
+.rg-app,.ra-app {
+  .rg-icon-button { background:transparent; border:1px solid transparent; color:var(--rg-muted,var(--primary-medium)); width:36px; height:36px; cursor:pointer; border-radius:10px; display:inline-grid; place-items:center; padding:0; flex-shrink:0; }
+  .rg-icon-button:hover { background:var(--rg-soft,var(--primary-very-low)); color:var(--rg-ink,var(--primary)); }
+  .rg-rules {font-size:12px;line-height:1.8;color:var(--rg-muted,var(--primary-medium));border-top:1px solid var(--rg-line,var(--primary-low));margin-top:20px;padding-top:15px;p+p{margin-top:10px;}}
+}
+@media(max-width:720px){.ra-app .rg-icon-button,.rg-app .rg-icon-button{width:30px;height:30px}}
+
+.ra-app .rg-icon-button:focus-visible{outline:3px solid var(--tertiary);outline-offset:2px}

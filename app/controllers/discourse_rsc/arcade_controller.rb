@@ -9,7 +9,7 @@ module DiscourseRsc
     end
     def start
       RateLimiter.new(current_user,'rsc-arcade-start',20,1.minute).performed!
-      render_json_dump Arcade.start(actor:current_user,game:params[:game].to_s,request_id:params[:request_id])
+      render_json_dump Arcade.start(actor:current_user,game:params[:game].to_s,request_id:params[:request_id],rules_version:params.fetch(:rules_version,1),scope:params.fetch(:scope,'season'))
     end
     def advance
       id=positive_id(:id)
@@ -18,7 +18,7 @@ module DiscourseRsc
       grid=game=='2048'
       RateLimiter.new(current_user,"rsc-arcade-action-#{grid ? 'grid' : 'realtime'}",grid ? 600 : 180,1.minute).performed!
       render_json_dump Arcade.advance(actor:current_user,id:id,version:params[:version],request_id:params[:request_id],
-        frames:params[:frames],events:params[:events],finish:params.fetch(:finish,false))
+        frames:params[:frames],events:params[:events],finish:params.fetch(:finish,false),rules_version:params.fetch(:rules_version,1))
     end
   end
 end

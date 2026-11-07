@@ -20,7 +20,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   await page.locator('canvas.ra-canvas').press('ArrowLeft');await page.getByRole('button',{name:'重试并恢复进度'}).waitFor();response=page.waitForResponse(r=>r.url().includes('/advance')&&r.status()===200);await page.getByRole('button',{name:'重试并恢复进度'}).click();const retried=await(await response).json();assert.equal(retried.version,committed.version);assert.equal(retried.state.score,committed.state.score);
   await page.getByRole('button',{name:'结束并保存',exact:true}).click();await page.getByRole('button',{name:'再来一局',exact:true}).waitFor();await page.waitForFunction(username=>Array.from(document.querySelectorAll('.ra-rank li')).some(row=>row.textContent.includes(username)),c.username);await page.getByRole('button',{name:'返回挑战',exact:false}).click();await page.locator('.ra-card').first().waitFor();
   for(const name of ['方块堆叠','贪吃蛇','河畔飞鸟','六角消除','打砖块','合成大河畔']){
-   await page.locator('.ra-card').filter({hasText:name}).click();await page.getByRole('button',{name:'开始挑战',exact:true}).click();await page.getByRole('button',{name:'暂停',exact:true}).waitFor();
+   await page.locator('.ra-card').filter({hasText:name}).click();await page.getByRole('button',{name:'开始挑战',exact:true}).click();await page.getByRole('button',{name:'暂停并保存',exact:true}).waitFor();
    await page.locator('canvas.ra-canvas').press(name==='方块堆叠'?'Space':name==='河畔飞鸟'?'Space':'ArrowRight');
    await page.waitForTimeout(300);
    if(name==='合成大河畔'){await page.locator('canvas.ra-canvas').click({position:{x:170,y:80}});}
