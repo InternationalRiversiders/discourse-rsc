@@ -72,12 +72,12 @@ for(const game of Core.games.filter(g=>g!=='2048')){
  assert.deepEqual(p.keys,['l']);for(let i=0;i<7;i++)p.advance();assert.equal(p.state.dir,3,'second turn waits for next cell');
 }
 // Exercise the component's actual asynchronous pump with a delayed transport.
-const source=fs.readFileSync(new URL('components/rsc-arcade.gjs',root),'utf8');
-const klass=source.slice(source.indexOf('export default class'),source.indexOf(' <template>')).replace('export default class','return class').replace(/@tracked /g,'').replace(/@action /g,'')+'}';
+const source=fs.readFileSync(new URL('lib/arcade-app.js',root),'utf8');
+const klass=source.slice(source.indexOf('export default class'),source.indexOf('export { GAMES }')).replace('export default class','return class');
 const requests=[];
-const ajax=(_path,opts)=>new Promise((resolve,reject)=>requests.push({body:JSON.parse(opts.data),resolve,reject}));
-const Component=new Function('Component','GAMES','Core','Playback','Effects','ajax','extractError','modifier','draw','formatDateTime','crypto',klass)(class{},[],Core,Playback,Effects,ajax,e=>e.message,()=>null,()=>{},()=>'',{randomUUID});
-function component(game){const c=new Component();c.game=game;c.playback=new Playback(view(run(game)));c.run=c.playback.run;c.state=c.playback.state;c.paused=false;c.loadRanking=()=>{};return c;}
+const request=(_action,body)=>new Promise((resolve,reject)=>requests.push({body,resolve,reject}));
+const Component=new Function('GAMES','Core','Playback','Effects','draw','formatDateTime','crypto','renderArcade',klass)([],Core,Playback,Effects,()=>{},()=>'',{randomUUID},()=>{});
+function component(game){const c=new Component({addEventListener(){}},{request});c.game=game;c.playback=new Playback(view(run(game)));c.run=c.playback.run;c.state=c.playback.state;c.paused=false;c.loadRanking=()=>{};return c;}
 async function settle(c,r){const req=requests.shift();assert(req);const response=server(r,req.body);req.resolve(view(response));await new Promise(resolve=>setImmediate(resolve));return response;}
 {
  const c=component('bird');let r=run('bird');r.id=c.run.id;

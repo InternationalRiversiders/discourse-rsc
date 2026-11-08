@@ -1,0 +1,14 @@
+// Standalone shell only; all game geometry, controls and responsive layout are shared.
+@import 'rsc-arcade';
+:root{color-scheme:light;--primary:#222;--secondary:#fff;--primary-medium:#737780;--primary-low:#e2e4e8;--primary-very-low:#f5f6f8;--tertiary:#6155cb;--tertiary-low:#ece9fb;--header-offset:0px}
+@mixin dark{color-scheme:dark;--primary:#edf0f3;--secondary:#191d24;--primary-medium:#a4aab4;--primary-low:#363b45;--primary-very-low:#252a34;--tertiary:#a79eff;--tertiary-low:#363051}
+:root[data-theme=dark]{@include dark}
+@media(prefers-color-scheme:dark){:root[data-theme=auto]{@include dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--secondary);color:var(--primary);font:15px/1.5 system-ui,sans-serif}button{font:inherit}a{color:var(--tertiary);text-decoration:none}button,summary{touch-action:manipulation}
+.ra-embed{padding:12px;max-width:1240px;margin:auto}.ra-hub{padding:0}.ra-heading{margin-top:0}.ra-rules p{margin:8px 0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--primary-low);background:var(--primary-very-low);color:var(--primary);border-radius:10px;padding:10px 14px;cursor:pointer;min-height:42px}.btn-flat{border-color:transparent;background:transparent}.btn-primary{background:var(--tertiary);color:var(--secondary);border:0;border-radius:24px}.btn:disabled{opacity:.5;cursor:default}
+.ra-app .rg-icon-button{background:transparent;border:1px solid transparent;color:var(--primary-medium);width:36px;height:36px;cursor:pointer;border-radius:10px;display:inline-grid;place-items:center;padding:0;flex-shrink:0}.ra-app .rg-icon-button:hover{background:var(--primary-very-low);color:var(--primary)}
+.ra-app .rg-rules{font-size:12px;line-height:1.8;color:var(--primary-medium);border-top:1px solid var(--primary-low);margin-top:20px;padding-top:15px}.rg-error{border-radius:12px;padding:12px;background:#e859591a;color:var(--primary);margin-bottom:16px}.ra-error-text{display:block;overflow-wrap:anywhere}
+#connection{color:var(--primary-medium);padding:20px;text-align:center}
+.ra-rank ol{margin-bottom:0}.rsc-forum-user{color:var(--primary)}
+@media(max-width:720px){.ra-app .rg-icon-button{width:30px;height:30px}.ra-embed{padding:8px}}

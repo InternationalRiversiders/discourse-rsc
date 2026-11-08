@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {webcrypto} from 'node:crypto';
+if(!globalThis.crypto){globalThis.crypto=webcrypto;}
+const url=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
+const source=fs.readFileSync(new URL('../../assets/javascripts/discourse/lib/arcade-transport.js',import.meta.url),'utf8');
+const transportUrl=url(source),{arcadeRequest}=await import(transportUrl);
+const {default:Bridge}=await import(url(fs.readFileSync(new URL('../../assets/javascripts/discourse/lib/arcade-bridge.js',import.meta.url),'utf8').replace("'./arcade-transport'",JSON.stringify(transportUrl))));
+assert.throws(()=>arcadeRequest('wallet',{}));assert.throws(()=>arcadeRequest('ranking',{game:'../admin'}));
+assert.throws(()=>arcadeRequest('advance',{id:'1/../../wallet'}));
+assert.deepEqual(arcadeRequest('catalog'),{method:'GET',path:'/rsc/arcade/catalog.json'});
+const sent=[],commands=[];let initialized=0;
+const bridge=new Bridge({send:m=>sent.push(m),onInit:()=>initialized++,onCommand:async a=>{commands.push(a);return {saved:true};},timeout:15});
+const envelope=(fields)=>({channel:'riverside.arcade',protocol:1,session:bridge.session,...fields});
+bridge.ready();assert.equal(sent[0].type,'ready');
+bridge.receive({...envelope({type:'init'}),session:'old-page'});assert.equal(initialized,0);
+bridge.receive({...envelope({type:'init'}),protocol:99});assert.equal(initialized,0);
+bridge.receive(envelope({type:'init'}));bridge.receive(envelope({type:'init'}));assert.equal(initialized,1);
+const request=bridge.request('catalog');let message=sent.at(-1);assert.equal(message.action,'catalog');
+bridge.receive({...envelope({type:'response',id:message.id,result:{bad:true}}),session:'old-page'});assert.equal(bridge.pending.size,1);
+bridge.receive(envelope({type:'response',id:message.id,result:{rules_version:2}}));assert.equal((await request).rules_version,2);
+bridge.receive(envelope({type:'response',id:message.id,result:{bad:true}}));assert.equal(bridge.pending.size,0);
+await assert.rejects(bridge.request('ranking',{game:'2048'}),/超时/);
+const failed=bridge.request('catalog');message=sent.at(-1);bridge.receive(envelope({type:'response',id:message.id,error:{message:'请先登录',status:403}}));await assert.rejects(failed,/请先登录/);
+const command=envelope({type:'command',id:'pause-1',action:'pause'});bridge.receive(command);bridge.receive(command);bridge.receive({...command,action:'resume'});
+await new Promise(r=>setTimeout(r,5));assert.deepEqual(commands,['pause']);assert(sent.some(m=>m.type==='command-result'&&m.result.saved));
+bridge.close();await assert.rejects(bridge.request('catalog'),/尚未就绪/);
+console.log('PASS allowlist, handshake version/session, duplicate and stale replies, timeout, native errors and idempotent lifecycle commands');

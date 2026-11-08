@@ -76,3 +76,7 @@
 .ra-play[data-game="bird"]{touch-action:manipulation}
 
 .ra-play{scroll-margin-top:calc(var(--header-offset,60px) + 8px)}
+
+.ra-app [hidden]{display:none!important}
+.ra-app .rg-icon-button svg{width:18px;height:18px}
+.ra-app .rsc-forum-user img{border-radius:50%;object-fit:cover}

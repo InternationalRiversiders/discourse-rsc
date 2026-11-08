@@ -12,7 +12,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   await page.goto(base+'/rsc/games',{waitUntil:'networkidle'});await page.locator('.ra-card').first().waitFor();
   // Test-only observation: access the real component, never alter its game state.
   await page.evaluate(()=>{
-   const id=Object.keys(requirejs.entries).find(k=>k.endsWith('/components/rsc-arcade'));
+   const id=Object.keys(requirejs.entries).find(k=>k.endsWith('/lib/arcade-app'));
    if(!id)throw new Error('arcade component module missing');
    const proto=require(id).default.prototype,update=proto.updateView;
    proto.updateView=function(...args){window.arcadeUnderTest=this;return update.apply(this,args);};
@@ -26,8 +26,9 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   async function open(name){await page.locator('.ra-card').filter({hasText:name}).click();await page.getByRole('button',{name:'开始挑战',exact:true}).click();await page.waitForFunction(()=>window.arcadeUnderTest?.run?.status==='playing'&&!window.arcadeUnderTest.busy);}
   async function finish(){await page.getByRole('button',{name:'结束并保存',exact:true}).click();await page.getByRole('button',{name:'再来一局',exact:true}).waitFor();await page.getByRole('button',{name:'返回挑战',exact:false}).click();await page.locator('.ra-card').first().waitFor();}
   latency=350;await open('2048');
+  const initialTick=await page.evaluate(()=>window.arcadeUnderTest.run.state.tick);
   for(const key of ['ArrowLeft','ArrowDown','ArrowRight','ArrowUp','ArrowLeft','ArrowDown'])await page.locator('canvas.ra-canvas').press(key);
-  await page.waitForFunction(()=>window.arcadeUnderTest.run.state.tick===6);
+  await page.waitForFunction(t=>window.arcadeUnderTest.run.state.tick===t+6,initialTick);
   assert.equal(await page.evaluate(()=>window.arcadeUnderTest.playback.keys.length),0,'all rapid swipes consumed');
   assert(requests.length<6,'rapid moves are batched');assert.equal(requests.reduce((sum,r)=>sum+r.frames,0),6);
   await finish();

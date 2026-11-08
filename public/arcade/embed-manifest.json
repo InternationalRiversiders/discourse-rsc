@@ -1,0 +1,27 @@
+{
+  "protocol": 1,
+  "rules_version": 2,
+  "entry": "/rsc/arcade/embed",
+  "script": "/plugins/discourse-rsc/arcade/arcade-embed-011ac632e9678960.js",
+  "stylesheet": "/plugins/discourse-rsc/arcade/arcade-embed-b0001c5ce30406b1.css",
+  "sha256": {
+    "script": "011ac632e967896059901151dd8ca25f2e1c3058f954194e5d9312905edfe8d3",
+    "stylesheet": "b0001c5ce30406b12ba3217255686b851b2f7af9708f1f9f92963c1e7d667e26"
+  },
+  "sources": {
+    "arcade-core": "77a839f87dc69981c3a67ef7a69b456d5976fa1dcad2630e16bd5be209a71982",
+    "arcade-playback": "922cabd483753ed9c2e3abd921899c021df2339da59a211ee2a9b45886510e72",
+    "arcade-effects": "84ba8baa3977085a3e51ec15d2faf425c61ffe98efee0a7a387e3835238b93ba",
+    "arcade-draw": "fa9c13b2ff09d8e0eacf69ff4e41f4824496bc759a022ccb874abda9e939cda8",
+    "arcade-sprites": "1f906d4fba7947a510373388e5ffa052af954c30ca221225b88afab3b43dabcc",
+    "campus-time": "63f09fbc224fc607e26397d4375ddf6076074cf95868b980c4e2ae793105c12b",
+    "arcade-cover": "5467cb745d7e3080a887eb46bc4b198e8ba90ac494aeaba3b599a841dbafb411",
+    "arcade-ui": "bd5c7a0e6100a32d2f824236c6b5cc5f0f65c4f9977970d459044a77f9327459",
+    "arcade-app": "169df9d2c7329c9c19ff7e511d848578d35e235de26971f2b1fa6f93a5eef60b",
+    "arcade-transport": "cd27259ea8b6f7921e2e0fd34ba42eaa8e76dd887bc7b6a63e424f08d22e7566",
+    "arcade-bridge": "80b9867f2b2fa1e57ce3e0cea633da1dba67e895472c8c6a62a89dc80530b2bc",
+    "arcade-embed": "3bdca5bca6d5730ff652b2629f7a1beb6fc4c50803ba5cf1c0c8fd5fe05571bd",
+    "rsc-arcade.scss": "a149073cede79a65d235d0c6a853b553042e2f732a1c361ae06ff5d1ab0d45fa",
+    "rsc-arcade-embed.scss": "56d896137190f5c0865b47bb95bf734e70383c44c4c9e4bdf375f7b1a438127e"
+  }
+}

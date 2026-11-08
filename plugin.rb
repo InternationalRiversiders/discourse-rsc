@@ -117,6 +117,7 @@ after_initialize do
     app/services/discourse_rsc/rewards
     app/services/discourse_rsc/notification_delivery
     app/controllers/discourse_rsc/wallet_controller
+    app/controllers/discourse_rsc/arcade_embed_controller
     app/controllers/discourse_rsc/arcade_controller
     app/controllers/discourse_rsc/games_controller
     app/controllers/discourse_rsc/lottery_controller

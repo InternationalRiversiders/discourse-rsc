@@ -7,7 +7,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
  try{
   await p.goto(base+'/login',{waitUntil:'networkidle'});assert.equal(await p.evaluate(async c=>{for(let i=0;i<2;i++){const {csrf}=await(await fetch('/session/csrf.json')).json();const r=await fetch('/session.json',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf,'X-Requested-With':'XMLHttpRequest'},body:JSON.stringify({login:c.username,password:c.password})});if(r.status!==403||i===1)return r.status;}},c),200);
   await p.goto(base+'/rsc/games',{waitUntil:'networkidle'});await p.getByRole('button',{name:'街机区',exact:true}).click();
-  await p.evaluate(()=>{const id=Object.keys(requirejs.entries).find(k=>k.endsWith('/components/rsc-arcade'));const proto=require(id).default.prototype,update=proto.updateView;proto.updateView=function(...args){window.arcadeUnderTest=this;return update.apply(this,args);};});
+  await p.evaluate(()=>{const id=Object.keys(requirejs.entries).find(k=>k.endsWith('/lib/arcade-app'));const proto=require(id).default.prototype,update=proto.updateView;proto.updateView=function(...args){window.arcadeUnderTest=this;return update.apply(this,args);};});
   async function open(name){await p.locator('.ra-card').filter({hasText:name}).click();await p.getByRole('button',{name:'开始挑战',exact:true}).click();await p.waitForFunction(()=>window.arcadeUnderTest?.run?.status==='playing'&&!window.arcadeUnderTest.busy);}
   async function finish(){if(await p.getByRole('button',{name:'结束并保存',exact:true}).count())await p.getByRole('button',{name:'结束并保存',exact:true}).click();await p.getByRole('button',{name:'再来一局',exact:true}).waitFor();await p.getByRole('button',{name:'返回挑战',exact:false}).click();}
   for(const name of ['打砖块','六角消除']){
@@ -32,7 +32,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   const before=await p.evaluate(()=>JSON.parse(JSON.stringify(window.arcadeUnderTest.run)));
   assert.equal(before.rules_version,2);assert(before.state.balls[0].x<500,'drop reaches the actual wall');
   await p.locator('.ra-play').screenshot({path:out+'/endless-merge.png'});
-  await p.reload({waitUntil:'networkidle'});await p.evaluate(()=>{const id=Object.keys(requirejs.entries).find(k=>k.endsWith('/components/rsc-arcade'));const proto=require(id).default.prototype,update=proto.updateView;proto.updateView=function(...args){window.arcadeUnderTest=this;return update.apply(this,args);};});await p.locator('.ra-card').filter({hasText:'合成大河畔'}).click();
+  await p.reload({waitUntil:'networkidle'});await p.evaluate(()=>{const id=Object.keys(requirejs.entries).find(k=>k.endsWith('/lib/arcade-app'));const proto=require(id).default.prototype,update=proto.updateView;proto.updateView=function(...args){window.arcadeUnderTest=this;return update.apply(this,args);};});await p.locator('.ra-card').filter({hasText:'合成大河畔'}).click();
   const start=p.waitForResponse(r=>r.url().includes('/arcade/start')&&r.status()===200);await p.getByRole('button',{name:'开始挑战',exact:true}).click();const resumed=await(await start).json();
   assert.equal(resumed.id,before.id);assert.deepEqual(resumed.state,before.state);
   // Return to the server checkpoint, not a fresh random game.
