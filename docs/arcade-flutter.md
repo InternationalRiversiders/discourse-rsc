@@ -1,6 +1,37 @@
 # 街机区：Flutter 复用与赛季
 
-这七款目前是插件内自行实现的规则与 Canvas 2D 绘制，不是嵌入第三方成品。规则、联网回放、显示效果已分离。推荐 App 保留 Dart 的导航和登录态，用 WebView 运行相同 JS；不把七套规则重新实现成 Dart。
+这七款目前是插件内自行实现的规则与 Canvas 2D 绘制，不是嵌入第三方成品。规则、联网回放、显示效果已分离。按目前接入目标，推荐 App 保留 Dart 的导航和登录态，用 WebView 加载服务器提供的完整小游戏页面（包含控件、样式和联网调度），不把七套规则或按键布局重新实现成 Dart。
+
+## 当前接入方向：远程完整页面优先
+
+用户要求：服务器更新键位、触控、布局、动画后，App 下次进入小游戏即可使用新版，不需要为这些调整重新发版。
+
+**当前状态：已有可复用 SDK 和论坛完整游戏组件，但还没有实现并上线独立小游戏嵌入页面或原生 bridge。下面是接入约定建议，不是已经可调用的接口。** `/rsc/games` 是论坛完整页面；不能把它当作已经去除论坛导航的嵌入入口。现有 SDK 也不包含组件中的 HTML/CSS、触摸控件和完整生命周期调度。
+
+| 归属 | 负责内容 |
+| --- | --- |
+| 论坛插件 | 发布独立游戏页面；复用网页游戏的输入、控件、样式、绘制、回放与存档逻辑；提供版本兼容策略 |
+| Flutter App | WebView 容器、安全区、原生导航、登录凭据、允许的 API 请求代理、前后台与退出通知 |
+| 共享契约 | 带版本的消息协议、明确的游戏 ID、就绪/暂停保存/退出回执、API 错误与版本不兼容处理 |
+
+### 论坛侧仍需补齐
+
+1. 提供同站 HTTPS 独立游戏入口，仅渲染游戏相关 UI，去除论坛页头、侧边栏和外围导航；实际 URL 待实现后补入本文档，App 不应猜测路径。
+2. 从现有 `rsc-arcade.gjs` 抽取共享的游戏界面和调度，论坛和嵌入入口使用同一份控件代码。仅共享 `arcade-core.js` 或 SDK 不够；否则键位和样式仍会分叉。
+3. 把请求发送抽成 transport：论坛页面沿用 cookie + CSRF；嵌入页使用受限原生 bridge，或在已建立论坛会话时沿用 cookie + CSRF。App 的用户 API key 不等于 WebView 的论坛登录会话，不能假定二者自动互通。
+4. 增加就绪、暂停保存、恢复和退出消息；后台时先暂停输入、释放按住的键、提交待同步操作，再向宿主返回保存结果。恢复从服务器读取进度或重试原请求。离线/强杀只能保证服务器已确认的检查点。
+5. 入口 HTML 和版本清单进入游戏时重新验证缓存，JS/CSS/素材使用内容指纹缓存；一局内不强制刷新。服务端保留兼容窗口和旧资源，遇到不兼容升级先暂停并明确提示，不能声称仅保留旧 JS 就保证旧协议继续可用。
+
+### App 侧可以先做的部分
+
+- Android/iOS 使用项目已有的 `webview_flutter`，加载届时提供的远程游戏页；Flutter Web 使用 iframe/`HtmlElementView`。不在 Dart 内另外画方向键，不注入一套按游戏名称匹配的 DOM/CSS 修补代码。
+- 按整个游戏可用区域设置 WebView 尺寸，安全区只由约定的一侧处理，避免双倍留白。游戏区不要套会抢滑动或长按的滚动容器；横竖屏变化通知页面调整显示尺寸，不改变游戏逻辑尺寸。
+- 原生 bridge 的 API 请求仅接受下面列出的 action 和结构化参数，由 Dart 构造固定路径、添加鉴权；禁止任意 URL/方法/请求头代理。只在可信主页面启用 bridge，阻止非可信导航和子页面调用；Flutter Web 校验消息 origin、source、request ID，禁止 `*`。
+- 登录凭据保留在 Dart，不能放进 URL、JS、postMessage 或日志。当前账号切换/退出后废弃旧页面的请求与回包，重新初始化会话。
+- 现有 `lib/pages/web_view_page.dart` 在失焦/后台时会执行 `window.stop()` 并禁用 JavaScript，**不能原样套到游戏上**：需要先通知游戏暂停保存并处理确认/超时，再按平台生命周期处理页面；否则可能打断未完成的存档请求。
+- 消息协议需要握手与版本检查，且离开页面后忽略迟到回包。游戏运行期间不自动 reload；普通界面更新在下次进入时生效。新增原生权限或不兼容 bridge 改动仍可能需要 App 更新。
+
+这份指南目前只覆盖七款街机游戏。博弈区的下注、结算与大乐透接口不在下面四个 action 的白名单里；如也要嵌入，应复用完整网页 UI，并单独核对所需接口、幂等和退出规则，不能直接开放任意 RSC API。
 
 ## 本次对照的开源实现
 
@@ -46,9 +77,9 @@ const request = playback.checkpoint(crypto.randomUUID());
 
 不要在每帧调用接口。实时类通常每 120 帧同步，最多 180 帧尾缓冲；2048 使用服务端预发的最多 20 个随机数（最多约 9 步），每 4 步或停手 250ms 后同步，单批最多 16 步。完整种子不下发；预取耗尽时等待补充，不能自行生成随机值。旧版客户端需刷新或升级 SDK；服务端不再接受旧规则写入，恢复存档时直接升级并保留已验证进度。随机种子不公开，但少量前瞻及机器人策略仍可能存在；服务器复核的是规则合法性，不保证操作者是人。
 
-## App 集成方式
+## SDK 自建页面方式（备选，不满足控件自动同步目标）
 
-现有 RiversideApp 已依赖 `webview_flutter`，可参考 `lib/widgets/alumni_plugin_map.dart` 的 JavaScript channel 及 `lib/widgets/browser_frame_web.dart` 的 Web iframe 分支。
+以下是此前的 SDK 方案，仅在需要 App 自建完整游戏页面时采用；当前优先完成上面的远程页面方式。现有 RiversideApp 已依赖 `webview_flutter`，可参考 `lib/widgets/alumni_plugin_map.dart` 的 JavaScript channel 及 `lib/widgets/browser_frame_web.dart` 的 Web iframe 分支。
 
 1. **Android/iOS**：本地可信 HTML + 已校验/随 App 打包的 SDK，使用 `WebViewController`；Dart 保留登录凭据，通过窄接口 bridge 代发请求。
 2. **Flutter Web**：`webview_flutter` 不支持 Web；沿用 `HtmlElementView` / iframe。跨窗口消息同时验证 `event.origin`、`event.source` 和 request ID；来源不能设为 `*`。用服务端 cookie+CSRF 或同样的父页面 API 代理。
