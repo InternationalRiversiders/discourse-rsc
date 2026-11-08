@@ -5,7 +5,7 @@ class GamesTest < NativeBusinessTest
   def setup
     super
     R::GameRound.delete_all
-    R::Games::NAMES.each_key { |g| %w[month all].each { |p| Rails.cache.delete("rsc:game-ranking:v1:#{g}:#{p}") } }
+    R::Games::NAMES.each_key { |g| %w[month all].each { |p| Rails.cache.delete("rsc:game-ranking:v2:#{g}:#{p}") } }
     SiteSetting.rsc_games_enabled=true
     SiteSetting.rsc_games_max_stake=500
     fund(@alice,'2000'); fund(@bob,'100')
@@ -302,19 +302,23 @@ class GamesTest < NativeBusinessTest
     ranking_round(@admin,'slots',500)
     board=R::GameRanking.fetch(game:'slots')
     assert_equal 'net',board[:metric]
-    assert_equal [@alice.id,@bob.id],board[:rows].map { |r| r[:user][:id] }
-    assert_equal ['5','5'],board[:rows].map { |r| r[:value] }
-    assert_equal '20',R::GameRanking.fetch(game:'slots',period:'all')[:rows].first[:value]
+    assert_equal [@admin.id,@alice.id,@bob.id],board[:rows].map { |r| r[:user][:id] }
+    assert_equal ['500','5','5'],board[:rows].map { |r| r[:value] }
+    assert_equal ['500','20','5'],R::GameRanking.fetch(game:'slots',period:'all')[:rows].map { |r| r[:value] }
     R::Account.wallet(@alice.id).update!(status:'frozen')
-    assert_equal [@bob.id],R::GameRanking.calculate(game:'slots',period:'all')[:rows].map { |r| r[:user][:id] }
+    assert_equal [@admin.id,@bob.id],R::GameRanking.calculate(game:'slots',period:'all')[:rows].map { |r| r[:user][:id] }
     @bob.update!(suspended_till:1.day.from_now)
+    assert_equal [@admin.id],R::GameRanking.calculate(game:'slots',period:'all')[:rows].map { |r| r[:user][:id] }
+    @admin.update!(active:false)
     assert_empty R::GameRanking.calculate(game:'slots',period:'all')[:rows]
     @bob.update!(suspended_till:nil)
+    @admin.update!(active:true)
     assert_raises(R::Error) { R::GameRanking.fetch(game:"slots' OR 1=1 --") }
     assert_raises(R::Error) { R::GameRanking.fetch(game:'slots',period:'nope') }
   end
 
   def test_games_streaks_pushes_do_not_count_or_break_and_other_games_do_not_mix
+    @bob.update!(admin:true)
     [10,0,10,-10,10,10,10].each_with_index { |n,i| ranking_round(@alice,'dice',n,at:(100-i).minutes.ago) }
     5.times { |i| ranking_round(@alice,'coin',10,at:(90-i).minutes.ago) }
     4.times { |i| ranking_round(@bob,'dice',10,at:(100-i).minutes.ago) }
@@ -325,6 +329,8 @@ class GamesTest < NativeBusinessTest
     assert_equal [4,3],board[:rows].map { |r| r[:value] }
     assert_equal 5,R::GameRanking.calculate(game:'coin',period:'all')[:rows].first[:value]
     assert_empty R::GameRanking.calculate(game:'blackjack',period:'all')[:rows]
+  ensure
+    @bob.update!(admin:false)
   end
 
 end

@@ -7,14 +7,14 @@ module DiscourseRsc
       raise Error.new('invalid_game') unless Games::NAMES.key?(game) || game == 'lottery'
       raise Error.new('invalid_request') unless %w[month all].include?(period)
       # Shared, bounded cache: opening a game never scans all rounds per visitor.
-      Rails.cache.fetch("rsc:game-ranking:v1:#{game}:#{period}", expires_in: 30.seconds) do
+      Rails.cache.fetch("rsc:game-ranking:v2:#{game}:#{period}", expires_in: 30.seconds) do
         calculate(game: game, period: period)
       end
     end
 
     def self.calculate(game:, period:)
       connection = GameRound.connection
-      eligible = "u.active AND NOT u.admin AND (u.suspended_till IS NULL OR u.suspended_till <= CURRENT_TIMESTAMP) AND a.status = 'active'"
+      eligible = "u.active AND (u.suspended_till IS NULL OR u.suspended_till <= CURRENT_TIMESTAMP) AND a.status = 'active'"
       if game == 'lottery'
         cutoff = period == 'month' ? "AND d.settled_at >= #{connection.quote(30.days.ago)}" : ''
         base = <<~SQL

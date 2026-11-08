@@ -237,6 +237,7 @@ class LotteryTest < NativeBusinessTest
   end
 
   def test_lottery_ranking_uses_net_of_all_tickets_in_draw_and_excludes_unsettled
+    @bob.update!(admin:true)
     buy('1234')
     buy('0000',quantity:3)
     buy('1234',actor:@bob)
@@ -252,6 +253,8 @@ class LotteryTest < NativeBusinessTest
     end
     assert board[:rows].all? { |r| r.keys.sort==[:achieved_at,:user,:value].sort }
     consistent
+  ensure
+    @bob.update!(admin:false)
   end
 
 end
