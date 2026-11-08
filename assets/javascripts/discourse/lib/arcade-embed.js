@@ -20,7 +20,7 @@ const send=(message)=>{
 const bridge=new ArcadeBridge({send,onError:showError,onInit:async payload=>{
  clearInterval(readyTimer);theme(payload.theme);status.hidden=true;
  const game=params.get('game');if(game&&!GAMES.some(g=>g.id===game)){throw new Error('未找到这个游戏');}
- app=new ArcadeApp(root,{game,request:(action,data)=>{if(retired){throw new Error('游戏已退出，请重新打开');}return bridge.request(action,data);},reloadCatalog:()=>loadCatalog(),
+ app=new ArcadeApp(root,{game,hostNavigation:!!game&&payload.host_navigation===true,request:(action,data)=>{if(retired){throw new Error('游戏已退出，请重新打开');}return bridge.request(action,data);},reloadCatalog:()=>loadCatalog(),
   updateSeason:current=>{if(current){app.update({catalog:{...app.args.catalog,current}});}},
   onProfile:username=>bridge.emit({type:'profile',username})});
  await loadCatalog();

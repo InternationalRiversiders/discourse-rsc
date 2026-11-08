@@ -18,7 +18,7 @@ js='/* Generated from the forum UI. Do not edit. */\n(()=>{"use strict";\n'
 for row in [('arcade-core','Core','ArcadeCore'),('arcade-playback','Playback','ArcadePlayback'),('arcade-effects','Effects','ArcadeEffects'),('arcade-draw','draw','draw'),('arcade-sprites','{loadMergeSprites}','{loadMergeSprites}'),('campus-time','{formatDateTime}','{formatDateTime}'),('arcade-cover','drawCover','drawCover'),('arcade-ui','{renderArcade}','{renderArcade}'),('arcade-app','{ArcadeApp,GAMES}','{ArcadeApp,GAMES}'),('arcade-transport','{arcadeRequest}','{arcadeRequest}'),('arcade-bridge','ArcadeBridge','ArcadeBridge')]:js+=module(*row)
 source=(base/'arcade-embed.js').read_text();sources['arcade-embed']=hashlib.sha256(source.encode()).hexdigest();js+=re.sub(r'^import .*?;\n','',source,flags=re.M)+'\n})();\n'
 css=subprocess.check_output([args.sass,'--style=compressed','--no-source-map',str(root/'assets/stylesheets/rsc-arcade-embed.scss')],text=True)
-for name in ['rsc-arcade.scss','rsc-arcade-embed.scss']:sources[name]=hashlib.sha256((root/'assets/stylesheets'/name).read_bytes()).hexdigest()
+for name in ['rsc-arcade.scss','rsc-arcade-embed.scss']:sources[name]=hashlib.sha256((root/'assets/stylesheets'/name).read_text().encode()).hexdigest()
 out=root/'public/arcade';prefix='/plugins/discourse-rsc/arcade/'
 sha=lambda data:hashlib.sha256(data.encode()).hexdigest()
 js_name='arcade-embed-'+sha(js)[:16]+'.js';css_name='arcade-embed-'+sha(css)[:16]+'.css'

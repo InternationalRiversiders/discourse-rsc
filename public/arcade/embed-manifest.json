@@ -2,10 +2,10 @@
   "protocol": 1,
   "rules_version": 4,
   "entry": "/rsc/arcade/embed",
-  "script": "/plugins/discourse-rsc/arcade/arcade-embed-1101c1bfe64f9a93.js",
+  "script": "/plugins/discourse-rsc/arcade/arcade-embed-139bed6d07dabb32.js",
   "stylesheet": "/plugins/discourse-rsc/arcade/arcade-embed-8db2d1ea1408de74.css",
   "sha256": {
-    "script": "1101c1bfe64f9a931bcca9940bfd491032beaeb43fe88c0e8d323170eaa1c45c",
+    "script": "139bed6d07dabb328b891b638fc1209c0675dc07d8277e779bb979e7940df3fe",
     "stylesheet": "8db2d1ea1408de743237d639f3143e9648ac4a52f481f523e698d438d45c23af"
   },
   "sources": {
@@ -16,11 +16,11 @@
     "arcade-sprites": "1f906d4fba7947a510373388e5ffa052af954c30ca221225b88afab3b43dabcc",
     "campus-time": "63f09fbc224fc607e26397d4375ddf6076074cf95868b980c4e2ae793105c12b",
     "arcade-cover": "5467cb745d7e3080a887eb46bc4b198e8ba90ac494aeaba3b599a841dbafb411",
-    "arcade-ui": "bd5c7a0e6100a32d2f824236c6b5cc5f0f65c4f9977970d459044a77f9327459",
-    "arcade-app": "4618f8b9d5a385b7672f355da3fa8effcdea5c8ed7699913e5efb256c9cccdd8",
+    "arcade-ui": "bd94692065d0f6c611feb4c0c8a00738f83aa92eacd20d9418fa86ce66b158eb",
+    "arcade-app": "5bc5fd6822f5dff3c5ea6b9db9d7ea0e991be5752b32f393860afe4f760c3119",
     "arcade-transport": "0a50ef69ccac882b9fba639b0b0ee7afb6c3a91ef3eedb0470c8722a143fc642",
     "arcade-bridge": "c72342fb74ebf6f94d15c37e22edc22881602aa12812b06b0dd532c5196fe808",
-    "arcade-embed": "2b0301b90f0f27cb203fb0ca1f62e8776cfb2eb071325fd8293fd48626784d74",
+    "arcade-embed": "eb17aa680746c35cdaa7a269867ddf064ad1933bfe4c2faaf536f9da80f4c2e2",
     "rsc-arcade.scss": "a87e7454e489c2f96fb1014d336f2757754ef79185c182a7fb8297499d21b19f",
     "rsc-arcade-embed.scss": "56d896137190f5c0865b47bb95bf734e70383c44c4c9e4bdf375f7b1a438127e"
   }

@@ -49,6 +49,8 @@ Flutter Web 由父页面和 iframe 使用 `postMessage`。两端 targetOrigin �
 
 theme 可为 `auto`、`light`、`dark`。页面只初始化一次，回复 `type: "initialized", rules_version: 4`。之后自动加载目录；指定 game 时也会读取榜单。**initialized 仅表示协议已建立，不代表已登录或 API 请求成功。** 协议不兼容时宿主应显示更新提示，不继续发送游戏请求。
 
+单游戏页面若由 App 提供标题栏和返回按钮，可在 init.payload 中额外传入 `host_navigation: true`（仅在入口带有效 game 时生效）。嵌入页将省略自己的标题和“返回挑战”，并固定当前游戏，不再进入网页内部大厅。App 顶部显示该游戏名称；返回仍通过既有 `exit` 命令等待 `saved: true` 后关闭容器。省略该选项、未指定 game 或普通论坛页面保留原有导航；不改变协议版本、鉴权或保存流程。
+
 宿主只能接受当前可信顶层文档发出的消息。限制加载 URL 的 scheme、host、port、path，阻止非可信跳转/新窗口，不能只做字符串前缀匹配；禁止同一桥被任意网页复用。嵌入页面 CSP 不允许子 frame 和直接业务网络请求。
 
 ## 四个业务 action
