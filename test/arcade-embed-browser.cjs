@@ -74,6 +74,22 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   assert((await command('exit')).result.saved,'exit drains in-flight checkpoint');
   assert(await page.locator('#arcade').evaluate(e=>e.inert));
   assert(!JSON.stringify(requests).includes(c.password));assert.equal(errors.length,0,errors.join('\n'));
+  // Single-game embeds delegate navigation to the App by default, without an
+  // init capability flag. The normal lobby above retains its own navigation.
+  lag=0;
+  await page.goto(base+'/rsc/arcade/embed?game=2048',{waitUntil:'networkidle'});
+  await page.locator('.ra-canvas[data-game="2048"]').waitFor();
+  assert.equal(await page.locator('.ra-heading').count(),0,'no duplicate game title');
+  assert.equal(await page.locator('[data-action=back]').count(),0,'no embedded lobby back button');
+  await page.getByRole('button',{name:'开始挑战',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('[data-action=pause]')?.hidden===false);
+  for(const key of ['ArrowLeft','ArrowDown','ArrowRight','ArrowUp'])await page.locator('.ra-canvas').press(key);
+  assert((await command('pause')).result.saved,'single-game background saves');
+  assert((await command('resume')).result.saved,'single-game resume restores');
+  assert((await command('exit')).result.saved,'single-game App back saves before exit');
+  assert(await page.locator('#arcade').evaluate(e=>e.inert));
+  assert.equal(errors.length,0,errors.join('\n'));
+  console.log('PASS default single-game navigation with pause/resume/exit; no opt-in flag');
   const parent=await host.newPage();
   await parent.route('**/embed-host-test',route=>route.fulfill({contentType:'text/html',body:`<!doctype html><iframe title="arcade" src="/rsc/arcade/embed?mode=iframe"></iframe><script>
    window.seen=[];window.addEventListener('message',async e=>{

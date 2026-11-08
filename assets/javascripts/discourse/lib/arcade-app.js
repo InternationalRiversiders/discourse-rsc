@@ -47,6 +47,7 @@ export default class ArcadeApp {
  effects=new Effects();repaint=true;mergeSprites=null;
  playback=null;state=null;canvas=null;raf=null;last=0;accumulator=0;generation=0;
  syncPromise=null;saveRequested=false;lastInputAt=0;
+ get fixedGame(){return this.args.embedded&&this.args.game;}
  get selected(){return GAMES.find(g=>g.id===this.game);}
  get rulesVersion(){return Core.version;}
  get rulesText(){return ENDLESS_RULES[this.game];}
@@ -71,14 +72,14 @@ export default class ArcadeApp {
  focusPlay(){this.canvas?.focus({preventScroll:true});if(window.innerWidth<=767){this.canvas?.closest('.ra-play')?.scrollIntoView({block:'start',behavior:'instant'});}}
  get controlsList(){return this.controls.map(k=>({key:k,label:{l:'←',r:'→',u:'↑',d:'↓'}[k]}));}
  async open(game){
-  if(this.args.hostNavigation&&game!==this.args.game){return;}
+  if(this.fixedGame&&game!==this.args.game){return;}
   this.generation++;this.rankInfo=false;this.rankChosen=false;this.rankScope=this.featured?.game===game?'season':'all';this.game=game;this.run=null;this.playback=null;this.pending=null;this.error='';
   this.paused=true;this.finishing=false;this.waiting=false;this.localOver=false;this.saveRequested=false;this.ranking=null;
   this.effects=new Effects({reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});this.state=Core.create(game,Array(24).fill(3733),this.rulesVersion);this.effects.observe(this.state);this.score=0;this.progress=0;this.loadRanking();
   if(game==='merge'){loadMergeSprites().then(images=>{if(!this.isDestroying){this.mergeSprites=images;this.effects.sprites=images;this.repaint=true;}});}
  }
  async back(){
-  if(this.args.hostNavigation){return;}
+  if(this.fixedGame){return;}
   if(this.busy||this.finishing){return;}this.paused=true;this.playback?.release();await this.flush();
   if(!this.error&&!this.isDestroying){this.startKey=null;this.game=null;this.playback=null;this.generation++;}
  }

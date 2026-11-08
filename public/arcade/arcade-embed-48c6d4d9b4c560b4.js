@@ -823,7 +823,7 @@ function renderArcade(app){
    root.querySelectorAll('canvas.ra-cover').forEach(c=>app.coverCleanups.push(drawCover(c,c.dataset.game)));
   }else{
    const controls=app.hasControls?`<div class="ra-controls" data-game="${app.game}">${[...app.controlsList,...(app.game==='blocks'?[{key:'drop',label:'落下'}]:[])].map(c=>`<button type="button" data-key="${c.key}" aria-label="${c.label}">${c.label}</button>`).join('')}</div>`:'';
-   const heading=app.args.hostNavigation?'':`<header class="ra-heading">${button('back','← 返回挑战')}<h2>${escape(app.selected.name)}</h2></header>`;
+   const heading=app.fixedGame?'':`<header class="ra-heading">${button('back','← 返回挑战')}<h2>${escape(app.selected.name)}</h2></header>`;
    root.innerHTML=`${heading}<p class="ra-rank-note ra-nonseason" hidden>本局计入总排行；新开一局可参加当前赛季。</p>
     <div class="rg-error" role="alert" hidden><span class="ra-error-text"></span>${button('retry','重试并恢复进度','btn')}${button('recover','读取已保存进度')}</div>
     <div class="ra-layout"><div class="ra-play" data-game="${app.game}"><div class="ra-scorebar"><div><small>本局得分</small><strong>0</strong></div><span role="status">准备就绪</span><small class="ra-progress"></small></div>
@@ -896,6 +896,7 @@ class ArcadeApp {
  effects=new Effects();repaint=true;mergeSprites=null;
  playback=null;state=null;canvas=null;raf=null;last=0;accumulator=0;generation=0;
  syncPromise=null;saveRequested=false;lastInputAt=0;
+ get fixedGame(){return this.args.embedded&&this.args.game;}
  get selected(){return GAMES.find(g=>g.id===this.game);}
  get rulesVersion(){return Core.version;}
  get rulesText(){return ENDLESS_RULES[this.game];}
@@ -920,14 +921,14 @@ class ArcadeApp {
  focusPlay(){this.canvas?.focus({preventScroll:true});if(window.innerWidth<=767){this.canvas?.closest('.ra-play')?.scrollIntoView({block:'start',behavior:'instant'});}}
  get controlsList(){return this.controls.map(k=>({key:k,label:{l:'←',r:'→',u:'↑',d:'↓'}[k]}));}
  async open(game){
-  if(this.args.hostNavigation&&game!==this.args.game){return;}
+  if(this.fixedGame&&game!==this.args.game){return;}
   this.generation++;this.rankInfo=false;this.rankChosen=false;this.rankScope=this.featured?.game===game?'season':'all';this.game=game;this.run=null;this.playback=null;this.pending=null;this.error='';
   this.paused=true;this.finishing=false;this.waiting=false;this.localOver=false;this.saveRequested=false;this.ranking=null;
   this.effects=new Effects({reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});this.state=Core.create(game,Array(24).fill(3733),this.rulesVersion);this.effects.observe(this.state);this.score=0;this.progress=0;this.loadRanking();
   if(game==='merge'){loadMergeSprites().then(images=>{if(!this.isDestroying){this.mergeSprites=images;this.effects.sprites=images;this.repaint=true;}});}
  }
  async back(){
-  if(this.args.hostNavigation){return;}
+  if(this.fixedGame){return;}
   if(this.busy||this.finishing){return;}this.paused=true;this.playback?.release();await this.flush();
   if(!this.error&&!this.isDestroying){this.startKey=null;this.game=null;this.playback=null;this.generation++;}
  }
@@ -1201,7 +1202,7 @@ const send=(message)=>{
 const bridge=new ArcadeBridge({send,onError:showError,onInit:async payload=>{
  clearInterval(readyTimer);theme(payload.theme);status.hidden=true;
  const game=params.get('game');if(game&&!GAMES.some(g=>g.id===game)){throw new Error('未找到这个游戏');}
- app=new ArcadeApp(root,{game,hostNavigation:!!game&&payload.host_navigation===true,request:(action,data)=>{if(retired){throw new Error('游戏已退出，请重新打开');}return bridge.request(action,data);},reloadCatalog:()=>loadCatalog(),
+ app=new ArcadeApp(root,{game,embedded:true,request:(action,data)=>{if(retired){throw new Error('游戏已退出，请重新打开');}return bridge.request(action,data);},reloadCatalog:()=>loadCatalog(),
   updateSeason:current=>{if(current){app.update({catalog:{...app.args.catalog,current}});}},
   onProfile:username=>bridge.emit({type:'profile',username})});
  await loadCatalog();
