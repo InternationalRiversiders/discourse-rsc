@@ -26,13 +26,13 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   await page.locator('.rg-ranking[aria-busy="false"]').waitFor();
   // Long IDs and large scores must fit a phone, using only public identity fields.
   await page.route('**/rsc/games/ranking.json*',r=>r.fulfill({contentType:'application/json',body:JSON.stringify({metric:'net',rows:Array.from({length:10},(_,i)=>({user:{id:i+10,username:'很长的用户名ABCDEFGHIJKLMNOPQRSTUVWXYZ'+i,avatar_template:'/plugins/discourse-rsc/images/games/cover-coin-v2.webp'},value:'12500.55',achieved_at:new Date().toISOString()}))})}));
-  await page.locator('.rg-tabs').getByRole('button',{name:'转转乐',exact:true}).click();
+  await page.getByRole('button',{name:'返回游戏',exact:true}).click();await page.locator('.rg-game-card').filter({hasText:'转转乐'}).click();
   await page.locator('.rg-ranking-list li').first().waitFor();
   assert.equal(await page.locator('.rg-ranking h2').innerText(),'单局净盈利榜');
   assert.equal(await page.locator('.rg-ranking-list li').count(),10);
   assert.equal(await page.locator('.rg-ranking-list [data-user-card]').count(),10);
   for(const width of [1360,390,320]){await page.setViewportSize({width,height:1000});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`overflow ${width}`);assert(await page.locator(".rg-ranking h2").evaluate(e=>e.getBoundingClientRect().height<25),"Ranking title stays on one line");await page.locator('.rg-ranking').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/ranking-${width}.png`});}
-  await page.locator('.rg-tabs').getByRole('button',{name:'21点',exact:true}).click();
+  await page.getByRole('button',{name:'返回游戏',exact:true}).click();await page.locator('.rg-game-card').filter({hasText:'21点'}).click();
   await page.getByRole('button',{name:'玩法与赔率',exact:true}).click();
   const rules=await page.locator('.rg-rules').innerText();assert(rules.includes('A＋6'));assert(rules.includes('双方都是天然 21 点'));assert.equal(await page.locator('.rg-felt-mark').count(),0);
   await page.locator('.rg-rules').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/blackjack-rules.png`});

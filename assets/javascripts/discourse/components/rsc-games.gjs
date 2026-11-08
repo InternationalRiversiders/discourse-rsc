@@ -264,7 +264,6 @@ export default class extends Component {
         {{#if this.active}}<button type="button" class="rg-resume" {{on "click" (fn this.open "blackjack")}}><span>♠</span>继续21点<strong>返回牌局 →</strong></button>{{/if}}
         <div class="rg-lobby">{{#each this.games as |game|}}<button type="button" class="rg-game-card rg-game-card--{{game.color}}" {{on "click" (fn this.open game.id)}}><span class="rg-card-number">{{game.mark}}</span><RscGameArt @game={{game.id}} /><div class="rg-card-bottom"><h2>{{game.name}}</h2><span class="rg-card-arrow">↗</span></div></button>{{/each}}</div>
       {{else}}
-        <nav class="rg-tabs" aria-label="选择游戏">{{#each this.games as |game|}}<button type="button" class={{if (eq this.game game.id) "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.game game.id}} {{on "click" (fn this.open game.id)}}>{{game.name}}</button>{{/each}}</nav>
         <div class="rg-play-layout">
           <div class="rg-stage rg-stage--{{this.game}} {{if this.busy 'is-busy'}} {{if this.uses3d 'is-3d'}} {{if this.animating 'is-animating'}}" aria-busy={{or this.busy this.animating}} {{this.motion this.round.id this.animating}}>
             {{#if (eq this.game "slots")}}

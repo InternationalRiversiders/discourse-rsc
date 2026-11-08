@@ -27,7 +27,7 @@ const hash=b=>crypto.createHash('sha1').update(b).digest('hex');
   });
   await page.route('**/rsc/games/*/action.json',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({id,game:'blackjack',name:'blackjack',status:'settled',version:2,stake:'10',payout:'20',net:'10',balance:'1010',state:{player:[12,9],dealer:[30,47,15],player_score:20,dealer_score:17,can_double:false,result:'win'},created_at:new Date().toISOString()})}));
   for(const [game,index,selector] of [['roulette',1,'.rg-wheel-disc'],['slots',0,'.rg-reel-strip'],['dice',5,'.rg-die-cube'],['coin',4,'.rg-coin-flipper']]){
-   if(await page.locator('.rg-game-card').count())await page.locator('.rg-game-card').nth(index).click();else await page.locator('.rg-tabs button').nth(index).click();
+   if(await page.locator('.rg-game-card').count())await page.locator('.rg-game-card').nth(index).click();else {await page.getByRole('button',{name:'返回游戏',exact:true}).click();await page.locator('.rg-game-card').nth(index).click();}
    if(mode==='3d'){await page.locator('.rg-stage.is-3d .rg-3d canvas').waitFor({timeout:45000});}
    else{await page.waitForTimeout(300);assert.equal(await page.locator('.rg-stage.is-3d').count(),0,'no WebGL 2 keeps the CSS stage');}
    if(game==='roulette')await page.locator('.rg-outside').getByRole('button',{name:'红',exact:true}).click();
@@ -65,7 +65,7 @@ const hash=b=>crypto.createHash('sha1').update(b).digest('hex');
   }
   if(mode==='3d'){
    // Blackjack: cards are dealt on the WebGL table, controls wait for the deal, hole card turns on stand.
-   await page.locator('.rg-tabs button').nth(3).click();await page.locator('.rg-stage.is-3d .rg-3d--blackjack canvas').waitFor({timeout:15000});
+   await page.getByRole('button',{name:'返回游戏',exact:true}).click();await page.locator('.rg-game-card').nth(3).click();await page.locator('.rg-stage.is-3d .rg-3d--blackjack canvas').waitFor({timeout:15000});
    await page.locator('.rg-play').click();await page.locator('.rg-3d--blackjack[data-motion="running"]').waitFor();
    assert(await page.getByRole('button',{name:'停牌',exact:true}).isDisabled(),'actions wait for the deal');
    await page.locator('.rg-stage').screenshot({path:`${out}/blackjack-3d-dealing.png`,animations:'allow'});
@@ -75,7 +75,7 @@ const hash=b=>crypto.createHash('sha1').update(b).digest('hex');
    assert.equal(await page.locator('.rg-3d--blackjack').getAttribute('aria-label'),'庄家 17 点，你的手牌 20 点');
    await page.locator('.rg-stage').screenshot({path:`${out}/blackjack-3d-settled.png`});
    // Scratch: a WebGL ticket flies in; dragging over a spot opens it; reveal-all finishes the rest.
-   await page.locator('.rg-tabs button').nth(2).click();await page.locator('.rg-large-ticket.is-3d .rg-3d--scratch canvas').waitFor({timeout:15000});
+   await page.getByRole('button',{name:'返回游戏',exact:true}).click();await page.locator('.rg-game-card').nth(2).click();await page.locator('.rg-large-ticket.is-3d .rg-3d--scratch canvas').waitFor({timeout:15000});
    await page.locator('.rg-play').click();await page.getByText('已刮开 0 / 10').waitFor();await page.waitForTimeout(900);
    const box=await page.locator('.rg-3d--scratch').boundingBox();
    const y0=box.y+box.height*0.305;await page.mouse.move(box.x+box.width*0.12,y0);await page.mouse.down();
@@ -90,12 +90,12 @@ const hash=b=>crypto.createHash('sha1').update(b).digest('hex');
   if(mode==='3d'){assert(threeRequests.length>=1,'three.js requested');assert(threeRequests.every(u=>new URL(u).pathname==='/plugins/discourse-rsc/javascripts/rsc-three-0.186.1-b2.js'));}
   else assert.equal(threeRequests.length,0,'no WebGL 2 skips the download');
   for(let i=0;i<6;i++){
-   await page.locator('.rg-tabs button').nth(i).click();await page.getByRole('button',{name:'玩法与赔率',exact:true}).click();
+   await page.getByRole('button',{name:'返回游戏',exact:true}).click();await page.locator('.rg-game-card').nth(i).click();await page.getByRole('button',{name:'玩法与赔率',exact:true}).click();
    const rules=await page.locator('.rg-rules').innerText();assert(!rules.includes('返还率'));if(i!==3){assert(!rules.includes('二十一点'));assert(!rules.includes('加倍'));}
    if(i===1){assert(!await page.locator('.rg-column-bets').innerText().then(t=>t.includes('…')));assert(rules.includes('1、4、7、10、13、16、19、22、25、28、31、34'));}
   }
   // Reduced motion still animates, about half as long, and then unlocks the controls.
-  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('.rg-tabs button').nth(4).click();
+  await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'返回游戏',exact:true}).click();await page.locator('.rg-game-card').nth(4).click();
   if(mode==='3d')await page.locator('.rg-stage.is-3d').waitFor();
   const reducedStart=Date.now();await page.locator('.rg-play').click();await page.waitForFunction(()=>document.querySelector('.rg-play')?.textContent.includes('开奖中'));
   await page.locator('.rg-result').waitFor({timeout:30000});assert(!(await page.locator('.rg-play').isDisabled()));

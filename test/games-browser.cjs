@@ -19,7 +19,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
    for(const width of widths){
     await page.setViewportSize({width,height:1100});
     for(const [i,name] of ['slots','roulette','scratch','blackjack','coin','dice'].entries()){
-     if(await page.locator('.rg-game-card').count()){await page.locator('.rg-game-card').nth(i).click();}else{await page.locator('.rg-tabs button').nth(i).click();}
+     if(await page.locator('.rg-game-card').count()){await page.locator('.rg-game-card').nth(i).click();}else{await page.getByRole('button',{name:'返回游戏',exact:true}).click();await page.locator('.rg-game-card').nth(i).click();}
      await page.locator(`.rg-stage--${name}`).waitFor();
      if(width===1440&&scheme==='light'){
       if(name==='roulette')await page.locator('.rg-outside').getByRole('button',{name:'红',exact:true}).click();

@@ -30,12 +30,12 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   await page.goto(base+'/rsc/games',{waitUntil:'domcontentloaded'});
   await page.locator('.rg-game-card').first().click();
   for(const [i,game] of ['slots','roulette','scratch','blackjack','coin','dice'].entries()){
-   await page.locator('.rg-tabs button').nth(i).click();
+   await page.getByRole('button',{name:'返回游戏',exact:true}).click();await page.locator('.rg-game-card').nth(i).click();
    await page.locator(game==='scratch'?'.rg-large-ticket.is-3d':'.rg-stage.is-3d').waitFor({timeout:30000});
    const size=await resolution();console.log(game,JSON.stringify(size));
    if(game==='blackjack'||game==='slots')await page.locator('.rg-stage').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/${game}-hd.png`});
   }
-  await page.locator('.rg-tabs button').nth(4).click();await page.locator('.rg-stage.is-3d').waitFor();await resolution();
+  await page.getByRole('button',{name:'返回游戏',exact:true}).click();await page.locator('.rg-game-card').nth(4).click();await page.locator('.rg-stage.is-3d').waitFor();await resolution();
   await page.locator('.rg-play').click();await page.locator('.rg-3d[data-motion="running"]').waitFor();await resolution(true);
   await page.locator('.rg-result').waitFor({timeout:45000});await resolution();
   await page.setViewportSize({width:390,height:900});await resolution();
