@@ -1,4 +1,5 @@
 import Core from "./arcade-core";
+const BLOCK_COLORS=['#6dc9e8','#e9d578','#ba9dea','#84ddc0','#f389a2','#7f9ae0','#f6bf70'];
 const PALETTE=['#84ddc0','#f6bf70','#9b9ef1','#f389a2','#6dc9e8','#e9d578','#ba9dea'];
 export default function draw(canvas,s,fx=null,now=performance.now()) {
  const ctx=canvas.getContext('2d');if(!ctx){return;}const width=s.game==='blocks'?296:400,height=s.game==='blocks'?576:s.game==='2048'||s.game==='snake'||s.game==='hex'?400:560;
@@ -18,17 +19,18 @@ export default function draw(canvas,s,fx=null,now=performance.now()) {
  if(s.game==='blocks'){
   // Exactly ten columns; the frame is outside the playable rectangle.
   ctx.fillStyle='#557782';ctx.fillRect(0,0,width,height);
-  ctx.translate(-52,8);ctx.fillStyle='#102c39';ctx.fillRect(60,0,280,560);
-  const cell=(i,v)=>{if(v){box(61+i%10*28,Math.floor(i/10)*28+1,26,26,PALETTE[(v-1)%7],4);box(64+i%10*28,Math.floor(i/10)*28+3,20,3,'#ffffff35',1);}};
+  ctx.save();ctx.translate(-52,8);ctx.fillStyle='#102c39';ctx.fillRect(60,0,280,560);
+  const cell=(i,v)=>{if(v){box(61+i%10*28,Math.floor(i/10)*28+1,26,26,BLOCK_COLORS[(v-1)%7],4);box(64+i%10*28,Math.floor(i/10)*28+3,20,3,'#ffffff35',1);}};
   ctx.strokeStyle='#23424f';for(let x=60;x<=340;x+=28){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,560);ctx.stroke();}
   for(let y=0;y<=560;y+=28){ctx.beginPath();ctx.moveTo(60,y);ctx.lineTo(340,y);ctx.stroke();}
   s.board.forEach((v,i)=>cell(i,v));if(s.piece){
    let ghost=s.piece.y;
    const fits=y=>s.piece.cells.every(([x,dy])=>{x+=s.piece.x;dy+=y;return x>=0&&x<10&&dy>=0&&dy<20&&!s.board[dy*10+x];});
    while(fits(ghost+1))ghost++;
-   ctx.save();ctx.strokeStyle=PALETTE[(s.piece.color-1)%7];ctx.globalAlpha=.55;ctx.lineWidth=1.5;s.piece.cells.forEach(([x,y])=>{ctx.beginPath();ctx.roundRect(62+(x+s.piece.x)*28,(y+ghost)*28+2,24,24,4);ctx.stroke();});ctx.restore();
+   ctx.save();ctx.strokeStyle=BLOCK_COLORS[(s.piece.color-1)%7];ctx.globalAlpha=.55;ctx.lineWidth=1.5;s.piece.cells.forEach(([x,y])=>{ctx.beginPath();ctx.roundRect(62+(x+s.piece.x)*28,(y+ghost)*28+2,24,24,4);ctx.stroke();});ctx.restore();
    s.piece.cells.forEach(([x,y])=>cell((y+s.piece.y)*10+x+s.piece.x,s.piece.color));
   }
+  ctx.restore();
  }
  if(s.game==='snake'){
   ctx.fillStyle='#e3edca';ctx.fillRect(0,0,400,400);
@@ -83,5 +85,5 @@ export default function draw(canvas,s,fx=null,now=performance.now()) {
   s.balls.forEach(b=>fruit(b.x/10,b.y/10,b.level,false,fx?.pop?.(b.id,now)||1,(b.angle||0)/10000));if(s.version>=2||s.drops<100){fruit(s.aim/10,25,s.next);if(s.cooldown){box(s.aim/10-18,48,36*(1-s.cooldown/(s.version===1?45:24)),2,'#b3ead8',1);}}
 
  }
- fx?.overlay?.(ctx,now,['2048','snake','merge','hex','bird'].includes(s.game)?'#5e6241':'#e5f6c6');
+ fx?.overlay?.(ctx,now,['2048','snake','merge','hex','bird'].includes(s.game)?'#5e6241':'#e5f6c6',width/2);
 }

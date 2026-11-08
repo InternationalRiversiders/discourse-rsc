@@ -26,6 +26,13 @@ export default class ArcadePlayback {
   input(key) {
     if (this.state.over || this.run.status !== "playing") { return; }
     if ((this.grid || this.run.game === "snake") && !["l", "r", "u", "d"].includes(key)) { return; }
+    if (this.run.game === "snake") {
+      const dirs=["u","r","d","l"], next=dirs.indexOf(key);
+      const last=this.keys.length?dirs.indexOf(this.keys[this.keys.length-1]):this.state.dir;
+      if(next===last||(next+2)%4===last||this.keys.length>=2){return;}
+    }
+    // Multiple events within one simulation frame are one flap, not a backlog.
+    if(this.run.game === "bird" && this.keys.includes(key)){return;}
     if (key.startsWith("x:")) {
       this.keys = this.keys.filter(k => !k.startsWith("x:"));
     }

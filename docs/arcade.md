@@ -13,3 +13,19 @@
 - 论坛与 App 嵌入页面共用完整 UI、键位和触控；SDK 不等于完整页面，App 优先使用正式嵌入入口。
 
 发布前验证后端规则与回放、前端真实操作、资源指纹及 WebView 协议。前端完整编译后，按工作区 AGENTS.md 的 A/B 容器切换流程上线；数据库兼容与回滚按实际变更检查。
+
+### 规则 v4：手感核对（2026-11-08）
+
+共享网页与嵌入页一起更新；桥接协议仍为 1，宿主使用可信页面 `ready.rules_version`，不写死玩法版本。已打开的 v2/v3 对局仍可完成，恢复旧存档时保留棋盘、分数和随机队列，在服务器检查点升级。
+
+本轮对照的是具体源码及实际运行参数，并未直接移植整套引擎：
+
+- [老河畔合成](https://bbs.uestc.edu.cn/merge_qshp/)：Cocos 2.2.2 / Box2D，球体摩擦 1、弹性 0.1、允许休眠；触摸松开投放。共享引擎改用保留小数余量的整数快照，接触摩擦和稳定停转，碰撞或失去支撑后恢复运动。修复保留旧 ID 合成时漏掉动画反馈。不宣称与 Box2D 完全等价。
+- [tetr.js](https://github.com/simonlc/tetr.js)：七袋出块、SRS 旋转及锁定延迟。这里使用七袋、形状固定色、顺时针踢墙、30 帧落地锁定时间，最多 15 次移动/旋转重置；硬降立即锁定。
+- [javascript-breakout](https://github.com/jakesgordon/javascript-breakout)：按运动路径选最近接触点并处理剩余帧时间。这里独立实现扫掠检测，挡板击球位置控制角度，同关出球速度一致。
+- [html5-snake](https://github.com/andrew-lim/html5-snake)：短转向队列。这里最多缓存两次有效转向，忽略重复及反向输入，滑动过阈值即响应。
+- [floppybird](https://github.com/nebez/floppybird)：身体内缩碰撞、触顶钳制。保留 v3 身体椭圆，触顶停止上升，同一帧重复点击合并，不积压后续自动拍翅。
+- [2048](https://github.com/gabrielecirulli/2048)：移动、生成及合并分别反馈。修复正常步进的新方块反馈遗漏。
+- [Hextris](https://github.com/Hextris/hextris)：参考相邻同色连通消除的玩法，独立实现跨边连通组与连锁消除，未复制其 GPL 源码。
+
+`test/arcade/handfeel.mjs` 检验静止 60 秒、碰撞唤醒、支撑消失、锁定延迟、踢墙、扫掠碰撞、短输入队列和反馈；v1–v4 固定回放同时通过 Node、Chromium 与服务端 MiniRacer。画面效果不写入成绩状态。

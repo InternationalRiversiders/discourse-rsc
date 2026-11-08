@@ -53,7 +53,7 @@ effects.observe(playback.state, playback.visualMove);
 draw(canvas, playback.state, effects);
 // 同时最多一份请求；网络慢时允许有限尾帧继续推进。
 const request = playback.checkpoint(crypto.randomUUID());
-// response = await nativeBridge.advance(playback.run.id, {...request, rules_version:3})
+// response = await nativeBridge.advance(playback.run.id, {...request, rules_version:4})
 // playback.acknowledge(response)
 ```
 
@@ -81,8 +81,8 @@ const request = playback.checkpoint(crypto.randomUUID());
 | --- | --- | --- |
 | GET | `/rsc/arcade/catalog.json` | 游戏列表、规则版本、当前轮替赛季、服务端时间 |
 | GET | `/rsc/arcade/ranking.json?game=2048` | 永久 `rows`，该游戏当期 `season`，当前轮替 `featured` |
-| POST | `/rsc/arcade/start.json` | `{game, request_id, rules_version:3}`；同用户同游戏恢复未过期局 |
-| POST | `/rsc/arcade/:id/advance.json` | `{version, request_id, frames, events, finish, rules_version:3}`；分数由服务端计算 |
+| POST | `/rsc/arcade/start.json` | `{game, request_id, rules_version:4}`；同用户同游戏恢复未过期局 |
+| POST | `/rsc/arcade/:id/advance.json` | `{version, request_id, frames, events, finish, rules_version:4}`；分数由服务端计算 |
 
 - 默认一周一个游戏，顺序：2048 → 方块堆叠 → 贪吃蛇 → 河畔飞鸟 → 六角消除 → 打砖块 → 合成大河畔。
 - 后台 `rsc_arcade_rotation_cadence` 可切 `daily`；从下一期生效，不中途缩短当前赛季。默认周日北京时间 20:00 换期，日赛沿用北京时间 20:00。

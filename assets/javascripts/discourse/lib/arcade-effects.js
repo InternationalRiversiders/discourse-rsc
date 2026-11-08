@@ -27,6 +27,8 @@ export default class ArcadeEffects {
       this.lastMove=move;
       this.motion={start:now,tracks:tileTracks(move.board,move.direction),board:move.board};
       for(const t of this.motion.tracks){if(t.merged){this.pops.set(t.to,now+110);}}
+      const occupied=new Set(this.motion.tracks.map(t=>t.to));
+      s.board.forEach((v,i)=>{if(v&&!occupied.has(i)){this.pops.set(i,now+110);}});
     }
     if(before){
       if(s.score>before.score){this.scoreGain={amount:s.score-before.score,start:now};}
@@ -35,7 +37,7 @@ export default class ArcadeEffects {
       }
       if(s.game==='blocks'&&s.lines>before.lines){
         const full=before.board.slice();before.piece?.cells.forEach(([x,y])=>{const i=(y+before.piece.y)*10+x+before.piece.x;if(i>=0&&i<200){full[i]=1;}});
-        for(let row=0;row<20;row++){if(full.slice(row*10,row*10+10).every(Boolean)){for(let x=0;x<5;x++)this.burst(88+x*56,row*28+14,'#c3f0d7',now,22);}}
+        for(let row=0;row<20;row++){if(full.slice(row*10,row*10+10).every(Boolean)){for(let x=0;x<5;x++)this.burst(36+x*56,row*28+22,'#c3f0d7',now,22);}}
       }
       if(s.game==='snake'&&s.snake[0]!==before.snake[0]){
         this.snakeMove={from:before.snake,start:now};
@@ -54,12 +56,12 @@ export default class ArcadeEffects {
         if(s.lives<before.lives){this.burst(s.paddle/10,510,'#f389a2',now,35);this.trail=[];}
       }
       if(s.game==='merge'&&s.score>before.score){
-        const old=new Set(before.balls.map(b=>b.id));
-        s.balls.forEach(b=>{if(!old.has(b.id)){this.burst(b.x/10,b.y/10,'#f6df9c',now,18+b.level*3);this.pops.set(b.id,now);}});
+        const old=new Map(before.balls.map(b=>[b.id,b.level]));
+        s.balls.forEach(b=>{if(!old.has(b.id)||b.level>old.get(b.id)){this.burst(b.x/10,b.y/10,'#f6df9c',now,18+b.level*3);this.pops.set(b.id,now);}});
       }
     }
     this.previous={game:s.game,tick:s.tick,score:s.score,lines:s.lines,food:s.food,rotation:s.rotation,lives:s.lives,
-      board:s.board?.slice(),piece:s.piece?{...s.piece}:null,snake:s.snake?.slice(),lanes:s.lanes?.map(l=>l.slice()),balls:s.balls?.map(b=>({id:b.id}))};
+      board:s.board?.slice(),piece:s.piece?{...s.piece}:null,snake:s.snake?.slice(),lanes:s.lanes?.map(l=>l.slice()),balls:s.balls?.map(b=>({id:b.id,level:b.level}))};
     for(const [key,start] of this.pops){if(now-start>500)this.pops.delete(key);}
     this.bursts=this.bursts.filter(b=>now-b.start<500);
   }
@@ -78,10 +80,10 @@ export default class ArcadeEffects {
     if(!this.turn||this.reducedMotion)return s.rotation;
     const t=Math.min(1,Math.max(0,(now-this.turn.start)/100));return this.turn.from+(this.turn.to-this.turn.from)*(1-(1-t)**3);
   }
-  overlay(ctx,now,scoreColor='#e5f6c6'){
+  overlay(ctx,now,scoreColor='#e5f6c6',centerX=200){
     if(this.reducedMotion)return;
     for(const b of this.bursts){const t=(now-b.start)/500;if(t<0||t>1)continue;ctx.save();ctx.globalAlpha=1-t;ctx.strokeStyle=b.color;ctx.lineWidth=2;ctx.beginPath();ctx.arc(b.x,b.y,b.radius*(.5+t),0,Math.PI*2);ctx.stroke();
       ctx.fillStyle=b.color;for(let i=0;i<8;i++){const a=i*Math.PI/4,d=b.radius*t*2.3;ctx.fillRect(b.x+Math.cos(a)*d-1.5,b.y+Math.sin(a)*d-1.5,3,3);}ctx.restore();}
-    const gain=this.scoreGain;if(gain){const t=(now-gain.start)/650;if(t>=0&&t<1){ctx.save();ctx.globalAlpha=1-t;ctx.fillStyle=scoreColor;ctx.font='700 22px system-ui';ctx.textAlign='center';ctx.fillText(`+${gain.amount}`,200,36-t*18);ctx.restore();}}
+    const gain=this.scoreGain;if(gain){const t=(now-gain.start)/650;if(t>=0&&t<1){ctx.save();ctx.globalAlpha=1-t;ctx.fillStyle=scoreColor;ctx.font='700 22px system-ui';ctx.textAlign='center';ctx.fillText(`+${gain.amount}`,centerX,36-t*18);ctx.restore();}}
   }
 }

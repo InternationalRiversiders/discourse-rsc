@@ -4,7 +4,7 @@ module DiscourseRsc
   module Arcade
     NAMES = { '2048'=>'2048', 'blocks'=>'方块堆叠', 'snake'=>'贪吃蛇', 'bird'=>'河畔飞鸟', 'hex'=>'六角消除', 'bricks'=>'打砖块', 'merge'=>'合成大河畔' }.freeze
     PRIZES = [100,60,40,25,15].freeze
-    RULES_VERSION = 3
+    RULES_VERSION = 4
     CHECKPOINT_BATCHES = 64
     SAVE_RETENTION = 30.days
     CORE = File.read(File.expand_path('../../../assets/javascripts/discourse/lib/arcade-core.js', __dir__)).sub('export default ArcadeCore;', 'globalThis.ArcadeCore = ArcadeCore;').freeze
@@ -80,7 +80,7 @@ module DiscourseRsc
     def self.start(actor:, game:, request_id:, rules_version: 1, scope: 'season')
       access!(actor,writable:true);key!(request_id)
       raise Error.new('invalid_game') unless NAMES.key?(game)
-      raise Error.new('arcade_upgrade') unless [2,RULES_VERSION].include?(rules_version)
+      raise Error.new('arcade_upgrade') unless [2,3,RULES_VERSION].include?(rules_version)
       raise Error.new('arcade_invalid_actions') unless %w[all season].include?(scope)
       ArcadeRun.transaction do
         Commands.lock("arcade-start:#{actor.id}")
@@ -122,7 +122,7 @@ module DiscourseRsc
     end
     def self.advance(actor:, id:, version:, request_id:, frames:, events:, finish: false, rules_version: 1)
       access!(actor,writable:true);key!(request_id)
-      raise Error.new('arcade_upgrade') unless [2,RULES_VERSION].include?(rules_version)
+      raise Error.new('arcade_upgrade') unless [2,3,RULES_VERSION].include?(rules_version)
       raise Error.new('arcade_invalid_actions') unless version.is_a?(Integer) && frames.is_a?(Integer) && [true,false].include?(finish)
       raise Error.new('arcade_invalid_actions') unless events.is_a?(Array) && events.size<=360 && events.all? { |e| e.is_a?(Array) && e.size==2 && e[0].is_a?(Integer) && e[1].is_a?(String) && e[1].bytesize<=10 }
       fingerprint=Digest::SHA256.hexdigest(JSON.generate([version,frames,events,finish]))
@@ -132,7 +132,7 @@ module DiscourseRsc
         period_lock=Digest::SHA256.digest("arcade-period:#{run.period_id}").unpack1('q>')
         ArcadeRun.connection.execute("SELECT pg_advisory_xact_lock_shared(#{period_lock})")
         run.lock!
-        raise Error.new('arcade_version',status:409) unless [2,RULES_VERSION].include?(run.state['version']) && run.state['version']<=rules_version
+        raise Error.new('arcade_version',status:409) unless [2,3,RULES_VERSION].include?(run.state['version']) && run.state['version']<=rules_version
         if run.last_key==request_id
           raise Error.new('idempotency_conflict',status:409) unless run.last_digest==fingerprint
           next view(run)

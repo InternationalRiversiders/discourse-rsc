@@ -8,6 +8,15 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
  page.on('pageerror',e=>errors.push(e.message));
  page.on('console',m=>{if(m.type()==='error'&&/Content Security Policy|Refused to/.test(m.text()))errors.push(m.text());});
  try{
+  const enginePage=await host.newPage();
+  await enginePage.route('**/rsc-engine-check',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>Engine check</title>'}));
+  await enginePage.goto(base+'/rsc-engine-check');
+  const manifest=JSON.parse(fs.readFileSync(__dirname+'/../public/arcade/manifest.json'));
+  await enginePage.addScriptTag({url:base+manifest.script});
+  const fixtures=['fixtures.json','fixtures-v2.json','fixtures-v3.json','fixtures-v4.json'].flatMap(name=>JSON.parse(fs.readFileSync(__dirname+'/arcade/'+name)));
+  const checks=await enginePage.evaluate(fixtures=>fixtures.map(f=>JSON.stringify(window.RiversideArcade.Core.advance(f.initial,f.frames,f.events))),fixtures);
+  checks.forEach((actual,i)=>assert.deepEqual(JSON.parse(actual),fixtures[i].expected,'Chromium replay '+fixtures[i].game));
+  await enginePage.close();console.log('Chromium/Node replay fixtures agree');
   await login.goto(base+'/login',{waitUntil:'networkidle'});
   assert.equal(await login.evaluate(async c=>{for(let i=0;i<2;i++){const {csrf}=await(await fetch('/session/csrf.json')).json();const r=await fetch('/session.json',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf,'X-Requested-With':'XMLHttpRequest'},body:JSON.stringify({login:c.username,password:c.password})});if(r.status!==403||i===1)return r.status;}},c),200);
   csrf=await login.evaluate(async()=>(await(await fetch('/session/csrf.json')).json()).csrf);

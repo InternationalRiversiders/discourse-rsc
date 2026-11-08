@@ -21,7 +21,7 @@ body = ('/* Riverside Arcade: generated from the forum modules. Do not edit. */\
 digest = hashlib.sha256(body.encode()).hexdigest()
 out = root / 'public/arcade'
 filename = f'rsc-arcade-sdk-{digest[:16]}.js'
-manifest = json.dumps({'protocol': 1, 'rules_version': 3, 'script': '/plugins/discourse-rsc/arcade/' + filename,
+manifest = json.dumps({'protocol': 1, 'rules_version': 4, 'script': '/plugins/discourse-rsc/arcade/' + filename,
     'sha256': digest, 'assets': [{'url': '/plugins/discourse-rsc/arcade/merge/'+a['file'], 'sha256': a['sha256']} for a in json.loads((out / 'merge/source.json').read_text())['assets']], 'sources': {k: hashlib.sha256(v.encode()).hexdigest() for k, v in parts.items()}}, indent=2) + '\n'
 parser = argparse.ArgumentParser(); parser.add_argument('--check', action='store_true'); args = parser.parse_args()
 if args.check:

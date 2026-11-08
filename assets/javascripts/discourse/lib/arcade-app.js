@@ -20,9 +20,9 @@ const ENDLESS_RULES={
  blocks:'左右移动，上键旋转，下键加速，空格落下。消除 1／2／3／4 行获得 100／300／500／800 分；消行越多下落越快，堆到顶部结束。',
  snake:'方向键或滑动转向，吃到食物获得 100 分。不能直接掉头，撞墙、障碍或身体结束，填满可用格子通关。',
  bird:'轻点画面或空格拍动翅膀。每穿过一道障碍获得 1 分，速度和难度随进度逐步增加，碰撞结束。',
- hex:'左右旋转中心六边形，堆叠末尾三个同色块消除并获得 100 分。速度随得分增加，任一边堆到 10 块结束。',
+ hex:'左右旋转中心六边形，三个及以上相邻同色块消除，可跨相邻边连接。每三个约 100 分，连续消除有倍数加分；任一边堆到 10 块结束。',
  bricks:'拖动画面或按住键盘左右键移动挡板，每消除一块砖获得 100 分。清屏进入下一关，后续有更耐打的砖块、不同布局和更快球速，3 条生命耗尽结束。',
- merge:'移动指针选择落点，轻点投放；也可左右移动、空格投放。同级图案相碰合成，得分随等级增加。可贴墙投放，越过虚线持续 3 秒结束。'
+ merge:'按住拖动选择落点，松手投放；也可左右移动、空格投放。同级图案相碰合成，得分随等级增加。可贴墙投放，越过虚线持续 3 秒结束。'
 };
 export default class ArcadeApp {
  games=GAMES;
@@ -174,19 +174,23 @@ export default class ArcadeApp {
   const up=e=>{const k=keyMap[e.key];if(k){this.playback?.release(k);}};
   const aim=e=>{const r=canvas.getBoundingClientRect();return `x:${Math.round(Math.max(0,Math.min(4000,(e.clientX-r.left)/r.width*4000)))}`;};
   const down=e=>{
-   e.preventDefault();canvas.setPointerCapture(e.pointerId);pointer={x:e.clientX,y:e.clientY};canvas.focus({preventScroll:true});
-   if(this.game==='bricks'&&this.rulesVersion>=2){this.input(aim(e));}else if(this.game==='merge'){this.input(aim(e));this.input('drop');}
+   if(pointer||this.inputDisabled){return;}e.preventDefault();canvas.setPointerCapture(e.pointerId);pointer={id:e.pointerId,x:e.clientX,y:e.clientY,swiped:false};canvas.focus({preventScroll:true});
+   if(this.game==='bricks'&&this.rulesVersion>=2){this.input(aim(e));}else if(this.game==='merge'){this.input(aim(e));}
   };
   const playArea=canvas.closest('.ra-play');
   const flap=e=>{if(this.game!=='bird'||this.inputDisabled||e.target.closest('button,a,input,summary,details')){return;}e.preventDefault();canvas.focus({preventScroll:true});this.input('tap');};
   playArea.addEventListener('pointerdown',flap);
+  const swipe=e=>{
+   if(pointer&&pointer.id===e.pointerId&&!pointer.swiped&&(this.grid||this.game==='snake')){const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;if(Math.max(Math.abs(dx),Math.abs(dy))>15){pointer.swiped=true;this.input(Math.abs(dx)>Math.abs(dy)?dx>0?'r':'l':dy>0?'d':'u');}}
+  };
   const end=e=>{
-   if(pointer&&(this.grid||this.game==='snake')){const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;if(Math.max(Math.abs(dx),Math.abs(dy))>15){this.input(Math.abs(dx)>Math.abs(dy)?dx>0?'r':'l':dy>0?'d':'u');}}
+   if(!pointer||pointer.id!==e.pointerId){return;}swipe(e);
+   if(this.game==='merge'&&!this.inputDisabled){this.input(aim(e));this.input('drop');}
    pointer=null;
   };
   const cancel=()=>{pointer=null;this.playback?.release();};
-  const move=e=>{if(this.game==='merge'||(pointer&&this.game==='bricks'&&this.rulesVersion>=2)){this.input(aim(e));}};
-  const blur=()=>{this.pause();};const visibility=()=>{if(document.hidden){this.pause();}};
+  const move=e=>{swipe(e);if((!pointer||pointer.id===e.pointerId)&&(this.game==='merge'||(pointer&&this.game==='bricks'&&this.rulesVersion>=2))){this.input(aim(e));}};
+  const blur=()=>{cancel();this.pause();};const visibility=()=>{if(document.hidden){cancel();this.pause();}};
   canvas.addEventListener('keydown',key);window.addEventListener('keyup',up);canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('pointermove',move);window.addEventListener('blur',blur);document.addEventListener('visibilitychange',visibility);
   const loop=t=>{
    if(this.isDestroying){return;}const delta=Math.min(100,t-(this.last||t));this.last=t;

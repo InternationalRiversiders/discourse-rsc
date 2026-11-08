@@ -1,6 +1,6 @@
 // Shared deterministic rules. No clock, browser API, random seed or wallet access.
 // All coordinates and velocities are integers. Rendering never affects simulation.
-const ARCADE_VERSION = 3;
+const ARCADE_VERSION = 4;
 const GAME_IDS = ["2048", "blocks", "snake", "bird", "hex", "bricks", "merge"];
 const LIMITS = {"2048": 2000, blocks: 18000, snake: 18000, bird: 10800, hex: 10800, bricks: 18000, merge: 18000};
 const SHAPES = [[[0,0],[1,0],[2,0],[3,0]],[[0,0],[1,0],[0,1],[1,1]],[[1,0],[0,1],[1,1],[2,1]],[[1,0],[2,0],[0,1],[1,1]],[[0,0],[1,0],[1,1],[2,1]],[[0,0],[0,1],[1,1],[2,1]],[[2,0],[0,1],[1,1],[2,1]]];
@@ -9,11 +9,18 @@ const clone = (s) => JSON.parse(JSON.stringify(s));
 function take(s,n) { if (!s.q.length) { throw new Error("queue_empty"); } return s.q.shift()%n; }
 function tile(s) { const empty=s.board.map((v,i)=>v?null:i).filter(i=>i!==null); if(empty.length){s.board[empty[take(s,empty.length)]]=take(s,10)===0?4:2;} }
 function food(s) { const free=[];for(let i=0;i<400;i++){if(!s.snake.includes(i)&&!s.walls.includes(i)){free.push(i);}}if(!free.length){s.over=true;}else{s.food=free[take(s,free.length)];} }
-function block(s) { s.piece={cells:clone(SHAPES[take(s,7)]),x:3,y:0,color:s.pieces%7+1};s.pieces++;if(!fits(s,s.piece)){s.over=true;} }
+function block(s) {
+ if(s.version>=4){
+  if(!s.bag?.length)s.bag=[0,1,2,3,4,5,6];
+  const shape=s.bag.splice(take(s,s.bag.length),1)[0];
+  s.piece={cells:shape===0?[[0,1],[1,1],[2,1],[3,1]]:clone(SHAPES[shape]),shape,rotation:0,x:3,y:0,color:shape+1};
+  s.pieces++;s.fall=0;s.lock=0;s.lockResets=0;if(!fits(s,s.piece))s.over=true;return;
+ }
+ s.piece={cells:clone(SHAPES[take(s,7)]),x:3,y:0,color:s.pieces%7+1};s.pieces++;if(!fits(s,s.piece)){s.over=true;} }
 function fits(s,p) {return p.cells.every(([x,y])=>{x+=p.x;y+=p.y;return x>=0&&x<10&&y>=0&&y<20&&!s.board[y*10+x];});}
 function lower(s) {const p={...s.piece,y:s.piece.y+1};if(fits(s,p)){s.piece=p;return true;}for(const [x,y] of s.piece.cells){s.board[(s.piece.y+y)*10+s.piece.x+x]=s.piece.color;}let lines=0;for(let y=19;y>=0;y--){if(s.board.slice(y*10,y*10+10).every(Boolean)){s.board.splice(y*10,10);s.board.unshift(...Array(10).fill(0));lines++;y++;}}s.lines+=lines;s.score+=[0,100,300,500,800][lines];if(s.version===1&&s.pieces>=200){s.over=true;}else{block(s);}return false;}
 function create(game,q,version=ARCADE_VERSION) {
- if(![1,2,3].includes(version)){throw new Error("rules_version");}
+ if(![1,2,3,4].includes(version)){throw new Error("rules_version");}
  if(!GAME_IDS.includes(game)){throw new Error("game");}
  const s={game,version,tick:0,score:0,over:false,q:q.slice(),limit:version===1?LIMITS[game]:null};
  if(game==="2048"){s.board=Array(16).fill(0);tile(s);tile(s);}
@@ -169,6 +176,164 @@ function mergePhysicsV3(s) {
  }
  s.danger=s.balls.some(b=>b.y-RADIUS[b.level]<400)?s.danger+1:0;if(s.danger>180)s.over=true;
 }
+// Version 4: retain sub-unit precision during contact resolution. The persistent
+// precise tuple is integer fixed-point; rendered coordinates remain integers.
+function mergePhysicsV4(s) {
+ const clamp=(v,n)=>Math.max(-n,Math.min(n,v));
+ const bodies=s.balls.map(b=>{
+  const p=b.precise;
+  return {...b,x:p?p[0]/1000:b.x,y:p?p[1]/1000:b.y,vx:p?p[2]/1000:b.vx,vy:p?p[3]/1000:b.vy,
+   w:p?p[4]/1e7:(b.spin||0)/10000,a:p?p[5]/1e7:(b.angle||0)/10000,
+   startX:p?p[0]/1000:b.x,startY:p?p[1]/1000:b.y,startA:p?p[5]/1e7:(b.angle||0)/10000,contact:false,hit:0};
+ });
+ let balls=bodies;const merged=new Set();
+ for(let sub=0;sub<2;sub++){
+  for(const b of balls){b.vy=Math.min(140,b.vy+2);b.x+=b.vx/2;b.y+=b.vy/2;b.a+=b.w/2;b.w*=.998;}
+  for(let pass=0;pass<6;pass++){
+   const buckets=new Map(),pairs=new Set(),count=balls.length;
+   for(let i=0;i<count;i++){
+    const b=balls[i],r=RADIUS[b.level];
+    for(let x=Math.floor((b.x-r)/500);x<=Math.floor((b.x+r)/500);x++)for(let y=Math.floor((b.y-r)/500);y<=Math.floor((b.y+r)/500);y++){
+     const key=x+','+y,ids=buckets.get(key)||[];for(const j of ids)pairs.add(j*count+i);ids.push(i);buckets.set(key,ids);
+    }
+   }
+   const removed=new Set();
+   for(const code of [...pairs].sort((a,b)=>a-b)){
+    const i=Math.floor(code/count),j=code%count;if(removed.has(i)||removed.has(j))continue;
+    const a=balls[i],b=balls[j],ra=RADIUS[a.level],rb=RADIUS[b.level],dx=b.x-a.x,dy=b.y-a.y,rr=ra+rb;
+    if(dx*dx+dy*dy>(rr+.5)**2)continue;
+    if(a.level===b.level&&a.level<10&&!merged.has(a.id)&&!merged.has(b.id)){
+     a.level++;a.x=(a.x+b.x)/2;a.y=(a.y+b.y)/2;a.vx=(a.vx+b.vx)/2;a.vy=(a.vy+b.vy)/2;
+     a.w=(a.w+b.w)/2;a.rest=0;a.hit=20;s.score+=2**a.level*10;removed.add(j);merged.add(a.id);continue;
+    }
+    a.contact=b.contact=true;
+    const dist=Math.max(.001,Math.hypot(dx,dy)),nx=dx===0&&dy===0?1:dx/dist,ny=dy/dist,tx=-ny,ty=nx;
+    const wa=rb*rb/(ra*ra+rb*rb),wb=1-wa,overlap=Math.max(0,rr-dist-.1)*.8;
+    a.x-=nx*overlap*wa;a.y-=ny*overlap*wa;b.x+=nx*overlap*wb;b.y+=ny*overlap*wb;
+    const normal=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny,impulse=normal<0?-normal*(normal < -16?1.1:1):0;
+    a.hit=Math.max(a.hit,impulse*wa);b.hit=Math.max(b.hit,impulse*wb);
+    a.vx-=impulse*nx*wa;a.vy-=impulse*ny*wa;b.vx+=impulse*nx*wb;b.vy+=impulse*ny*wb;
+    const slip=(b.vx-a.vx)*tx+(b.vy-a.vy)*ty-a.w*ra-b.w*rb;
+    const tangent=clamp(-slip/3,.65*impulse);
+    a.vx-=tangent*tx*wa;a.vy-=tangent*ty*wa;b.vx+=tangent*tx*wb;b.vy+=tangent*ty*wb;
+    a.w-=2*tangent*wa/ra;b.w-=2*tangent*wb/rb;
+   }
+   balls=balls.filter((_,i)=>!removed.has(i));
+   for(const b of balls){
+    const r=RADIUS[b.level];
+    if(b.x<=r||b.x>=4000-r){
+     const side=b.x<=r?-1:1;b.contact=true;b.x=Math.max(r,Math.min(4000-r,b.x));
+     const impact=Math.max(0,b.vx*side);b.hit=Math.max(b.hit,impact);
+     if(impact>0)b.vx=-side*impact*(impact>16?.1:0);
+     const slip=b.vy+side*b.w*r,f=clamp(slip/3,.45*impact);
+     b.vy-=f;b.w-=side*2*f/r;
+    }
+    if(b.y>=5500-r){
+     b.contact=true;b.y=5500-r;const impact=Math.max(0,b.vy);b.hit=Math.max(b.hit,impact);
+     if(impact>0)b.vy=impact>16?-impact*.1:0;
+     const slip=b.vx-b.w*r,f=clamp(slip/3,.45*impact);
+     b.vx-=f;b.w+=2*f/r;
+     if(pass===5){b.vx*=.99;b.w*=.99;}
+    }
+    b.vx=clamp(b.vx,180);b.vy=clamp(b.vy,180);b.w=clamp(b.w,.3);
+   }
+  }
+ }
+ s.balls=balls.map(b=>{
+  const quiet=b.contact&&b.hit<7&&Math.hypot(b.vx,b.vy)<1.5&&Math.abs(b.w)<.006&&Math.hypot(b.x-b.startX,b.y-b.startY)<1.5;
+  const rest=quiet?Math.min(45,(b.rest||0)+1):0;
+  // Continue resolving gravity and contacts, so removing support or a new impact
+  // wakes the fruit. Only residual velocities of a settled body are zeroed.
+  if(rest===45){b.vx=b.vy=b.w=0;b.a=b.startA;}
+  const a=(b.a%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+  return {id:b.id,level:b.level,x:Math.round(b.x),y:Math.round(b.y),vx:Math.round(b.vx),vy:Math.round(b.vy),spin:Math.round(b.w*10000),angle:Math.round(a*10000),rest,
+   precise:[Math.round(b.x*1000),Math.round(b.y*1000),Math.round(b.vx*1000),Math.round(b.vy*1000),Math.round(b.w*1e7),Math.round(a*1e7)]};
+ });
+ s.danger=s.balls.some(b=>b.y-RADIUS[b.level]<400)?s.danger+1:0;if(s.danger>180)s.over=true;
+}
+const BLOCK_KICKS=[[[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],[[0,0],[1,0],[1,1],[0,-2],[1,-2]],[[0,0],[1,0],[1,-1],[0,2],[1,2]],[[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]]];
+const LINE_KICKS=[[[0,0],[-2,0],[1,0],[-2,1],[1,-2]],[[0,0],[-1,0],[2,0],[-1,-2],[2,1]],[[0,0],[2,0],[-1,0],[2,-1],[-1,2]],[[0,0],[1,0],[-2,0],[1,2],[-2,-1]]];
+function stepBlocksV4(s,keys){
+ let adjusted=false;
+ if(keys.includes('l')||keys.includes('r')){const next={...s.piece,x:s.piece.x+(keys.includes('l')?-1:1)};if(fits(s,next)){s.piece=next;adjusted=true;}}
+ if(keys.includes('u')){
+  const current=s.piece,orientation=current.rotation||0,pivot=current.shape===0?1.5:current.shape===1?.5:1;
+  const cells=current.shape===undefined?current.cells.map(([x,y])=>[-y,x]):current.cells.map(([x,y])=>[pivot-(y-pivot),pivot+(x-pivot)]);
+  if(current.shape===undefined){const minX=Math.min(...cells.map(c=>c[0])),minY=Math.min(...cells.map(c=>c[1]));for(const c of cells){c[0]-=minX;c[1]-=minY;}}
+  const kicks=current.shape===0?LINE_KICKS[orientation]:BLOCK_KICKS[orientation];
+  for(const [dx,dy] of kicks){const next={...current,cells,x:current.x+dx,y:current.y+dy,rotation:(orientation+1)%4};if(fits(s,next)){s.piece=next;adjusted=true;break;}}
+ }
+ if(keys.includes('drop')){for(let i=0;i<21;i++)if(!lower(s))break;return;}
+ s.fall=(s.fall||0)+1;
+ if(keys.includes('d')||s.fall>=Math.max(5,35-Math.floor(s.lines/5))){
+  s.fall=0;const next={...s.piece,y:s.piece.y+1};if(fits(s,next)){s.piece=next;s.lock=0;}
+ }
+ if(fits(s,{...s.piece,y:s.piece.y+1})){s.lock=0;}else{
+  if(adjusted&&(s.lockResets||0)<15){s.lock=0;s.lockResets=(s.lockResets||0)+1;}
+  s.lock=(s.lock||0)+1;if(s.lock>=30)lower(s);
+ }
+}
+function clearHexV4(s){
+ let chain=0;
+ for(let pass=0;pass<20;pass++){
+  const seen=new Set(),remove=new Set();
+  for(let side=0;side<6;side++)for(let i=0;i<s.lanes[side].length;i++){
+   const id=side*16+i;if(seen.has(id))continue;
+   const group=[],todo=[[side,i]],color=s.lanes[side][i];seen.add(id);
+   while(todo.length){const [a,b]=todo.pop();group.push(a*16+b);
+    for(const [c,d] of [[(a+5)%6,b],[(a+1)%6,b],[a,b-1],[a,b+1]]){
+     const key=c*16+d;if(d>=0&&s.lanes[c][d]===color&&!seen.has(key)){seen.add(key);todo.push([c,d]);}
+    }
+   }
+   if(group.length>=3)for(const key of group)remove.add(key);
+  }
+  if(!remove.size)break;chain++;s.score+=Math.floor(remove.size*100/3)*chain;
+  s.lanes=s.lanes.map((lane,side)=>lane.filter((_,i)=>!remove.has(side*16+i)));
+ }
+}
+// Swept circle-versus-expanded rectangle: choose the first contact along the
+// path, then spend the remainder of the fixed tick after reflection.
+function sweptBox(x,y,dx,dy,left,top,right,bottom){
+ let enter=-Infinity,exit=Infinity,nx=0,ny=0;
+ for(const [p,v,lo,hi,ax,ay] of [[x,dx,left,right,1,0],[y,dy,top,bottom,0,1]]){
+  if(Math.abs(v)<1e-9){if(p<lo||p>hi)return null;continue;}
+  let a=(lo-p)/v,b=(hi-p)/v,sign=-1;if(a>b){[a,b]=[b,a];sign=1;}
+  if(a>enter+1e-8){enter=a;nx=ax*sign;ny=ay*sign;}else if(Math.abs(a-enter)<1e-8){nx+=ax*sign;ny+=ay*sign;}
+  exit=Math.min(exit,b);if(enter>exit)return null;
+ }
+ return enter>=-1e-8&&enter<=1&&exit>=0?{t:Math.max(0,enter),nx,ny}:null;
+}
+function stepBricksV4(s,keys){
+ const left=keys.includes('l'),right=keys.includes('r'),aim=keys.find(k=>k.startsWith('x:'));
+ if(aim)s.target=Math.max(450,Math.min(3550,Number(aim.slice(2))));
+ if(left||right)delete s.target;
+ if(s.target!==undefined)s.paddle+=Math.max(-65,Math.min(65,s.target-s.paddle));
+ if(left)s.paddle-=65;if(right)s.paddle+=65;s.paddle=Math.max(450,Math.min(3550,s.paddle));
+ let time=1;
+ for(let bounce=0;bounce<6&&time>1e-6;bounce++){
+  const dx=s.vx*time,dy=s.vy*time;let hit=null;
+  const offer=(h,type,index)=>{if(h&&h.t>=0&&h.t<=1&&(!hit||h.t<hit.t-1e-8))hit={...h,type,index};};
+  if(dx<0)offer({t:(60-s.x)/dx,nx:1,ny:0},'wall');
+  if(dx>0)offer({t:(3940-s.x)/dx,nx:-1,ny:0},'wall');
+  if(dy<0)offer({t:(60-s.y)/dy,nx:0,ny:1},'wall');
+  if(hit&&(hit.t<0||hit.t>1))hit=null;
+  if(dy>0&&s.y<=5020){const t=(5020-s.y)/dy;if(t>=0&&t<=1&&Math.abs(s.x+dx*t-s.paddle)<=500)offer({t,nx:0,ny:-1},'paddle');}
+  for(let i=0;i<48;i++)if(s.board[i]){const x=100+i%8*475,y=600+Math.floor(i/8)*220;offer(sweptBox(s.x,s.y,dx,dy,x-60,y-60,x+495,y+240),'brick',i);}
+  if(!hit){s.x+=dx;s.y+=dy;break;}
+  s.x+=dx*hit.t;s.y+=dy*hit.t;time*=1-hit.t;
+  if(hit.type==='brick'){s.board[hit.index]--;if(!s.board[hit.index])s.score+=100;}
+  if(hit.type==='paddle'){
+   const speed=Math.min(72,45+((s.wave||1)-1)*3),offset=Math.max(-1,Math.min(1,(s.x-s.paddle)/500));
+   let angle=offset*Math.PI/3;if(Math.abs(angle)<.12)angle=(s.vx<0?-1:1)*.12;
+   s.vx=speed*Math.sin(angle);s.vy=-speed*Math.cos(angle);
+  }else{if(hit.nx)s.vx=-s.vx;if(hit.ny)s.vy=-s.vy;}
+  s.x+=hit.nx*.01;s.y+=hit.ny*.01;
+ }
+ for(const key of ['x','y','vx','vy'])s[key]=Math.round(s[key]);
+ if(s.y>5600){s.lives--;if(!s.lives)s.over=true;else{s.x=s.paddle;s.y=4700;s.vx=27;s.vy=-36;}}
+ if(!s.board.some(Boolean))nextWave(s);
+}
+
 function birdHitsPipe(y,p) {
  // Body inset excludes beak/wing decoration; rounded corners allow near misses.
  const x=900,rx=110,ry=85,half=p.half||750;
@@ -182,13 +347,14 @@ function step(s,keys=[]) {
  s.tick++;
  const has=(k)=>keys.includes(k), left=has('l'),right=has('r');
  if(s.game==='2048'){const dir=keys.find(k=>['l','r','u','d'].includes(k));if(dir){slide(s,dir);}}
- if(s.game==='blocks'){
+ if(s.game==='blocks'&&s.version>=4){stepBlocksV4(s,keys);}
+ if(s.game==='blocks'&&s.version<4){
   if(left||right){const p={...s.piece,x:s.piece.x+(left?-1:1)};if(fits(s,p)){s.piece=p;}}
   if(has('u')){const p={...s.piece,cells:s.piece.cells.map(([x,y])=>[-y,x])};const minX=Math.min(...p.cells.map(c=>c[0])),minY=Math.min(...p.cells.map(c=>c[1]));p.cells=p.cells.map(([x,y])=>[x-minX,y-minY]);if(fits(s,p)){s.piece=p;}}
   if(has('drop')){for(let i=0;i<21;i++){if(!lower(s)){break;}}}else if(has('d')||s.tick%Math.max(s.version===1?8:5,35-Math.floor(s.lines/5))===0){lower(s);}
  }
  if(s.game==='snake'){
-  const dir=keys.map(k=>['u','r','d','l'].indexOf(k)).find(d=>d>=0);if(dir!==undefined&&(dir+2)%4!==s.dir&&!s.turned){s.dir=dir;s.turned=true;}
+  const dir=keys.map(k=>['u','r','d','l'].indexOf(k)).find(d=>d>=0);if(dir!==undefined&&(dir+2)%4!==s.dir&&!s.turned&&(s.version<4||dir!==s.dir)){s.dir=dir;s.turned=true;}
   if(s.tick%7===0){s.turned=false;const h=s.snake[0],x=h%20,y=Math.floor(h/20),nx=x+[0,1,0,-1][s.dir],ny=y+[-1,0,1,0][s.dir],n=ny*20+nx,eat=n===s.food;
    if(nx<0||nx>=20||ny<0||ny>=20||s.walls.includes(n)||s.snake.slice(0,eat?undefined:-1).includes(n)){s.over=true;}else{s.snake.unshift(n);if(eat){s.score+=100;food(s);}else{s.snake.pop();}}
   }
@@ -197,16 +363,17 @@ function step(s,keys=[]) {
   if(has('tap')||has('u')){s.vy=-65;}s.vy+=3;s.y+=s.vy;
   if(s.tick>=s.next){s.pipes.push({x:4200,gap:1300+take(s,2700),passed:false,...(s.version>=2?{half:Math.max(600,750-Math.floor(s.score/15)*15)}:{})});s.next=s.tick+120;}
   for(const p of s.pipes){p.x-=s.version===1?25:Math.min(40,25+Math.floor(s.score/20));if(!p.passed&&p.x+400<900){p.passed=true;s.score++;}if(s.version>=3?birdHitsPipe(s.y,p):(p.x<1050&&p.x+400>750&&(s.y-120<p.gap-(p.half||750)||s.y+120>p.gap+(p.half||750)))){s.over=true;}}
-  s.pipes=s.pipes.filter(p=>p.x>-500);if(s.y<(s.version>=3?85:120)||s.y>(s.version>=3?5515:5480)){s.over=true;}
+  s.pipes=s.pipes.filter(p=>p.x>-500);if(s.version>=4&&s.y<85){s.y=85;s.vy=Math.max(0,s.vy);}if(s.y<(s.version>=3?85:120)||s.y>(s.version>=3?5515:5480)){s.over=true;}
  }
  if(s.game==='hex'){
   if(left){s.rotation=(s.rotation+5)%6;}if(right){s.rotation=(s.rotation+1)%6;}
   if(!s.falling){s.falling={lane:take(s,6),color:take(s,4)+1,distance:1900};}
   s.falling.distance-=12+Math.min(s.version===1?20:28,Math.floor(s.score/300));
   const lane=(s.falling.lane-s.rotation+6)%6,stack=s.lanes[lane];
-  if(s.falling.distance<=stack.length*160){stack.push(s.falling.color);s.falling=null;const n=stack.length;if(n>=3&&stack[n-1]===stack[n-2]&&stack[n-2]===stack[n-3]){stack.splice(n-3,3);s.score+=100;}if(stack.length>=10){s.over=true;}}
+  if(s.falling.distance<=stack.length*160){stack.push(s.falling.color);s.falling=null;const n=stack.length;if(s.version>=4){clearHexV4(s);}else if(n>=3&&stack[n-1]===stack[n-2]&&stack[n-2]===stack[n-3]){stack.splice(n-3,3);s.score+=100;}if((s.version>=4?s.lanes[lane]:stack).length>=10){s.over=true;}}
  }
- if(s.game==='bricks'){
+ if(s.game==='bricks'&&s.version>=4){stepBricksV4(s,keys);}
+ if(s.game==='bricks'&&s.version<4){
   if(s.version>=2){const aim=keys.find(k=>k.startsWith('x:'));if(aim){s.target=Math.max(450,Math.min(3550,Number(aim.slice(2))));}if(left||right){delete s.target;}if(s.target!==undefined){s.paddle+=Math.max(-65,Math.min(65,s.target-s.paddle));}}
   if(left){s.paddle-=65;}if(right){s.paddle+=65;}s.paddle=Math.max(450,Math.min(3550,s.paddle));const px=s.x,py=s.y;s.x+=s.vx;s.y+=s.vy;
   if(s.x<60||s.x>3940){s.x=Math.max(60,Math.min(3940,s.x));s.vx=-s.vx;}if(s.y<60){s.y=60;s.vy=Math.abs(s.vy);}
@@ -219,7 +386,7 @@ function step(s,keys=[]) {
   const aim=keys.find(k=>k.startsWith('x:'));if(aim){s.aim=Number(aim.slice(2));}const edge=s.version===1?500:RADIUS[s.next];s.aim=Math.max(edge,Math.min(4000-edge,s.aim));
   if(s.cooldown>0){s.cooldown--;}
   if((has('drop')||has('tap'))&&!s.cooldown&&(s.version>=2||s.drops<100)){s.balls.push({id:s.serial++,x:s.aim,y:650,level:s.next,vx:0,vy:s.version===1?0:24});s.next=take(s,4);s.drops++;s.cooldown=s.version===1?45:24;}
-  if(s.version===1){mergePhysics(s);}else{if(s.version>=3){mergePhysicsV3(s);}else{mergePhysicsV2(s);}s.aim=Math.max(RADIUS[s.next],Math.min(4000-RADIUS[s.next],s.aim));}if(s.version===1&&s.drops>=100&&!s.cooldown){s.over=true;}
+  if(s.version===1){mergePhysics(s);}else{if(s.version>=4){mergePhysicsV4(s);}else if(s.version>=3){mergePhysicsV3(s);}else{mergePhysicsV2(s);}s.aim=Math.max(RADIUS[s.next],Math.min(4000-RADIUS[s.next],s.aim));}if(s.version===1&&s.drops>=100&&!s.cooldown){s.over=true;}
  }
  if(s.limit!==null&&s.tick>=s.limit){s.over=true;}return s;
 }
