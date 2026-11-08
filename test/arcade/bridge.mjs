@@ -4,8 +4,9 @@ import {webcrypto} from 'node:crypto';
 if(!globalThis.crypto){globalThis.crypto=webcrypto;}
 const url=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
 const source=fs.readFileSync(new URL('../../assets/javascripts/discourse/lib/arcade-transport.js',import.meta.url),'utf8');
+const coreUrl=url(fs.readFileSync(new URL('../../assets/javascripts/discourse/lib/arcade-core.js',import.meta.url),'utf8'));
 const transportUrl=url(source),{arcadeRequest}=await import(transportUrl);
-const {default:Bridge}=await import(url(fs.readFileSync(new URL('../../assets/javascripts/discourse/lib/arcade-bridge.js',import.meta.url),'utf8').replace("'./arcade-transport'",JSON.stringify(transportUrl))));
+const {default:Bridge}=await import(url(fs.readFileSync(new URL('../../assets/javascripts/discourse/lib/arcade-bridge.js',import.meta.url),'utf8').replace('"./arcade-core"',JSON.stringify(coreUrl)).replace("'./arcade-transport'",JSON.stringify(transportUrl))));
 assert.throws(()=>arcadeRequest('wallet',{}));assert.throws(()=>arcadeRequest('ranking',{game:'../admin'}));
 assert.throws(()=>arcadeRequest('advance',{id:'1/../../wallet'}));
 assert.deepEqual(arcadeRequest('catalog'),{method:'GET',path:'/rsc/arcade/catalog.json'});

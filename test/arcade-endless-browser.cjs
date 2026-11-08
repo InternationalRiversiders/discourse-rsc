@@ -30,7 +30,7 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
   await open('合成大河畔');const rect=await p.locator('canvas.ra-canvas').boundingBox();await p.locator('canvas.ra-canvas').click({position:{x:2,y:60}});await p.waitForTimeout(250);
   await p.getByRole('button',{name:'暂停并保存',exact:true}).click();await p.waitForFunction(()=>!window.arcadeUnderTest.syncing);
   const before=await p.evaluate(()=>JSON.parse(JSON.stringify(window.arcadeUnderTest.run)));
-  assert.equal(before.rules_version,2);assert(before.state.balls[0].x<500,'drop reaches the actual wall');
+  assert.equal(before.rules_version,3);assert(before.state.balls[0].x<500,'drop reaches the actual wall');
   await p.locator('.ra-play').screenshot({path:out+'/endless-merge.png'});
   await p.reload({waitUntil:'networkidle'});await p.evaluate(()=>{const id=Object.keys(requirejs.entries).find(k=>k.endsWith('/lib/arcade-app'));const proto=require(id).default.prototype,update=proto.updateView;proto.updateView=function(...args){window.arcadeUnderTest=this;return update.apply(this,args);};});await p.locator('.ra-card').filter({hasText:'合成大河畔'}).click();
   const start=p.waitForResponse(r=>r.url().includes('/arcade/start')&&r.status()===200);await p.getByRole('button',{name:'开始挑战',exact:true}).click();const resumed=await(await start).json();
@@ -43,7 +43,13 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
    const stage=await p.locator('.ra-stage').boundingBox(),toolbar=await p.locator('.ra-toolbar').boundingBox();
    assert(stage.x>=0&&stage.x+stage.width<=390,name+' fits screen width');
    assert(toolbar.y+toolbar.height<=667,name+' controls and save fit a short phone screen');
-   if(!['方块堆叠','六角消除'].includes(name))assert.equal(await p.locator('.ra-controls').count(),0,name+' uses direct gesture input');
+   if(!['方块堆叠','贪吃蛇','六角消除'].includes(name))assert.equal(await p.locator('.ra-controls').count(),0,name+' uses direct gesture input');
+   if(['方块堆叠','贪吃蛇'].includes(name)){
+    const boxes=await p.locator('.ra-controls').evaluate(el=>Object.fromEntries([...el.querySelectorAll('[data-key]')].map(b=>{const r=b.getBoundingClientRect();return[b.dataset.key,{x:r.x,y:r.y,w:r.width,h:r.height}]})));
+    assert(boxes.u.y<boxes.d.y&&Math.abs(boxes.u.x-boxes.d.x)<1,'up over down');
+    assert(boxes.l.x<boxes.d.x&&boxes.d.x<boxes.r.x&&Math.abs(boxes.l.y-boxes.r.y)<1,'left/down/right same row');
+    if(boxes.drop)assert(boxes.drop.x>boxes.r.x+boxes.r.w+8,'drop separated on the right');
+   }
    if(name==='方块堆叠')await p.screenshot({path:out+'/stage-short-phone.png'});
    await finish();
   }

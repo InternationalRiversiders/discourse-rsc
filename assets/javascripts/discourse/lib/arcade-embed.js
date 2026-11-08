@@ -1,3 +1,4 @@
+import Core from "./arcade-core";
 import ArcadeApp, { GAMES } from './arcade-app';
 import ArcadeBridge from './arcade-bridge';
 
@@ -35,7 +36,7 @@ const bridge=new ArcadeBridge({send,onError:showError,onInit:async payload=>{
 async function loadCatalog(){
  if(catalogPromise){return catalogPromise;}
  catalogPromise=(async()=>{
-  try{const catalog=await bridge.request('catalog');if(catalog.rules_version!==2){throw new Error('游戏规则已更新，请重新进入游戏。');}app.update({catalog,catalogError:''});}
+  try{const catalog=await bridge.request('catalog');if(catalog.rules_version!==Core.version){throw new Error('游戏规则已更新，请重新进入游戏。');}app.update({catalog,catalogError:''});}
   catch(e){app.update({catalogError:e.message});}
   finally{catalogPromise=null;}
  })();return catalogPromise;

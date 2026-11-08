@@ -1,3 +1,4 @@
+import Core from "./arcade-core";
 import { arcadeRequest } from './arcade-transport';
 export const BRIDGE_PROTOCOL=1;
 export const BRIDGE_CHANNEL='riverside.arcade';
@@ -8,13 +9,13 @@ export default class ArcadeBridge {
   this.pending=new Map();this.commands=new Map();this.initialized=false;this.closed=false;this.commandTail=Promise.resolve();
  }
  emit(message){if(!this.closed){this.send({channel:BRIDGE_CHANNEL,protocol:BRIDGE_PROTOCOL,session:this.session,...message});}}
- ready(){this.emit({type:'ready',rules_version:2,actions:['catalog','ranking','start','advance'],commands:['pause','resume','exit','theme']});}
+ ready(){this.emit({type:'ready',rules_version:Core.version,actions:['catalog','ranking','start','advance'],commands:['pause','resume','exit','theme']});}
  receive(raw){
   let message;try{if(typeof raw==='string'&&raw.length>1048576){return;}message=typeof raw==='string'?JSON.parse(raw):raw;}catch{return;}
   if(this.closed||!message||message.channel!==BRIDGE_CHANNEL||message.protocol!==BRIDGE_PROTOCOL||message.session!==this.session){return;}
   if(message.type==='init'){
    if(this.initialized){return;}this.initialized=true;
-   this.emit({type:'initialized',rules_version:2});
+   this.emit({type:'initialized',rules_version:Core.version});
    Promise.resolve(this.onInit(message.payload||{})).catch(e=>this.onError(e));return;
   }
   if(!this.initialized){return;}

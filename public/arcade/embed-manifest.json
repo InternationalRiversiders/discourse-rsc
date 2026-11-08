@@ -1,27 +1,27 @@
 {
   "protocol": 1,
-  "rules_version": 2,
+  "rules_version": 3,
   "entry": "/rsc/arcade/embed",
-  "script": "/plugins/discourse-rsc/arcade/arcade-embed-011ac632e9678960.js",
-  "stylesheet": "/plugins/discourse-rsc/arcade/arcade-embed-b0001c5ce30406b1.css",
+  "script": "/plugins/discourse-rsc/arcade/arcade-embed-4ae3059103e78d9a.js",
+  "stylesheet": "/plugins/discourse-rsc/arcade/arcade-embed-8db2d1ea1408de74.css",
   "sha256": {
-    "script": "011ac632e967896059901151dd8ca25f2e1c3058f954194e5d9312905edfe8d3",
-    "stylesheet": "b0001c5ce30406b12ba3217255686b851b2f7af9708f1f9f92963c1e7d667e26"
+    "script": "4ae3059103e78d9ab31193de07ddd8d5ec122c00b65c337f3f6093b84d7b8519",
+    "stylesheet": "8db2d1ea1408de743237d639f3143e9648ac4a52f481f523e698d438d45c23af"
   },
   "sources": {
-    "arcade-core": "77a839f87dc69981c3a67ef7a69b456d5976fa1dcad2630e16bd5be209a71982",
+    "arcade-core": "696281fdfd7a463942a57a71f7265afde4f60326efb12111065f870dd3d0d86a",
     "arcade-playback": "922cabd483753ed9c2e3abd921899c021df2339da59a211ee2a9b45886510e72",
     "arcade-effects": "84ba8baa3977085a3e51ec15d2faf425c61ffe98efee0a7a387e3835238b93ba",
-    "arcade-draw": "fa9c13b2ff09d8e0eacf69ff4e41f4824496bc759a022ccb874abda9e939cda8",
+    "arcade-draw": "adae684c155a4747eac09da7044f16ed49cfc09958a72077ded7a12ec8d3e2c8",
     "arcade-sprites": "1f906d4fba7947a510373388e5ffa052af954c30ca221225b88afab3b43dabcc",
     "campus-time": "63f09fbc224fc607e26397d4375ddf6076074cf95868b980c4e2ae793105c12b",
     "arcade-cover": "5467cb745d7e3080a887eb46bc4b198e8ba90ac494aeaba3b599a841dbafb411",
     "arcade-ui": "bd5c7a0e6100a32d2f824236c6b5cc5f0f65c4f9977970d459044a77f9327459",
-    "arcade-app": "169df9d2c7329c9c19ff7e511d848578d35e235de26971f2b1fa6f93a5eef60b",
-    "arcade-transport": "cd27259ea8b6f7921e2e0fd34ba42eaa8e76dd887bc7b6a63e424f08d22e7566",
-    "arcade-bridge": "80b9867f2b2fa1e57ce3e0cea633da1dba67e895472c8c6a62a89dc80530b2bc",
-    "arcade-embed": "3bdca5bca6d5730ff652b2629f7a1beb6fc4c50803ba5cf1c0c8fd5fe05571bd",
-    "rsc-arcade.scss": "a149073cede79a65d235d0c6a853b553042e2f732a1c361ae06ff5d1ab0d45fa",
+    "arcade-app": "234a757d6fcaf786e1bf777c6bb2a9b366d86e5a3f5055c414fef80e470a814f",
+    "arcade-transport": "9a938d1f291d3dbd8362d4cab4df9f550bd8a569fe5eb3a477ce975ef676330c",
+    "arcade-bridge": "c72342fb74ebf6f94d15c37e22edc22881602aa12812b06b0dd532c5196fe808",
+    "arcade-embed": "2b0301b90f0f27cb203fb0ca1f62e8776cfb2eb071325fd8293fd48626784d74",
+    "rsc-arcade.scss": "a87e7454e489c2f96fb1014d336f2757754ef79185c182a7fb8297499d21b19f",
     "rsc-arcade-embed.scss": "56d896137190f5c0865b47bb95bf734e70383c44c4c9e4bdf375f7b1a438127e"
   }
 }

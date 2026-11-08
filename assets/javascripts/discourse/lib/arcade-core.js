@@ -1,6 +1,6 @@
 // Shared deterministic rules. No clock, browser API, random seed or wallet access.
 // All coordinates and velocities are integers. Rendering never affects simulation.
-const ARCADE_VERSION = 2;
+const ARCADE_VERSION = 3;
 const GAME_IDS = ["2048", "blocks", "snake", "bird", "hex", "bricks", "merge"];
 const LIMITS = {"2048": 2000, blocks: 18000, snake: 18000, bird: 10800, hex: 10800, bricks: 18000, merge: 18000};
 const SHAPES = [[[0,0],[1,0],[2,0],[3,0]],[[0,0],[1,0],[0,1],[1,1]],[[1,0],[0,1],[1,1],[2,1]],[[1,0],[2,0],[0,1],[1,1]],[[0,0],[1,0],[1,1],[2,1]],[[0,0],[0,1],[1,1],[2,1]],[[2,0],[0,1],[1,1],[2,1]]];
@@ -13,7 +13,7 @@ function block(s) { s.piece={cells:clone(SHAPES[take(s,7)]),x:3,y:0,color:s.piec
 function fits(s,p) {return p.cells.every(([x,y])=>{x+=p.x;y+=p.y;return x>=0&&x<10&&y>=0&&y<20&&!s.board[y*10+x];});}
 function lower(s) {const p={...s.piece,y:s.piece.y+1};if(fits(s,p)){s.piece=p;return true;}for(const [x,y] of s.piece.cells){s.board[(s.piece.y+y)*10+s.piece.x+x]=s.piece.color;}let lines=0;for(let y=19;y>=0;y--){if(s.board.slice(y*10,y*10+10).every(Boolean)){s.board.splice(y*10,10);s.board.unshift(...Array(10).fill(0));lines++;y++;}}s.lines+=lines;s.score+=[0,100,300,500,800][lines];if(s.version===1&&s.pieces>=200){s.over=true;}else{block(s);}return false;}
 function create(game,q,version=ARCADE_VERSION) {
- if(![1,2].includes(version)){throw new Error("rules_version");}
+ if(![1,2,3].includes(version)){throw new Error("rules_version");}
  if(!GAME_IDS.includes(game)){throw new Error("game");}
  const s={game,version,tick:0,score:0,over:false,q:q.slice(),limit:version===1?LIMITS[game]:null};
  if(game==="2048"){s.board=Array(16).fill(0);tile(s);tile(s);}
@@ -104,6 +104,78 @@ function mergePhysicsV2(s) {
  s.danger=s.balls.some(b=>b.y-RADIUS[b.level]<400)?s.danger+1:0;
  if(s.danger>180)s.over=true;
 }
+// Version 3 keeps rotational momentum. Fixed substeps, stable pair order and
+// quantized state are shared by browser and server (not render-frame dependent).
+function mergePhysicsV3(s) {
+ const merged=new Set(),clamp=(v,n)=>Math.max(-n,Math.min(n,v));
+ for(let sub=0;sub<2;sub++){
+  for(const b of s.balls){
+   b.spin=b.spin||0;b.angle=b.angle||0;
+   b.vy=Math.min(140,b.vy+2);b.x+=Math.round(b.vx/2);b.y+=Math.round(b.vy/2);
+   b.angle=(b.angle+Math.round(b.spin/2)+62832)%62832;
+   b.spin=Math.round(b.spin*998/1000);
+  }
+  for(let pass=0;pass<4;pass++){
+   const buckets=new Map(),pairs=new Set(),count=s.balls.length;
+   for(let i=0;i<count;i++){
+    const b=s.balls[i],r=RADIUS[b.level];
+    for(let x=Math.floor((b.x-r)/500);x<=Math.floor((b.x+r)/500);x++)for(let y=Math.floor((b.y-r)/500);y<=Math.floor((b.y+r)/500);y++){
+     const key=x+','+y,ids=buckets.get(key)||[];
+     for(const j of ids)pairs.add(j*count+i);
+     ids.push(i);buckets.set(key,ids);
+    }
+   }
+   const removed=new Set();
+   for(const code of [...pairs].sort((a,b)=>a-b)){
+    const i=Math.floor(code/count),j=code%count;if(removed.has(i)||removed.has(j))continue;
+    const a=s.balls[i],b=s.balls[j],ra=RADIUS[a.level],rb=RADIUS[b.level],dx=b.x-a.x,dy=b.y-a.y,rr=ra+rb;
+    if(dx*dx+dy*dy>rr*rr)continue;
+    if(a.level===b.level&&a.level<10&&!merged.has(a.id)&&!merged.has(b.id)){
+     a.level++;a.x=Math.round((a.x+b.x)/2);a.y=Math.round((a.y+b.y)/2);
+     a.vx=Math.round((a.vx+b.vx)/2);a.vy=Math.round((a.vy+b.vy)/2);a.spin=Math.round((a.spin+b.spin)/2);
+     s.score+=2**a.level*10;removed.add(j);merged.add(a.id);continue;
+    }
+    const dist=Math.max(1,Math.sqrt(dx*dx+dy*dy)),nx=dx===0&&dy===0?1:dx/dist,ny=dy/dist,tx=-ny,ty=nx;
+    const wa=rb*rb/(ra*ra+rb*rb),wb=1-wa,overlap=Math.max(0,rr-dist-1)*.8;
+    a.x-=Math.round(nx*overlap*wa);a.y-=Math.round(ny*overlap*wa);b.x+=Math.round(nx*overlap*wb);b.y+=Math.round(ny*overlap*wb);
+    const normal=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
+    // Small impacts settle; harder impacts retain a little bounce.
+    const impulse=normal<0?-normal*(normal < -16?1.12:1):0;
+    a.vx-=Math.round(impulse*nx*wa);a.vy-=Math.round(impulse*ny*wa);b.vx+=Math.round(impulse*nx*wb);b.vy+=Math.round(impulse*ny*wb);
+    const slip=(b.vx-a.vx)*tx+(b.vy-a.vy)*ty-(a.spin*ra+b.spin*rb)/10000;
+    const tangent=clamp(-slip/3,.3*(impulse+2*Math.abs(ny)));
+    a.vx-=Math.round(tangent*tx*wa);a.vy-=Math.round(tangent*ty*wa);b.vx+=Math.round(tangent*tx*wb);b.vy+=Math.round(tangent*ty*wb);
+    a.spin-=Math.round(20000*tangent*wa/ra);b.spin-=Math.round(20000*tangent*wb/rb);
+   }
+   s.balls=s.balls.filter((_,i)=>!removed.has(i));
+   for(const b of s.balls){
+    const r=RADIUS[b.level];
+    if(b.x<r||b.x>4000-r){
+     const side=b.x<r?-1:1;b.x=Math.max(r,Math.min(4000-r,b.x));
+     if(b.vx*side>0)b.vx=Math.round(-b.vx*.12);
+     const slip=b.vy+side*b.spin*r/10000,friction=clamp(slip/3,2);
+     b.vy-=Math.round(friction);b.spin-=Math.round(side*20000*friction/r);
+    }
+    if(b.y>=5500-r){
+     b.y=5500-r;if(b.vy>0)b.vy=b.vy>16?Math.round(-b.vy*.12):0;
+     const slip=b.vx-b.spin*r/10000,friction=clamp(slip/3,2);
+     b.vx-=Math.round(friction);b.spin+=Math.round(20000*friction/r);
+     // Rolling resistance is much weaker than sliding friction.
+     if(pass===3){b.vx=Math.trunc(b.vx*.995);b.spin=Math.trunc(b.spin*.995);}
+    }
+    b.vx=clamp(b.vx,180);b.vy=clamp(b.vy,180);b.spin=clamp(b.spin,3000);
+   }
+  }
+ }
+ s.danger=s.balls.some(b=>b.y-RADIUS[b.level]<400)?s.danger+1:0;if(s.danger>180)s.over=true;
+}
+function birdHitsPipe(y,p) {
+ // Body inset excludes beak/wing decoration; rounded corners allow near misses.
+ const x=900,rx=110,ry=85,half=p.half||750;
+ const nearestX=Math.max(p.x,Math.min(p.x+400,x));
+ const dy=y<p.gap-half?0:y>p.gap+half?0:Math.min(y-(p.gap-half),p.gap+half-y);
+ return ((x-nearestX)/rx)**2+(dy/ry)**2<1;
+}
 function step(s,keys=[]) {
  if(s.over){return s;}
  if(s.q.length<4){throw new Error("queue_empty");}
@@ -124,8 +196,8 @@ function step(s,keys=[]) {
  if(s.game==='bird'){
   if(has('tap')||has('u')){s.vy=-65;}s.vy+=3;s.y+=s.vy;
   if(s.tick>=s.next){s.pipes.push({x:4200,gap:1300+take(s,2700),passed:false,...(s.version>=2?{half:Math.max(600,750-Math.floor(s.score/15)*15)}:{})});s.next=s.tick+120;}
-  for(const p of s.pipes){p.x-=s.version===1?25:Math.min(40,25+Math.floor(s.score/20));if(!p.passed&&p.x+400<900){p.passed=true;s.score++;}if(p.x<1050&&p.x+400>750&&(s.y-120<p.gap-(p.half||750)||s.y+120>p.gap+(p.half||750))){s.over=true;}}
-  s.pipes=s.pipes.filter(p=>p.x>-500);if(s.y<120||s.y>5480){s.over=true;}
+  for(const p of s.pipes){p.x-=s.version===1?25:Math.min(40,25+Math.floor(s.score/20));if(!p.passed&&p.x+400<900){p.passed=true;s.score++;}if(s.version>=3?birdHitsPipe(s.y,p):(p.x<1050&&p.x+400>750&&(s.y-120<p.gap-(p.half||750)||s.y+120>p.gap+(p.half||750)))){s.over=true;}}
+  s.pipes=s.pipes.filter(p=>p.x>-500);if(s.y<(s.version>=3?85:120)||s.y>(s.version>=3?5515:5480)){s.over=true;}
  }
  if(s.game==='hex'){
   if(left){s.rotation=(s.rotation+5)%6;}if(right){s.rotation=(s.rotation+1)%6;}
@@ -147,7 +219,7 @@ function step(s,keys=[]) {
   const aim=keys.find(k=>k.startsWith('x:'));if(aim){s.aim=Number(aim.slice(2));}const edge=s.version===1?500:RADIUS[s.next];s.aim=Math.max(edge,Math.min(4000-edge,s.aim));
   if(s.cooldown>0){s.cooldown--;}
   if((has('drop')||has('tap'))&&!s.cooldown&&(s.version>=2||s.drops<100)){s.balls.push({id:s.serial++,x:s.aim,y:650,level:s.next,vx:0,vy:s.version===1?0:24});s.next=take(s,4);s.drops++;s.cooldown=s.version===1?45:24;}
-  if(s.version===1){mergePhysics(s);}else{mergePhysicsV2(s);s.aim=Math.max(RADIUS[s.next],Math.min(4000-RADIUS[s.next],s.aim));}if(s.version===1&&s.drops>=100&&!s.cooldown){s.over=true;}
+  if(s.version===1){mergePhysics(s);}else{if(s.version>=3){mergePhysicsV3(s);}else{mergePhysicsV2(s);}s.aim=Math.max(RADIUS[s.next],Math.min(4000-RADIUS[s.next],s.aim));}if(s.version===1&&s.drops>=100&&!s.cooldown){s.over=true;}
  }
  if(s.limit!==null&&s.tick>=s.limit){s.over=true;}return s;
 }

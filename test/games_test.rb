@@ -33,6 +33,21 @@ class GamesTest < NativeBusinessTest
     end
     R::Journal.find_each { |j| assert_equal 0,R::Entry.where(journal_id:j.id).sum(:units).to_i }
   end
+  def test_cent_stakes_and_fractional_returns_are_exact
+    assert_equal '0.01',R::Games.state(@alice)[:min_stake]
+    r=stub_method(SecureRandom,:random_number,0){play('coin',stake:'0.01')}
+    assert_equal '0.02',r[:payout]
+    r=stub_method(SecureRandom,:random_number,0){play('roulette',bets:[{'choice'=>'red','stake'=>'0.01'}])}
+    assert_equal '0.005',r[:payout]
+    r=stub_method(SecureRandom,:random_number,5700){play('scratch',stake:'0.01')}
+    assert_equal '0.001',r[:state]['spot_stake']
+    assert_equal '0.01',r[:payout]
+    deck([0,9,1,2]) do
+      r=play('blackjack',stake:'0.01');assert_equal '0.025',r[:payout]
+    end
+    %w[0 0.001 -0.01 500.01].each{|stake| assert_raises(R::Error){play(stake:stake)}}
+    consistent
+  end
   def test_games_record_lookup_is_owner_only_and_independent_of_history_page
     r=play
     21.times { play }

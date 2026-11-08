@@ -20,7 +20,7 @@ module DiscourseRsc
 
     def self.amount(value)
       units=Amount.positive(value,decimals:2)
-      raise Error.new('game_stake_range',details:{max:SiteSetting.rsc_games_max_stake}) unless units.between?(Amount::UNIT,SiteSetting.rsc_games_max_stake*Amount::UNIT)
+      raise Error.new('game_stake_range',details:{max:SiteSetting.rsc_games_max_stake}) unless units.between?(Amount::UNIT/100,SiteSetting.rsc_games_max_stake*Amount::UNIT)
       units
     end
 
@@ -208,7 +208,7 @@ module DiscourseRsc
       history=scope.order(id: :desc)
       history=before ? history.where('id < ?',before) : history.offset((page-1)*20)
       rows=history.limit(21).to_a
-      {selected_round:selected && view(selected),lottery:Lottery.summary,balance:wallet.balance,wallet_status:wallet.status,read_only:Safety.read_only?,max_stake:SiteSetting.rsc_games_max_stake,
+      {selected_round:selected && view(selected),lottery:Lottery.summary,balance:wallet.balance,wallet_status:wallet.status,read_only:Safety.read_only?,max_stake:SiteSetting.rsc_games_max_stake,min_stake:'0.01',stake_step:'0.01',
        active:GameRound.where(user_id:actor.id,status:'playing').first&.then { |r| view(r) },
        history_page:page,history_pages:pages,history_total:total,history:rows.first(20).map { |r| view(r) },next_cursor:rows.size>20 ? rows[19].id : nil}
     end

@@ -6,7 +6,7 @@ const q=()=>Array.from({length:100},(_,i)=>713+i*7919);
 // Released version 1 fixtures must remain unchanged.
 for(const f of JSON.parse(fs.readFileSync(new URL('./fixtures.json',import.meta.url))))assert.deepEqual(Core.advance(f.initial,f.frames,f.events),f.expected);
 for(const game of Core.games){
- const s=Core.create(game,q());assert.equal(s.version,2);assert.equal(s.limit,null);
+ const s=Core.create(game,q());assert.equal(s.version,3);assert.equal(s.limit,null);
  s.tick=Core.limits[game];Core.step(s,game==='2048'?['l']:[]);assert(!s.over,game+' still time-limited');
  const legacy=Core.create(game,q(),1);legacy.tick=legacy.limit-1;Core.step(legacy,game==='2048'?['l']:[]);assert(legacy.over,game+' legacy limit changed');
 }
@@ -26,5 +26,5 @@ let frames=local.tick-s.tick;const replay=Core.advance(s,frames,[]);assert.deepE
 s=Core.create('bird',q());s.score=1000;Core.step(s);assert.equal(s.pipes[0].half,600);assert.equal(s.pipes[0].x,4160);
 // SDK includes both rule versions and retains deterministic cross-runtime results.
 const manifest=JSON.parse(fs.readFileSync(new URL('../../public/arcade/manifest.json',import.meta.url)));
-const sdk=fs.readFileSync(new URL('../../public/arcade/'+manifest.script.split('/').pop(),import.meta.url),'utf8');const sandbox={};vm.createContext(sandbox);vm.runInContext(sdk,sandbox);assert.equal(sandbox.RiversideArcade.rulesVersion,2);
+const sdk=fs.readFileSync(new URL('../../public/arcade/'+manifest.script.split('/').pop(),import.meta.url),'utf8');const sandbox={};vm.createContext(sandbox);vm.runInContext(sdk,sandbox);assert.equal(sandbox.RiversideArcade.rulesVersion,3);
 console.log('PASS both rules versions, uncapped play, recurring brick waves, bounded drag, edge drops, long deterministic physics');

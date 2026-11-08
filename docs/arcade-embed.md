@@ -39,15 +39,15 @@ Flutter Web 由父页面和 iframe 使用 `postMessage`。两端 targetOrigin �
 {"channel":"riverside.arcade","protocol":1,"session":"本次文档生成的 UUID","type":"..."}
 ```
 
-页面就绪时发送 `type: "ready"`，另含 `rules_version: 2`、`actions: ["catalog","ranking","start","advance"]`、`commands: ["pause","resume","exit","theme"]`。收到初始化前约每秒重发一次，宿主不要因重发而重复创建容器。
+页面就绪时发送 `type: "ready"`，另含 `rules_version: 3`、`actions: ["catalog","ranking","start","advance"]`、`commands: ["pause","resume","exit","theme"]`。收到初始化前约每秒重发一次，宿主不要因重发而重复创建容器。
 
-宿主检查协议后原样带回该 session：
+宿主按 protocol 检查桥接协议兼容性；rules_version 是网页与服务器的游戏规则版本，保存当前 ready 声明值用于请求校验，不能把它当作 App 支持的游戏规则白名单。然后原样带回该 session：
 
 ```json
 {"channel":"riverside.arcade","protocol":1,"session":"从 ready 取得","type":"init","payload":{"theme":"auto"}}
 ```
 
-theme 可为 `auto`、`light`、`dark`。页面只初始化一次，回复 `type: "initialized", rules_version: 2`。之后自动加载目录；指定 game 时也会读取榜单。**initialized 仅表示协议已建立，不代表已登录或 API 请求成功。** 协议不兼容时宿主应显示更新提示，不继续发送游戏请求。
+theme 可为 `auto`、`light`、`dark`。页面只初始化一次，回复 `type: "initialized", rules_version: 3`。之后自动加载目录；指定 game 时也会读取榜单。**initialized 仅表示协议已建立，不代表已登录或 API 请求成功。** 协议不兼容时宿主应显示更新提示，不继续发送游戏请求。
 
 宿主只能接受当前可信顶层文档发出的消息。限制加载 URL 的 scheme、host、port、path，阻止非可信跳转/新窗口，不能只做字符串前缀匹配；禁止同一桥被任意网页复用。嵌入页面 CSP 不允许子 frame 和直接业务网络请求。
 
@@ -65,14 +65,14 @@ theme 可为 `auto`、`light`、`dark`。页面只初始化一次，回复 `type
 | --- | --- | --- |
 | catalog | GET `/rsc/arcade/catalog.json` | `{}` |
 | ranking | GET `/rsc/arcade/ranking.json?game=游戏ID` | `{game}` |
-| start | POST `/rsc/arcade/start.json` | `{game, request_id, rules_version:2, scope:"all"或"season"}` |
-| advance | POST `/rsc/arcade/:id/advance.json` | `{id, version, request_id, frames, events, finish, rules_version:2}`；id 只用于路径，不必放入 HTTP body |
+| start | POST `/rsc/arcade/start.json` | `{game, request_id, rules_version:3, scope:"all"或"season"}` |
+| advance | POST `/rsc/arcade/:id/advance.json` | `{id, version, request_id, frames, events, finish, rules_version:3}`；id 只用于路径，不必放入 HTTP body |
 
 宿主必须独立校验 action、游戏 ID、数据类型与数量边界，忽略/拒绝额外请求字段。参考可执行白名单 `assets/javascripts/discourse/lib/arcade-transport.js`：
 
 - id 是正的安全整数，version 为非负整数；request_id 是 1–100 字符的字符串。
 - frames 为 0–180 的整数，events 最多 360 条，每条 `[帧号, 指令]`，帧号在 `[0, frames)`。
-- 指令仅 `l/r/u/d/drop/tap/x:0..4000`；finish 必须为 boolean；规则版本当前为 2。
+- 指令仅 `l/r/u/d/drop/tap/x:0..4000`；finish 必须为 boolean；规则版本当前为 3。原生端应校验它与当前可信页面 ready 消息声明的 rules_version 相同，不要在 Dart 写死 2 或 3；本规则字段变动不等于 bridge 协议变动。
 - 服务端另按游戏校验输入和批次限制（2048 单批最多 16 步），仍是最终裁决者。不能提交分数、坐标、随机种子或修改后的状态。
 - 不接受网页传入任意 URL、请求方法、鉴权请求头、账号或钱包目标。
 

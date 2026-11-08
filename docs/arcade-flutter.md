@@ -25,13 +25,13 @@
 | [Floppy Bird](https://github.com/nebez/floppybird) | 拍翅和倾斜反馈 | 原创天空、云层和管道层次；不采用其声明未获授权的原作素材 |
 | [Hextris](https://github.com/Hextris/hextris)（GPLv3） | 旋转过渡、消除反馈 | 只参考交互和扇形排布，自行实现梯形环与完整视野；未复制源码或素材 |
 | [JavaScript Breakout](https://github.com/jakesgordon/javascript-breakout) | 触控与碰撞反馈 | 球轨迹、砖块高光、挡板与墙体区分、丢球反馈 |
-| [合成大西瓜](https://github.com/liyupi/daxigua) | 落点与合成反馈 | 版本 2 使用固定子步、质量分配与法向速度修正；按图案半径限制落点，保留原版物理运行旧存档 |
+| [合成大西瓜](https://github.com/liyupi/daxigua) | 落点与合成反馈 | 版本 3 加入接触摩擦、角速度和轻微弹性；固定子步、量化状态保证复算，恢复时升级存档 |
 
 效果只读取游戏状态，不参与得分或碰撞。支持 `prefers-reduced-motion`。当前赛季直接启用版本 2，测试期历史成绩并入同一总榜与对应赛季榜。
 
 ## 交付的可复用模块
 
-- `assets/javascripts/discourse/lib/arcade-core.js`：规则版本 2（兼容版本 1 存档）；服务端 MiniRacer 与浏览器运行同一份。
+- `assets/javascripts/discourse/lib/arcade-core.js`：规则版本 3（兼容旧存档）；服务端 MiniRacer 与浏览器运行同一份。
 - `arcade-playback.js`：一份在途请求、有限本地尾帧、服务端回包后重放；重试原请求。
 - `arcade-effects.js` / `arcade-draw.js`：无 Ember 依赖的显示层。`arcade-sprites.js` 加载老河畔提供的 11 级素材。
 - `python3 script/build-arcade-sdk.py`：生成带内容指纹的单文件 JS 和 `public/arcade/manifest.json`。
@@ -53,7 +53,7 @@ effects.observe(playback.state, playback.visualMove);
 draw(canvas, playback.state, effects);
 // 同时最多一份请求；网络慢时允许有限尾帧继续推进。
 const request = playback.checkpoint(crypto.randomUUID());
-// response = await nativeBridge.advance(playback.run.id, {...request, rules_version:2})
+// response = await nativeBridge.advance(playback.run.id, {...request, rules_version:3})
 // playback.acknowledge(response)
 ```
 
@@ -81,8 +81,8 @@ const request = playback.checkpoint(crypto.randomUUID());
 | --- | --- | --- |
 | GET | `/rsc/arcade/catalog.json` | 游戏列表、规则版本、当前轮替赛季、服务端时间 |
 | GET | `/rsc/arcade/ranking.json?game=2048` | 永久 `rows`，该游戏当期 `season`，当前轮替 `featured` |
-| POST | `/rsc/arcade/start.json` | `{game, request_id, rules_version:2}`；同用户同游戏恢复未过期局 |
-| POST | `/rsc/arcade/:id/advance.json` | `{version, request_id, frames, events, finish, rules_version:2}`；分数由服务端计算 |
+| POST | `/rsc/arcade/start.json` | `{game, request_id, rules_version:3}`；同用户同游戏恢复未过期局 |
+| POST | `/rsc/arcade/:id/advance.json` | `{version, request_id, frames, events, finish, rules_version:3}`；分数由服务端计算 |
 
 - 默认一周一个游戏，顺序：2048 → 方块堆叠 → 贪吃蛇 → 河畔飞鸟 → 六角消除 → 打砖块 → 合成大河畔。
 - 后台 `rsc_arcade_rotation_cadence` 可切 `daily`；从下一期生效，不中途缩短当前赛季。默认周日北京时间 20:00 换期，日赛沿用北京时间 20:00。
@@ -115,3 +115,10 @@ Flutter 原生包尚未集成或真机验收；后续至少测 Android WebView�
 先在隔离环境验证迁移和新旧存档回放，再从一次性候选镜像任务运行该单一迁移；完成后按 A/B 流程启动、校验、切换、排空。切换前确认当前赛季不在截止窗口，避免旧结算器处理新规则。新镜像保留旧指纹资源；旧客户端收到更新提示后须刷新，避免不同规则继续同一局。
 
 一旦创建了版本 2 存档，回滚到不认识版本 2 的镜像前必须先设置 rsc_read_only=true 并关闭 rsc_arcade_enabled，暂停所有 RSC 写操作和自动结算（旧版本的结算器不会仅因关闭街机入口而停止）。新旧存档和奖金快照保留，不删成绩、不清空奖池；修复后恢复支持版本 2 的服务，再恢复原开关。数据库 bigint 不回退。
+
+## 2026-11-08 手感调整
+
+- 贪吃蛇和方块使用画面内倒 T 形方向键；方块硬降在右侧独立放置。网页和嵌入页共享布局。
+- 飞鸟版本 3 使用内缩椭圆碰撞体，管口边角按最近点检测；鸟嘴、翅膀不计入碰撞体。参考 [Floppy Bird 的碰撞框修正](https://github.com/nebez/floppybird/blob/gh-pages/js/main.js)，没有复制其图片或源码。
+- [老河畔合成游戏](https://bbs.uestc.edu.cn/merge_qshp/) 的 `src/project.js` 使用 Cocos `PhysicsManager` / `RigidBody`，重力配置为 `(0,-300)`；引擎包含 `b2World`。本插件没有直接嵌入其物理引擎，采用共享确定性圆体求解，新增接触摩擦、角速度、旋转绘制与小幅弹性，避免只消除重叠带来的僵硬感。
+- 当前规则为 3，桥协议仍为 1。服务端兼容已打开的规则 2 页面；新版恢复旧局时保留位置/得分、升级检查点并递增版本，旧页面不得继续写入已升级局。排名不清空。

@@ -48,7 +48,7 @@ export default class ArcadeApp {
  playback=null;state=null;canvas=null;raf=null;last=0;accumulator=0;generation=0;
  syncPromise=null;saveRequested=false;lastInputAt=0;
  get selected(){return GAMES.find(g=>g.id===this.game);}
- get rulesVersion(){return 2;}
+ get rulesVersion(){return Core.version;}
  get rulesText(){return ENDLESS_RULES[this.game];}
  get grid(){return this.game==='2048';}
  get finished(){return this.run?.status==='finished';}
@@ -66,8 +66,8 @@ export default class ArcadeApp {
  get status(){return this.finished?'成绩已保存':this.error?'连接中断':this.finishing||this.localOver?'保存成绩':this.paused?'已暂停':this.waiting?'等待同步':'挑战中';}
  get startLabel(){return this.finished?'再来一局':this.run?'继续挑战':'开始挑战';}
  get progressLabel(){if(!this.state){return '';}if(this.grid){return `${this.progress} 步`;}if(this.game==='blocks'){return `${this.state.lines} 行`;}if(this.game==='merge'){return `${this.state.drops} 次投放`;}if(this.game==='bricks'){return `第 ${this.state.wave||1} 关`;}if(this.game==='bird'){return `${this.score} 道障碍`;}return '';}
- get controls(){return this.game==='blocks'?['l','u','d','r']:this.game==='hex'?['l','r']:[];}
- get hasControls(){return this.game==='blocks'||this.game==='hex';}
+ get controls(){return ['blocks','snake'].includes(this.game)?['u','l','d','r']:this.game==='hex'?['l','r']:[];}
+ get hasControls(){return ['blocks','snake','hex'].includes(this.game);}
  focusPlay(){this.canvas?.focus({preventScroll:true});if(window.innerWidth<=767){this.canvas?.closest('.ra-play')?.scrollIntoView({block:'start',behavior:'instant'});}}
  get controlsList(){return this.controls.map(k=>({key:k,label:{l:'←',r:'→',u:'↑',d:'↓'}[k]}));}
  async open(game){
@@ -90,7 +90,7 @@ export default class ArcadeApp {
   if(this.run?.status==='playing'&&!this.error){this.hostPaused=false;this.paused=false;this.focusPlay();return;}
   this.hostPaused=false;this.busy=true;this.error='';const generation=this.generation;
   try{
-   const r=await this.request('start',{game:this.game,request_id:this.startKey ||= crypto.randomUUID(),rules_version:2,scope:this.rankScope});
+   const r=await this.request('start',{game:this.game,request_id:this.startKey ||= crypto.randomUUID(),rules_version:this.rulesVersion,scope:this.rankScope});
    if(this.isDestroying||generation!==this.generation){return;}
    this.effects=new Effects({reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});this.effects.sprites=this.mergeSprites;this.playback=new Playback(r);this.finishing=false;this.saveRequested=false;this.updateView();
    this.startKey=null;this.paused=this.hostPaused||r.status!=='playing';this.focusPlay();
@@ -135,7 +135,7 @@ export default class ArcadeApp {
     }
     if(!p.pending){break;}
     this.pending=p.pending;
-    const r=await this.request('advance',{id:p.run.id,...p.pending,rules_version:2});
+    const r=await this.request('advance',{id:p.run.id,...p.pending,rules_version:this.rulesVersion});
     if(this.isDestroying||p!==this.playback){return;}
     p.acknowledge(r);this.updateView();
     if(r.status!=='playing'){this.paused=true;this.finishing=false;this.loadRanking();break;}

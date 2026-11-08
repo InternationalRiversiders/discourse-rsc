@@ -18,6 +18,20 @@ class ArcadeTest < NativeBusinessTest
   def advance(run,**args)
     R::Arcade.advance(**{actor:@alice,id:run[:id],version:run[:version],request_id:SecureRandom.uuid,frames:1,events:[[0,'l']],rules_version:2}.merge(args))
   end
+  def test_new_physics_resume_keeps_score_and_rejects_old_client_writes
+    old=start('merge');old=advance(old,frames:30,events:[[0,'drop']])
+    modern=R::Arcade.start(actor:@alice,game:'merge',request_id:SecureRandom.uuid,rules_version:3)
+    assert_equal old[:id],modern[:id]
+    assert_equal old[:state]['score'],modern[:state]['score']
+    assert_equal old[:state]['balls'],modern[:state]['balls']
+    assert_equal 3,modern[:state]['version']
+    assert_equal old[:version]+1,modern[:version]
+    assert_raises(R::Error){advance(modern,events:[])}
+    updated=advance(modern,events:[],rules_version:3)
+    assert updated[:state]['balls'].all?{|b| b.key?('spin') && b.key?('angle')}
+    duplicate=R::ArcadeRun.find(modern[:id]).inputs.first
+    assert duplicate['checkpoint']
+  end
   def test_start_resume_and_duplicate_do_not_charge_or_reset
     key=SecureRandom.uuid;r=start(key:key);assert_equal r,start(key:key);assert_equal r,start
     assert_equal '100',R::Account.wallet(@alice.id).balance
@@ -128,7 +142,7 @@ class ArcadeTest < NativeBusinessTest
     assert_equal 1,R::Journal.where(operation:'arcade_prize').count
   end
   def test_node_and_embedded_v8_match_exactly
-    (%w[fixtures.json fixtures-v2.json].flat_map { |name| JSON.parse(File.read("/rsc/test/arcade/#{name}")) }).each do |f|
+    (%w[fixtures.json fixtures-v2.json fixtures-v3.json].flat_map { |name| JSON.parse(File.read("/rsc/test/arcade/#{name}")) }).each do |f|
       assert_equal f["expected"],R::Arcade.engine("advance",f["initial"],f["frames"],f["events"]),f["game"]
     end
   end
@@ -203,7 +217,7 @@ class ArcadeTest < NativeBusinessTest
     old=R::ArcadeRun.create!(user_id:@bob.id,period_id:p.id,game:'2048',start_key:SecureRandom.uuid,
       state:old_state,inputs:[],status:'finished',score:600,finished_at:Time.current,expires_at:1.hour.from_now)
     modern=start;assert_equal 2,modern[:rules_version];assert_equal p.id,modern[:season_id]
-    assert_nil modern[:state]['limit'];assert_equal 2,R::Arcade.season_view(p)[:rules_version]
+    assert_nil modern[:state]['limit'];assert_equal 3,R::Arcade.season_view(p)[:rules_version]
     assert_raises(R::Error) { R::Arcade.start(actor:@alice,game:'2048',request_id:SecureRandom.uuid) }
     assert_raises(R::Error) { R::Arcade.advance(actor:@alice,id:modern[:id],version:modern[:version],request_id:SecureRandom.uuid,frames:1,events:[]) }
     advance(modern,finish:true);R::ArcadeRun.find(modern[:id]).update!(score:900)
@@ -251,7 +265,7 @@ class ArcadeTest < NativeBusinessTest
       R::Arcade.settle;R::Arcade.settle
       assert_equal '200',R::Account.wallet(@alice.id).balance
       assert_equal 40,p.reload.results['2048'].first['score']
-      assert_equal 2,R::Arcade.period_rules(p)
+      assert_equal 3,R::Arcade.period_rules(p)
     end
   end
   def test_unfinished_new_season_save_is_settled_without_client_return

@@ -97,7 +97,7 @@ en:
       lottery_closed: 本期已截止，请刷新后购买下一期。
       games_disabled: 游戏暂未开放。
       invalid_game: 请选择有效的游戏。
-      game_stake_range: '每局投入须为 1–%{max} RSC。'
+      game_stake_range: '每局投入须为 0.01–%{max} RSC。'
       game_invalid_bet: 请检查投注位置和金额。
       game_invalid_action: 当前不能执行这个操作。
       game_resume: 请先完成未结束的二十一点牌局。
