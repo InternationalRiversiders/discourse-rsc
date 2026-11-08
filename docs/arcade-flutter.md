@@ -40,7 +40,7 @@
 
 素材来自维护者提供的 [老河畔合成游戏](https://bbs.uestc.edu.cn/merge_qshp/)，保留原始 PNG、原顺序与来源/校验值，不引入老版脚本。`manifest.json` 的 `assets` 列出全部图片 URL 和 SHA256；App 可随包内置。调用 `loadMergeSprites(baseURL)` 后把返回数组赋给 `effects.sprites`，其中 `baseURL` 可以是 WebView 本地资源目录。清单建议在局外重新验证缓存，图片和 SDK 使用带指纹路径。
 
-全局对象 `RiversideArcade` 暴露 `Core`、`Playback`、`Effects`、`draw`、`protocol`、`rulesVersion`、`loadMergeSprites`、`mergeSpriteFiles`。不是完整 Flutter 页面；App 仍需连接输入、生命周期、API 和原生导航。论坛现有 `rsc-arcade.gjs` 是可运行的完整调度参考。
+全局对象 `RiversideArcade` 暴露 `Core`、`Playback`、`Effects`、`draw`、`protocol`、`rulesVersion`、`loadMergeSprites`、`mergeSpriteFiles`。不是完整 Flutter 页面；App 仍需连接输入、生命周期、API 和原生导航。共享的 `arcade-app.js` 是完整调度参考，`rsc-arcade.gjs` 只负责在论坛页面挂载它。
 
 ```js
 const {Playback, Effects, draw} = RiversideArcade;
