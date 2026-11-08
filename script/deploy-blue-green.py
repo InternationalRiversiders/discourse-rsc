@@ -62,6 +62,14 @@ def check_assets(container, paths):
 root=pathlib.Path('/var/www/discourse/public/assets')
 missing=[p for p in json.load(sys.stdin) if not (root/p).is_file()]
 if missing: raise SystemExit('Missing release assets: '+str(missing[:10]))
+manifest=json.loads((root/'.manifest.json').read_text())
+missing_index=[]
+for source in pathlib.Path('/var/www/discourse/app/assets/generated').glob('*/manifest.json'):
+ for item in json.loads(source.read_text()).values():
+  if isinstance(item,dict) and item.get('fileName','').endswith('.js'):
+   logical='js/plugins/'+item['fileName']
+   if logical not in manifest: missing_index.append(logical)
+if missing_index: raise SystemExit('Plugin assets missing from Propshaft manifest: '+str(missing_index[:10]))
 """
     subprocess.run(['docker', 'exec', '-i', container, 'python3', '-c', code],
                    input=json.dumps(sorted(paths)), text=True, check=True)
@@ -84,6 +92,22 @@ def healthy(port):
     return True
 
 
+def check_frontend(port):
+    # curl/Python user agents can receive the crawler layout, which omits the
+    # plugin import map and does not expose missing Propshaft manifest entries.
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    headers = {'Host': 'river-side.cc', 'X-Forwarded-Proto': 'https',
+               'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
+                             '(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'}
+    for path in ['/', '/login']:
+        request = urllib.request.Request(f'http://127.0.0.1:{port}{path}', headers=headers)
+        with opener.open(request, timeout=30) as response:
+            body = response.read()
+            if (response.status != 200 or b'importmap' not in body
+                    or b'The software powering this discussion forum encountered' in body):
+                raise RuntimeError(f'Full browser page failed: {path}')
+
+
 def wait_ready(port):
     deadline = time.monotonic() + 180
     consecutive = 0
@@ -91,6 +115,7 @@ def wait_ready(port):
         try:
             consecutive = consecutive + 1 if healthy(port) else 0
             if consecutive >= 3:
+                check_frontend(port)
                 return
         except Exception:
             consecutive = 0
