@@ -14,16 +14,20 @@ export default class ArcadePlayback {
     this.pending = null;
   }
 
+  get sudoku() { return this.run.game === "sudoku"; }
   get grid() { return this.run.game === "2048"; }
   get privateGrid() { return this.grid && !Array.isArray(this.state.q); }
   get blocked() {
+    if(this.sudoku){return this.state.awaiting || this.frames>=120;}
     return this.privateGrid ? !!this.pending || this.frames > 0 : this.frames >= (this.grid ? 16 : 180) || this.state.q.length < 4;
   }
   get needsSync() {
+    if(this.sudoku){return this.frames>0 && (this.state.awaiting || this.frames>=20);}
     return this.frames > 0 && (this.privateGrid || this.frames >= (this.grid ? 4 : 120) || this.state.over || this.state.q.length < 8);
   }
 
   input(key) {
+    if(this.sudoku && (this.state.awaiting || !/^(?:[vn]:[0-9]{1,2}:[0-9]|undo)$/.test(key))){return;}
     if (this.state.over || this.run.status !== "playing") { return; }
     if ((this.grid || this.run.game === "snake") && !["l", "r", "u", "d"].includes(key)) { return; }
     if (this.run.game === "snake") {
@@ -52,10 +56,10 @@ export default class ArcadePlayback {
 
   advance() {
     if (this.blocked || this.state.over || this.run.status !== "playing") { return false; }
-    if (this.grid) {
+    if (this.grid || this.sudoku) {
       const key = this.keys.shift();
       if (!key) { return false; }
-      this.visualMove = {direction:key,board:this.state.board.slice(),tick:this.state.tick+1};
+      if(!this.sudoku)this.visualMove = {direction:key,board:this.state.board.slice(),tick:this.state.tick+1};
       if(this.privateGrid){this.state=Core.preview(this.state,key);}else{Core.step(this.state,[key]);}
       this.events.push([this.frames,key]);
       this.frames++;
@@ -100,10 +104,12 @@ export default class ArcadePlayback {
     if (!this.pending || run.id !== this.run.id || run.version !== this.pending.version + 1) {
       throw new Error("进度版本发生变化，请读取已保存进度。");
     }
+    const previousLevel=this.state.level;
     const state = Core.advance(run.state, run.status === "playing" ? this.frames : 0, run.status === "playing" ? this.events : []);
     this.run = run;
     this.state = state;
     this.pending = null;
+    if(this.sudoku && run.state.level!==previousLevel){this.keys=[];}
     if (run.status !== "playing") { this.frames=0;this.events=[];this.keys = []; this.release(); }
   }
 }

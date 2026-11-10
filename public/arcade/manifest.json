@@ -1,8 +1,8 @@
 {
   "protocol": 1,
   "rules_version": 4,
-  "script": "/plugins/discourse-rsc/arcade/rsc-arcade-sdk-f4252c6159bebdba.js",
-  "sha256": "f4252c6159bebdbab086dbe63165e99cc706c4c1e7b11ce1e6d8fef54206f978",
+  "script": "/plugins/discourse-rsc/arcade/rsc-arcade-sdk-89d4fe17e18bbd46.js",
+  "sha256": "89d4fe17e18bbd46344fe3e29a7179eb6b3a066eff235cbf554f91f42d2bdbf5",
   "assets": [
     {
       "url": "/plugins/discourse-rsc/arcade/merge/00-973df787c094.png",
@@ -50,10 +50,10 @@
     }
   ],
   "sources": {
-    "core": "c18500e47651a1b99acaab5ef7b7c309c27d9578bdf0e33d008a06dabb351190",
-    "playback": "3235531ee307c9cc541a1f91288881a6a6b72d8835f61da4c0f6a4493157d132",
+    "core": "409ca19672c5d91843678837e14754d5ccf29e6e6c2dc2ea7ff3af694cae56d2",
+    "playback": "e47f1640f7152ace6003c4725fa02cbe28022114d5f3831d2f154a09577c3666",
     "effects": "5d4dd7c7ee15639c7e26002a6de1a836809c2e7ae1bc4dca57e740a081b64b53",
-    "draw": "6aaf2ad5e34b50d6a10fa6a959d768fff82b30279273070779d5e655d134b42b",
+    "draw": "78b4b13d9ac1055030e50bbf2f84c059c48a934880a8c4f624c046d2e4dee881",
     "sprites": "1f906d4fba7947a510373388e5ffa052af954c30ca221225b88afab3b43dabcc"
   }
 }

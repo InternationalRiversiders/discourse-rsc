@@ -16,7 +16,7 @@ function server(r,request){
 }
 function view(r){const v=structuredClone(r);if(r.game==='2048'){delete v.state.q;}return v;}
 function comparable(state){const v=structuredClone(state);delete v.q;return v;}
-for(const game of Core.games.filter(g=>g!=='2048')){
+for(const game of Core.games.filter(g=>!['2048','sudoku'].includes(g))){
  let authoritative=run(game);const p=new Playback(view(authoritative));
  for(let i=0;i<10;i++)p.advance();
  const first=p.checkpoint(randomUUID());

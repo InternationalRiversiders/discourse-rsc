@@ -3,7 +3,7 @@
 ## 入口和分工
 
 - 原生 Android/iOS：`https://river-side.cc/rsc/arcade/embed?mode=native`
-- 直接打开某个游戏：再加 `&game=2048`（或 `blocks`、`snake`、`bird`、`hex`、`bricks`、`merge`）。不传 game 则显示七款游戏入口和赛季横幅。
+- 直接打开某个游戏：再加 `&game=2048`（或 `blocks`、`snake`、`bird`、`hex`、`bricks`、`merge`、`sudoku`）。不传 game 则显示八款游戏入口和赛季横幅。
 - 同站 Flutter Web `/app/`：iframe 使用同一 URL，改成 `mode=iframe`。仅支持同源父页面，跨域宿主不在本协议内。
 - 发布清单：`https://river-side.cc/plugins/discourse-rsc/arcade/embed-manifest.json`。记录协议、规则版本、JS/CSS 指纹和校验值。App 应加载稳定入口，不固定清单中的某一版脚本。
 
@@ -13,7 +13,7 @@
 
 Flutter 只做 WebView 容器、导航、安全区、鉴权请求代理和生命周期。不要在 Dart 再画方向键、把手势转成游戏指令或注入布局补丁。宿主控制安全区，网页只保留常规内边距；容器不要抢游戏区的滑动和长按。
 
-此入口只包含七款街机游戏。博弈区和大乐透继续使用它们现有接口，不允许通过本桥任意调用钱包或下注 API。
+此入口只包含八款街机游戏。博弈区和大乐透继续使用它们现有接口，不允许通过本桥任意调用钱包或下注 API。
 
 ## 建立连接
 
@@ -130,6 +130,19 @@ API 的错误响应必须转成 `error`，不能作为成功的 result。不把�
 
 插件构建：`python3 script/build-arcade-embed.py --sass /path/to/dart-sass/sass`，加 `--check` 验证构建产物。正常的 `assets:precompile:build_plugins` 和 `assets:precompile` 已接入自动构建任务，会同步生成嵌入页，不需要额外手工维护一套产物。完整论坛前端仍须正常编译；线上按 A/B 发布。只修改有指纹的产物而不更新源码不受支持。
 
-至少验收 Android WebView、iOS WKWebView、Flutter Web：七款触控、长按释放、多指、横竖屏/安全区、后台和返回保存、离线/丢回包后原请求重试、会话/账号切换、排名刷新、资源更新和协议不兼容。
+至少验收 Android WebView、iOS WKWebView、Flutter Web：八款触控、长按释放、多指、横竖屏/安全区、后台和返回保存、离线/丢回包后原请求重试、会话/账号切换、排名刷新、资源更新和协议不兼容。
 
 仓库包含 `test/arcade/bridge.mjs` 和 `test/arcade-embed-browser.cjs`，后者用独立且无登录 cookie 的页面模拟原生宿主，通过另一会话转发真实 API，验证页面不需要拿到用户凭据。浏览器模拟不等于 Flutter 真机验收。
+
+## 数独（sudoku）
+
+使用相同的完整网页入口、桥接协议 v1 和规则版本 4，无新增 API。棋盘、笔记、擦除、撤销、数字键盘、键盘操作和暂停恢复均在共享 Web UI 中实现。新增游戏不是原生 UI 改版，宿主不要重做数独界面。
+
+若宿主仍写死旧的七个游戏 ID 或输入正则，需把 `sudoku` 及以下事件加入受限白名单；此类旧宿主限制不能仅靠服务器改页面绕过。新宿主应从已鉴权 catalog 获取可用游戏 ID，继续限制固定 API 路径、请求大小、序号及请求类型。
+
+- `v:格号:数字`：格号 0–80，数字 0–9，0 表示擦除。
+- `n:格号:数字`：数字 1–9，切换候选笔记。
+- `undo`：撤销最近一次编辑，最多保留 200 次。
+- 数独每次编辑算一帧，不按墙钟推进；空闲约 1.5 秒、满 20 步、通关或暂停时同步，弱网下可继续编辑有限尾帧。
+- 只下发当前关卡题面，不下发生成种子或答案。完成后等待服务端确认并取得下一关，不能客户端自行挑题或跳关。
+- 本轮不改变既有轮替：数独先计总榜，`ROTATION_GAMES` 暂不包含 sudoku；后续启用赛季时按现有通关数分数与并列奖励结算。

@@ -13,9 +13,11 @@ const GAMES=[
  {id:'bird',name:'河畔飞鸟',mark:'➤',color:'sky'},
  {id:'hex',name:'六角消除',mark:'⬡',color:'rose'},
  {id:'bricks',name:'打砖块',mark:'▤',color:'peach'},
- {id:'merge',name:'合成大河畔',mark:'🍉',color:'green'}
+ {id:'merge',name:'合成大河畔',mark:'🍉',color:'green'},
+ {id:'sudoku',name:'数独',mark:'9',color:'lavender'}
 ];
 const ENDLESS_RULES={
+ sudoku:'每行、每列及每个九宫格填入 1–9，不能重复。完整填对即进入下一关，按通关数排名，同关数并列。数字键填数，方向键选格，N 切换笔记，Delete 或 Backspace 擦除，Ctrl/Cmd+Z 撤销。笔记只记录候选数，不提供答案。',
  '2048':'方向键或滑动合并相同数字，每次合并累加分数。没有步数和倒计时限制，棋盘无法移动时结束。',
  blocks:'左右移动，上键旋转，下键加速，空格落下。消除 1／2／3／4 行获得 100／300／500／800 分；消行越多下落越快，堆到顶部结束。',
  snake:'方向键或滑动转向，吃到食物获得 100 分。不能直接掉头，撞墙、障碍或身体结束，填满可用格子通关。',
@@ -28,6 +30,21 @@ export default class ArcadeApp {
  games=GAMES;
  rankScope='all';
  rankInfo=false;
+ seasonInfo=false;
+ sudokuCell=0;
+ sudokuNote=false;
+ sudokuSelect(i){this.sudokuCell=Number(i);this.scheduleRender();}
+ sudokuWrite(n){this.input(`${this.sudokuNote?'n':'v'}:${this.sudokuCell}:${n}`);}
+ sudokuKey(e){
+  if(this.game!=='sudoku'||e.isComposing||e.altKey||e.target.closest('input,textarea,select'))return;
+  const k=e.key.toLowerCase(),dirs={arrowleft:-1,a:-1,arrowright:1,d:1,arrowup:-9,w:-9,arrowdown:9,s:9};
+  if((e.ctrlKey||e.metaKey)&&k==='z'){e.preventDefault();this.input('undo');return;}
+  if(e.ctrlKey||e.metaKey)return;
+  if(k in dirs){e.preventDefault();this.sudokuSelect(Math.max(0,Math.min(80,this.sudokuCell+dirs[k])));this.root.querySelector(`[data-cell="${this.sudokuCell}"]`)?.focus({preventScroll:true});}
+  else if(/^[1-9]$/.test(k)){e.preventDefault();this.sudokuWrite(k);}
+  else if(['backspace','delete','0'].includes(k)){e.preventDefault();this.input(`v:${this.sudokuCell}:0`);}
+  else if(k==='n'){e.preventDefault();this.sudokuNote=!this.sudokuNote;this.scheduleRender();}
+ }
  toggleRankInfo(){this.rankInfo=!this.rankInfo;}
  rankChosen=false;
  game=null;
@@ -52,6 +69,7 @@ export default class ArcadeApp {
  get rulesVersion(){return Core.version;}
  get rulesText(){return `${ENDLESS_RULES[this.game]} 方向键也可使用 WASD；Esc 暂停并保存。`;}
  get grid(){return this.game==='2048';}
+ get turnBased(){return this.grid||this.game==='sudoku';}
  get finished(){return this.run?.status==='finished';}
  get inputDisabled(){return this.paused||this.busy||this.finishing||this.finished||this.localOver;}
  get navigationBusy(){return this.busy||this.syncing||!!this.pending;}
@@ -66,10 +84,10 @@ export default class ArcadeApp {
  openSeason(){if(this.featured){this.open(this.featured.game);this.rankScope='season';}}
  get status(){return this.finished?'成绩已保存':this.error?'连接中断':this.finishing||this.localOver?'保存成绩':this.paused?'已暂停':this.waiting?'等待同步':'挑战中';}
  get startLabel(){return this.finished?'再来一局':this.run?'继续挑战':'开始挑战';}
- get progressLabel(){if(!this.state){return '';}if(this.grid){return `${this.progress} 步`;}if(this.game==='blocks'){return `${this.state.lines} 行`;}if(this.game==='merge'){return `${this.state.drops} 次投放`;}if(this.game==='bricks'){return `第 ${this.state.wave||1} 关`;}if(this.game==='bird'){return `${this.score} 道障碍`;}return '';}
+ get progressLabel(){if(!this.state){return '';}if(this.grid){return `${this.progress} 步`;}if(this.game==='sudoku'){return `第 ${this.state.level||1} 关`;}if(this.game==='blocks'){return `${this.state.lines} 行`;}if(this.game==='merge'){return `${this.state.drops} 次投放`;}if(this.game==='bricks'){return `第 ${this.state.wave||1} 关`;}if(this.game==='bird'){return `${this.score} 道障碍`;}return '';}
  get controls(){return ['blocks','snake'].includes(this.game)?['u','l','d','r']:this.game==='hex'?['l','r']:[];}
  get hasControls(){return ['blocks','snake','hex'].includes(this.game);}
- focusPlay(){this.canvas?.focus({preventScroll:true});if(window.innerWidth<=767){this.canvas?.closest('.ra-play')?.scrollIntoView({block:'start',behavior:'instant'});}}
+ focusPlay(){if(this.game==='sudoku'){this.root.querySelector(`[data-cell="${this.sudokuCell}"]`)?.focus({preventScroll:true});return;}this.canvas?.focus({preventScroll:true});if(window.innerWidth<=767){this.canvas?.closest('.ra-play')?.scrollIntoView({block:'start',behavior:'instant'});}}
  get controlsList(){return this.controls.map(k=>({key:k,label:{l:'←',r:'→',u:'↑',d:'↓'}[k]}));}
  async open(game){
   if(this.fixedGame&&game!==this.args.game){return;}
@@ -103,8 +121,8 @@ export default class ArcadeApp {
  updateView(){
   const p=this.playback;if(!p){return;}
   this.run=p.run;this.state=p.state;this.pending=p.pending;this.score=p.state.score;
-  if(this.grid||p.state.tick%15===0||p.state.over){this.progress=p.state.tick;}
-  this.waiting=p.blocked&&!p.state.over;this.localOver=p.state.over;this.effects.observe(p.state,p.visualMove);this.repaint=true;
+  if(this.turnBased||p.state.tick%15===0||p.state.over){this.progress=p.state.tick;}
+  this.waiting=p.blocked&&!p.state.over;this.localOver=p.state.over;this.effects.observe(p.state,p.visualMove);this.repaint=true;if(this.game==='sudoku')this.scheduleRender();
  }
  paint(){if(this.canvas&&this.state){draw(this.canvas,this.state,this.effects);}}
  async pause(){this.hostPaused=true;this.paused=true;this.playback?.release();await this.startPromise;this.paused=true;this.playback?.release();await this.flush();}
@@ -143,7 +161,7 @@ export default class ArcadeApp {
     p.acknowledge(r);this.updateView();
     if(r.status!=='playing'){this.paused=true;this.finishing=false;this.loadRanking();break;}
     // Consume queued gestures after a refill, without waiting between moves.
-    if(this.grid&&!this.paused){p.advance();this.updateView();}
+    if(this.turnBased&&!this.paused){p.advance();this.updateView();}
    }
   }catch(e){
    if(!this.isDestroying){this.error=this.errorText(e);this.paused=true;p.release();}
@@ -151,7 +169,7 @@ export default class ArcadeApp {
  }
  input(key){
   if(!this.playback||this.inputDisabled||this.error){return;}
-  this.lastInputAt=performance.now();this.playback.input(key);if(this.grid){this.advanceFrame();}
+  this.lastInputAt=performance.now();this.playback.input(key);if(this.turnBased){this.advanceFrame();}
  }
  press(key,e){
   e?.preventDefault();if(this.inputDisabled){return;}
@@ -177,7 +195,7 @@ export default class ArcadeApp {
   };
   const key=e=>{
    if(e.isComposing||e.ctrlKey||e.metaKey||e.altKey){return;}
-   const k=mapped(e);if(!k){return;}e.preventDefault();
+   if(this.game==='sudoku')return;const k=mapped(e);if(!k){return;}e.preventDefault();
    if(!e.repeat&&!this.inputDisabled){this.input(this.game==='bird'?'tap':k);this.playback?.hold(k);}
   };
   const up=e=>{const k=mapped(e);if(k){this.playback?.release(k);}};
@@ -204,7 +222,7 @@ export default class ArcadeApp {
   const loop=t=>{
    if(this.isDestroying){return;}const delta=Math.min(100,t-(this.last||t));this.last=t;
    if(!this.inputDisabled&&!this.error&&this.run?.status==='playing'){
-    if(this.grid){this.advanceFrame();if(this.playback.frames&&!this.syncing&&t-this.lastInputAt>=250){this.flush();}}else{
+    if(this.turnBased){this.advanceFrame();if(this.playback.frames&&!this.syncing&&t-this.lastInputAt>=(this.game==='sudoku'?1500:250)){this.flush();}}else{
      this.accumulator+=delta;let count=0;
      while(this.accumulator>=1000/60&&count++<6){
       this.advanceFrame();this.accumulator-=1000/60;
@@ -226,13 +244,13 @@ export default class ArcadeApp {
   this.click=(e)=>{const b=e.target.closest('[data-action]');if(!b||!root.contains(b)||b.disabled){return;}
    const action=b.dataset.action,arg=b.dataset.arg;
    if(action==='profile'){if(options.onProfile){e.preventDefault();options.onProfile(arg);}return;}
-   const actions={open:()=>this.open(arg),back:()=>this.back(),start:()=>this.start(),pause:()=>this.pause(),finish:()=>this.finish(),retry:()=>this.retry(),recover:()=>this.recover(),rank:()=>this.selectRank(arg),info:()=>this.toggleRankInfo(),ranking:()=>this.loadRanking(),season:()=>this.openSeason(),catalog:()=>options.reloadCatalog?.()};
+   const actions={seasonInfo:()=>{this.seasonInfo=!this.seasonInfo;this.scheduleRender();},cell:()=>this.sudokuSelect(arg),digit:()=>this.sudokuWrite(arg),note:()=>{this.sudokuNote=!this.sudokuNote;this.scheduleRender();},erase:()=>this.input(`v:${this.sudokuCell}:0`),undo:()=>this.input('undo'),open:()=>this.open(arg),back:()=>this.back(),start:()=>this.start(),pause:()=>this.pause(),finish:()=>this.finish(),retry:()=>this.retry(),recover:()=>this.recover(),rank:()=>this.selectRank(arg),info:()=>this.toggleRankInfo(),ranking:()=>this.loadRanking(),season:()=>this.openSeason(),catalog:()=>options.reloadCatalog?.()};
    if(actions[action]){Promise.resolve(actions[action]()).catch(error=>{this.error=this.errorText(error);});}
   };
   this.pointerDown=(e)=>{const b=e.target.closest('[data-key]');if(b&&root.contains(b)){this.press(b.dataset.key,{preventDefault:()=>e.preventDefault(),currentTarget:b,pointerId:e.pointerId});}};
   this.pointerUp=(e)=>{const b=e.target.closest('[data-key]');if(b){this.release(b.dataset.key);}};
   this.keyClick=(e)=>{const b=e.target.closest('[data-key]');if(b&&e.detail===0){this.input(b.dataset.key);}};
-  root.addEventListener('click',this.click);root.addEventListener('click',this.keyClick);root.addEventListener('pointerdown',this.pointerDown);
+  this.sudokuKeyboard=e=>this.sudokuKey(e);root.addEventListener('keydown',this.sudokuKeyboard);root.addEventListener('click',this.click);root.addEventListener('click',this.keyClick);root.addEventListener('pointerdown',this.pointerDown);
   for(const event of ['pointerup','pointercancel','lostpointercapture']){root.addEventListener(event,this.pointerUp);}
   this.render();if(options.game&&GAMES.some(g=>g.id===options.game)){this.open(options.game);}
  }
@@ -257,7 +275,7 @@ export default class ArcadeApp {
  }
  destroy(){
   this.closing=true;this.stageCleanup?.();this.coverCleanups?.forEach(fn=>fn());
-  this.root.removeEventListener('click',this.click);this.root.removeEventListener('click',this.keyClick);this.root.removeEventListener('pointerdown',this.pointerDown);
+  this.root.removeEventListener('keydown',this.sudokuKeyboard);this.root.removeEventListener('click',this.click);this.root.removeEventListener('click',this.keyClick);this.root.removeEventListener('pointerdown',this.pointerDown);
   for(const event of ['pointerup','pointercancel','lostpointercapture']){this.root.removeEventListener(event,this.pointerUp);}
   return this.pause().finally(()=>{this.isDestroying=true;this.generation++;});
  }

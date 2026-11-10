@@ -84,3 +84,40 @@
 .ra-app .rsc-forum-user img{border-radius:50%;object-fit:cover}
 
 @media(max-width:767px){.ra-stage[data-game="snake"]{width:min(100%,400px,calc(100svh - 330px));min-width:180px}}
+
+// Season prizes live in an expandable panel, never a twenty-number banner.
+.ra-hub .ra-season-banner.rh-banner{cursor:default;grid-template-columns:minmax(0,1fr) auto auto}
+.ra-banner-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.ra-banner-actions button{font:inherit;color:inherit;background:transparent;cursor:pointer}
+.ra-banner-detail{border:0;padding:8px;text-decoration:underline;text-underline-offset:4px;font-size:13px!important}
+.ra-season-details{margin:-12px 0 24px;padding:18px;border:1px solid var(--primary-low);border-radius:14px;background:var(--secondary)}
+.ra-season-details p{font-size:.85rem;color:var(--primary-medium);margin:14px 0 0}
+.ra-prize-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 20px}
+.ra-prize-grid>div{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--primary-very-low);font-size:.9rem}
+@media(max-width:700px){.ra-hub .ra-season-banner.rh-banner{grid-template-columns:minmax(0,1fr) auto}.ra-banner-actions{grid-row:2;gap:4px}.ra-prize-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:370px){.ra-banner-actions{gap:2px}.ra-banner-detail{font-size:11px!important;padding:4px}.ra-prize-grid{gap:4px 12px}}
+
+.ra-stage[data-game="sudoku"]{width:min(100%,480px);background:var(--secondary);border-radius:10px;overflow:visible}
+.ra-stage[data-game="sudoku"]>.ra-canvas{display:none}
+.ra-sudoku-grid{border:2px solid var(--primary);border-radius:8px;overflow:hidden;background:var(--secondary);user-select:none}
+.ra-sudoku-grid>[role=row]{display:grid;grid-template-columns:repeat(9,minmax(0,1fr))}
+.ra-sudoku-grid>[role=row]:nth-child(3n):not(:last-child){border-bottom:2px solid var(--primary)}
+.ra-sudoku-grid button{position:relative;aspect-ratio:1;padding:0;border:0;border-right:1px solid var(--primary-low);border-bottom:1px solid var(--primary-low);border-radius:0;background:var(--secondary);color:var(--tertiary);font:500 clamp(18px,3.5vw,27px)/1 system-ui;cursor:pointer;touch-action:manipulation;min-width:0}
+.ra-sudoku-grid button:nth-child(3n):not(:last-child){border-right:2px solid var(--primary)}
+.ra-sudoku-grid button:last-child{border-right:0}
+.ra-sudoku-grid [role=row]:last-child button{border-bottom:0}
+.ra-sudoku-grid button.is-given{color:var(--primary);font-weight:700}
+.ra-sudoku-grid button.is-peer{background:var(--primary-very-low)}
+.ra-sudoku-grid button.is-same{background:var(--tertiary-low)}
+.ra-sudoku-grid button.is-selected{background:var(--tertiary-low);box-shadow:inset 0 0 0 2px var(--tertiary);z-index:1}
+.ra-sudoku-grid button.is-conflict{color:#ce3e54;background:#ce3e5420}
+.ra-sudoku-grid button:focus-visible{outline:2px solid var(--tertiary);outline-offset:-3px;z-index:2}
+.ra-sudoku-notes{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);position:absolute;inset:3px;font-size:clamp(9px,1.7vw,12px);line-height:1;color:var(--primary-medium)}
+.ra-sudoku-notes span{display:grid;place-items:center}
+.ra-sudoku-tools{display:flex;gap:8px;margin:12px 0}
+.ra-sudoku-tools .btn{flex:1;min-height:40px;justify-content:center;border-radius:8px}
+.ra-sudoku-tools .is-active{background:var(--tertiary-low);color:var(--tertiary);box-shadow:inset 0 0 0 1px var(--tertiary)}
+.ra-sudoku-digits{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:5px}
+.ra-sudoku-digits button{min-width:0;min-height:48px;padding:0;background:var(--tertiary-low);color:var(--tertiary);border:0;border-radius:7px;font:600 24px system-ui;touch-action:manipulation;cursor:pointer}
+.ra-sudoku-digits button:disabled{opacity:.45;cursor:default}
+@media(max-width:767px){.ra-play[data-game="sudoku"]{padding:12px}.ra-sudoku-digits{gap:3px}.ra-sudoku-digits button{font-size:21px}.ra-play[data-game="sudoku"] .ra-scorebar{gap:8px}.ra-play[data-game="sudoku"] .ra-scorebar strong{font-size:26px}}

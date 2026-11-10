@@ -1,4 +1,4 @@
-const games=['2048','blocks','snake','bird','hex','bricks','merge'];
+const games=['2048','blocks','snake','bird','hex','bricks','merge','sudoku'];
 const fail=()=>{throw new Error('无效的游戏请求');};
 // Also supplied to native implementers as the exact API allowlist contract.
 export function arcadeRequest(action,payload={}){
@@ -17,6 +17,6 @@ export function arcadeRequest(action,payload={}){
  }
  const {id,version,request_id,rules_version,frames,events,finish}=payload;
  if(!Number.isSafeInteger(id)||id<=0||!Number.isSafeInteger(version)||version<0||!Number.isInteger(frames)||frames<0||frames>180||!Array.isArray(events)||events.length>360||typeof finish!=='boolean'){fail();}
- if(!events.every(e=>Array.isArray(e)&&e.length===2&&Number.isInteger(e[0])&&e[0]>=0&&e[0]<frames&&typeof e[1]==='string'&&/^(l|r|u|d|drop|tap|x:(?:[0-9]{1,4}))$/.test(e[1])&&(!e[1].startsWith('x:')||Number(e[1].slice(2))<=4000))){fail();}
+ if(!events.every(e=>Array.isArray(e)&&e.length===2&&Number.isInteger(e[0])&&e[0]>=0&&e[0]<frames&&typeof e[1]==='string'&&/^(l|r|u|d|drop|tap|x:(?:[0-9]{1,4})|[vn]:[0-9]{1,2}:[0-9]|undo)$/.test(e[1])&&(!e[1].startsWith('x:')||Number(e[1].slice(2))<=4000))){fail();}
  return {method:'POST',path:`/rsc/arcade/${id}/advance.json`,body:{version,request_id,rules_version,frames,events,finish}};
 }

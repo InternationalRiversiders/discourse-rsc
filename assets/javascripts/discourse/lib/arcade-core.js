@@ -1,7 +1,7 @@
 // Shared deterministic rules. No clock, browser API, random seed or wallet access.
 // All coordinates and velocities are integers. Rendering never affects simulation.
 const ARCADE_VERSION = 4;
-const GAME_IDS = ["2048", "blocks", "snake", "bird", "hex", "bricks", "merge"];
+const GAME_IDS = ["2048", "blocks", "snake", "bird", "hex", "bricks", "merge", "sudoku"];
 const LIMITS = {"2048": 2000, blocks: 18000, snake: 18000, bird: 10800, hex: 10800, bricks: 18000, merge: 18000};
 const SHAPES = [[[0,0],[1,0],[2,0],[3,0]],[[0,0],[1,0],[0,1],[1,1]],[[1,0],[0,1],[1,1],[2,1]],[[1,0],[2,0],[0,1],[1,1]],[[0,0],[1,0],[1,1],[2,1]],[[0,0],[0,1],[1,1],[2,1]],[[2,0],[0,1],[1,1],[2,1]]];
 const RADIUS = [110,145,185,235,295,365,445,535,635,745,865];
@@ -19,10 +19,89 @@ function block(s) {
  s.piece={cells:clone(SHAPES[take(s,7)]),x:3,y:0,color:s.pieces%7+1};s.pieces++;if(!fits(s,s.piece)){s.over=true;} }
 function fits(s,p) {return p.cells.every(([x,y])=>{x+=p.x;y+=p.y;return x>=0&&x<10&&y>=0&&y<20&&!s.board[y*10+x];});}
 function lower(s) {const p={...s.piece,y:s.piece.y+1};if(fits(s,p)){s.piece=p;return true;}for(const [x,y] of s.piece.cells){s.board[(s.piece.y+y)*10+s.piece.x+x]=s.piece.color;}let lines=0;for(let y=19;y>=0;y--){if(s.board.slice(y*10,y*10+10).every(Boolean)){s.board.splice(y*10,10);s.board.unshift(...Array(10).fill(0));lines++;y++;}}s.lines+=lines;s.score+=[0,100,300,500,800][lines];if(s.version===1&&s.pieces>=200){s.over=true;}else{block(s);}return false;}
+// Sudoku inputs are replayed against server-owned givens, never a client score.
+const sudokuUnits = [...Array.from({length:9},(_,r)=>Array.from({length:9},(_,c)=>r*9+c)),...Array.from({length:9},(_,c)=>Array.from({length:9},(_,r)=>r*9+c)),...Array.from({length:9},(_,b)=>Array.from({length:9},(_,i)=>(Math.floor(b/3)*3+Math.floor(i/3))*9+b%3*3+i%3))];
+const sudokuPeers=Array.from({length:81},(_,i)=>[...new Set(sudokuUnits.filter(u=>u.includes(i)).flat())].filter(j=>j!==i));
+function sudokuCandidates(board,i){
+ let mask=1022;
+ for(const j of sudokuPeers[i])mask&=~(1<<board[j]);
+ return mask;
+}
+function sudokuValid(board){return board.length===81&&sudokuUnits.every(u=>u.reduce((m,i)=>m|(1<<board[i]),0)===1022);}
+function sudokuSolutions(input,limit=2){
+ const board=input.slice();let count=0,nodes=0;
+ function search(){
+  if(++nodes>30000)throw new Error('sudoku_search_limit');
+  let pos=-1,bits=0,size=10;
+  for(let i=0;i<81;i++)if(!board[i]){const m=sudokuCandidates(board,i),n=m.toString(2).replace(/0/g,'').length;if(!n)return;if(n<size){pos=i;bits=m;size=n;if(n===1)break;}}
+  if(pos<0){count++;return;}
+  for(let n=1;n<=9&&count<limit;n++)if(bits&(1<<n)){board[pos]=n;search();}board[pos]=0;
+ }
+ search();return count;
+}
+// Grade by the deductions required, not just by the number of clues.
+function sudokuGrade(input){
+ const b=input.slice();let grade=1;
+ for(let pass=0;pass<81;pass++){
+  if(b.every(Boolean))return grade;
+  let progress=false;const candidates=b.map((v,i)=>v?0:sudokuCandidates(b,i));
+  for(let i=0;i<81;i++){const m=candidates[i];if(m&&(m&(m-1))===0){b[i]=Math.log2(m);progress=true;break;}}
+  if(progress)continue;
+  for(const unit of sudokuUnits){for(let n=1;n<=9;n++){const cells=unit.filter(i=>candidates[i]&(1<<n));if(cells.length===1){b[cells[0]]=n;progress=true;grade=2;break;}}if(progress)break;}
+  if(!progress)return 3;
+ }
+ return 3;
+}
+// Called ONLY by the server with its private per-period/per-level seed.
+// The returned payload contains the puzzle, never the solution or seed.
+function sudokuPuzzle(seed,level){
+ let x=seed>>>0||1;const random=n=>{x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)%n;};
+ const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=random(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;};
+ const target=level<=3?1:level<=7?2:3,clues=level===1?46:level<=3?40:level<=7?32:27;
+ let best=null,bestGrade=0;
+ for(let attempt=0;attempt<12;attempt++){
+  const rows=shuffle([0,1,2]).flatMap(b=>shuffle([0,1,2]).map(r=>b*3+r)),cols=shuffle([0,1,2]).flatMap(b=>shuffle([0,1,2]).map(c=>b*3+c)),digits=shuffle([1,2,3,4,5,6,7,8,9]);
+  const board=rows.flatMap(r=>cols.map(c=>digits[(r*3+Math.floor(r/3)+c)%9]));
+  let count=81;
+  for(const i of shuffle(Array.from({length:81},(_,i)=>i))){
+   if(count<=clues)break;const old=board[i];board[i]=0;
+   let unique=false;try{unique=sudokuSolutions(board)===1;}catch{}
+   if(!unique||sudokuGrade(board)>target){board[i]=old;}else count--;
+  }
+  const grade=sudokuGrade(board);
+  if(!best||grade>bestGrade){best=board;bestGrade=grade;}
+  if(grade===target)return board;
+ }
+ if(bestGrade===target)return best;
+ // Bounded generation fallback: verified unique puzzles of each deduction tier.
+ const base=(target===2?'007104080100038720000600901000803070001059038030210090000080000060701800950020000':'026003051501000083003900000300010000004500702059730000260007000000100005000000040').split('').map(Number);
+ const rows=shuffle([0,1,2]).flatMap(b=>shuffle([0,1,2]).map(r=>b*3+r)),cols=shuffle([0,1,2]).flatMap(b=>shuffle([0,1,2]).map(c=>b*3+c)),digits=[0,...shuffle([1,2,3,4,5,6,7,8,9])];
+ return rows.flatMap(r=>cols.map(c=>digits[base[r*9+c]]));
+}
+function sudokuLoad(s,puzzle){
+ s.givens=puzzle.slice();s.board=puzzle.slice();s.notes=Array(81).fill(0);s.history=[];s.awaiting=false;s.level=s.score+1;return s;
+}
+function sudokuStep(s,keys){
+ if(s.awaiting)return;
+ for(const key of keys){
+  if(key==='undo'){
+   const prev=s.history.pop();if(prev){s.board[prev[0]]=prev[1];s.notes[prev[0]]=prev[2];}continue;
+  }
+  const m=/^([vn]):([0-9]{1,2}):([0-9])$/.exec(key);if(!m)continue;
+  const i=Number(m[2]),v=Number(m[3]);if(i>80||s.givens[i])continue;
+  const previous=[i,s.board[i],s.notes[i]];
+  if(m[1]==='n'){if(v&& !s.board[i])s.notes[i]^=1<<v;}
+  else{s.board[i]=v;s.notes[i]=0;}
+  if(previous[1]!==s.board[i]||previous[2]!==s.notes[i]){s.history.push(previous);if(s.history.length>200)s.history.shift();}
+  if(sudokuValid(s.board)){s.score++;s.awaiting=true;s.history=[];break;}
+ }
+}
+
 function create(game,q,version=ARCADE_VERSION) {
  if(![1,2,3,4].includes(version)){throw new Error("rules_version");}
  if(!GAME_IDS.includes(game)){throw new Error("game");}
  const s={game,version,tick:0,score:0,over:false,q:q.slice(),limit:version===1?LIMITS[game]:null};
+ if(game==="sudoku"){sudokuLoad(s,'530070000600195000098000060800060003400803001700020006060000280000419005000080079'.split('').map(Number));s.awaiting=true;}
  if(game==="2048"){s.board=Array(16).fill(0);tile(s);tile(s);}
  if(game==="blocks"){s.board=Array(200).fill(0);s.lines=0;s.pieces=0;block(s);}
  if(game==="snake"){s.snake=[210,209,208];s.dir=1;s.walls=[84,85,86,87,312,313,314,315];food(s);}
@@ -343,6 +422,7 @@ function birdHitsPipe(y,p) {
 }
 function step(s,keys=[]) {
  if(s.over){return s;}
+ if(s.game==='sudoku'){s.tick++;sudokuStep(s,keys);return s;}
  if(s.q.length<4){throw new Error("queue_empty");}
  s.tick++;
  const has=(k)=>keys.includes(k), left=has('l'),right=has('r');
@@ -393,10 +473,10 @@ function step(s,keys=[]) {
 function advance(state,frames,events){
  if(!Number.isInteger(frames)||frames<0||frames>180||!Array.isArray(events)||events.length>360){throw new Error('invalid_actions');}
  const s=clone(state), grouped={};let previous=-1;
- for(const e of events){if(!Array.isArray(e)||e.length!==2||!Number.isInteger(e[0])||e[0]<0||e[0]>=frames||e[0]<previous||typeof e[1]!=='string'||!(/^(l|r|u|d|drop|tap|x:[0-9]{1,4})$/).test(e[1])){throw new Error('invalid_actions');}previous=e[0];(grouped[e[0]]||= []).push(e[1]);if(grouped[e[0]].length>2){throw new Error('invalid_actions');}}
+ for(const e of events){if(!Array.isArray(e)||e.length!==2||!Number.isInteger(e[0])||e[0]<0||e[0]>=frames||e[0]<previous||typeof e[1]!=='string'||!(/^(l|r|u|d|drop|tap|x:[0-9]{1,4}|[vn]:[0-9]{1,2}:[0-9]|undo)$/).test(e[1])){throw new Error('invalid_actions');}previous=e[0];(grouped[e[0]]||= []).push(e[1]);if(grouped[e[0]].length>2){throw new Error('invalid_actions');}}
  if(s.game==='2048'&&(frames>16||Object.values(grouped).some(keys=>keys.length>1||!['l','r','u','d'].includes(keys[0])))){throw new Error('invalid_actions');}
  for(let i=0;i<frames;i++){if(s.over){throw new Error('already_over');}step(s,grouped[i]||[]);}return s;
 }
 function preview(state,dir){const s=clone(state);slide(s,dir,false);s.tick++;return s;}
-const ArcadeCore={preview,version:ARCADE_VERSION,games:GAME_IDS,limits:LIMITS,radii:RADIUS,create,step,advance};
+const ArcadeCore={sudokuPuzzle,sudokuLoad,sudokuValid,sudokuSolutions,sudokuGrade,preview,version:ARCADE_VERSION,games:GAME_IDS,limits:LIMITS,radii:RADIUS,create,step,advance};
 export default ArcadeCore;

@@ -46,6 +46,62 @@ class ArcadeTest < NativeBusinessTest
     run=R::ArcadeRun.find(current[:id])
     assert_equal run.state,R::Arcade.engine('advance',run.inputs.first['checkpoint'],120,[]).tap{|v| v['q']=run.state['q']}
   end
+  def solve_sudoku(board)
+    board=board.dup
+    visit=lambda do
+      i=board.index(0)
+      return true unless i
+      r=i/9;c=i%9
+      (1..9).each do |n|
+        next if board.each_with_index.any? { |v,j| v==n && (j/9==r || j%9==c || (j/27==r/3 && j%9/3==c/3)) }
+        board[i]=n
+        return true if visit.call
+      end
+      board[i]=0;false
+    end
+    raise 'unsolvable test puzzle' unless visit.call
+    board
+  end
+  def test_sudoku_same_period_same_puzzles_and_private_seed
+    a=start('sudoku');b=start('sudoku',actor:@bob)
+    assert_equal a[:state]['givens'],b[:state]['givens']
+    assert_equal 1,R::Arcade.engine('sudokuSolutions',a[:state]['givens'])
+    refute JSON.generate(a).match?(/seed|solution/)
+    assert_equal a,start('sudoku')
+    assert_equal '100',R::Account.wallet(@alice.id).balance
+    refute_includes R::Arcade::ROTATION_GAMES,'sudoku'
+  end
+  def test_sudoku_notes_undo_completion_replay_and_retry
+    r=start('sudoku');board=r[:state]['givens'];i=board.index(0);given=board.index { |v| v>0 }
+    r=advance(r,events:[[0,"n:#{i}:5"]]);assert_equal 32,r[:state]['notes'][i]
+    assert_equal r[:state],start('sudoku')[:state]
+    r=advance(r,events:[[0,"v:#{given}:0"]]);assert_equal board[given],r[:state]['board'][given]
+    r=advance(r,events:[[0,"v:#{i}:7"]]);assert_equal 7,r[:state]['board'][i]
+    r=advance(r,events:[[0,'undo']]);assert_equal 0,r[:state]['board'][i];assert_equal 32,r[:state]['notes'][i]
+    answer=solve_sudoku(board)
+    events=board.each_index.select { |j| board[j]==0 }.each_with_index.map { |j,t| [t,"v:#{j}:#{answer[j]}"] }
+    key=SecureRandom.uuid
+    done=advance(r,frames:events.size,events:events,request_id:key)
+    assert_equal done,advance(r,frames:events.size,events:events,request_id:key)
+    assert_equal 1,done[:state]['score'];assert_equal 2,done[:state]['level']
+    assert done[:state]['notes'].all?(&:zero?)
+    refute_equal board,done[:state]['givens']
+    row=R::ArcadeRun.find(done[:id]);replay=R::Arcade.engine('create','sudoku',row.inputs.first['initial'],row.inputs.first['version'])
+    replay=R::Arcade.engine('sudokuLoad',replay,row.inputs.first['puzzle'])
+    row.inputs.drop(1).each do |batch|
+      replay=R::Arcade.engine('advance',replay,batch['frames'],batch['events']);replay['q'].concat(batch['refill'])
+      replay=R::Arcade.engine('sudokuLoad',replay,batch['puzzle']) if batch['puzzle']
+    end
+    assert_equal row.state,replay
+    finished=advance(done,frames:0,events:[],finish:true)
+    assert_equal 'finished',finished[:status]
+    assert_equal [[@alice.id,1]],R::Arcade.ranked(nil,'sudoku')
+  end
+  def test_sudoku_invalid_fill_cannot_claim_a_level
+    r=start('sudoku');events=r[:state]['givens'].each_index.select { |j| r[:state]['givens'][j]==0 }.each_with_index.map { |j,t| [t,"v:#{j}:1"] }
+    r=advance(r,frames:events.size,events:events,finish:true)
+    assert_equal 0,r[:state]['score'];assert_empty R::Arcade.ranked(nil,'sudoku')
+  end
   def test_start_resume_and_duplicate_do_not_charge_or_reset
     key=SecureRandom.uuid;r=start(key:key);assert_equal r,start(key:key);assert_equal r,start
     assert_equal '100',R::Account.wallet(@alice.id).balance
@@ -66,13 +122,15 @@ class ArcadeTest < NativeBusinessTest
     assert_raises(R::Error) {advance(s,events:[[0,'score:999']])}
     assert_raises(R::Error) {advance(s,version:'1')}
   end
-  def test_saved_replay_reproduces_all_seven_games
+  def test_saved_replay_reproduces_all_games
     R::Arcade::NAMES.each_key do |game|
       r=start(game)
       r=advance(r,frames:game=='2048' ? 1 : 20,events:game=='2048' ? [[0,'l']] : [])
       row=R::ArcadeRun.find(r[:id]);replay=R::Arcade.engine('create',game,row.inputs.first['initial'],row.inputs.first['version'])
+      replay=R::Arcade.engine('sudokuLoad',replay,row.inputs.first['puzzle']) if game=='sudoku'
       row.inputs.drop(1).each do |batch|
         replay=R::Arcade.engine('advance',replay,batch['frames'],batch['events']);replay['q'].concat(batch['refill'])
+        replay=R::Arcade.engine('sudokuLoad',replay,batch['puzzle']) if batch['puzzle']
       end
       assert_equal row.state,replay
       assert_equal row.score,replay['score']

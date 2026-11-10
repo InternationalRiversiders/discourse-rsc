@@ -2,11 +2,16 @@ import Core from "./arcade-core";
 const BLOCK_COLORS=['#6dc9e8','#e9d578','#ba9dea','#84ddc0','#f389a2','#7f9ae0','#f6bf70'];
 const PALETTE=['#84ddc0','#f6bf70','#9b9ef1','#f389a2','#6dc9e8','#e9d578','#ba9dea'];
 export default function draw(canvas,s,fx=null,now=performance.now()) {
- const ctx=canvas.getContext('2d');if(!ctx){return;}const width=s.game==='blocks'?296:400,height=s.game==='blocks'?576:s.game==='2048'||s.game==='snake'||s.game==='hex'?400:560;
+ const ctx=canvas.getContext('2d');if(!ctx){return;}const width=s.game==='blocks'?296:400,height=s.game==='blocks'?576:s.game==='sudoku'||s.game==='2048'||s.game==='snake'||s.game==='hex'?400:560;
  const scale=Math.min(window.devicePixelRatio||1,2);if(canvas.width!==width*scale||canvas.height!==height*scale){canvas.width=width*scale;canvas.height=height*scale;canvas.style.aspectRatio=`${width}/${height}`;}
  ctx.setTransform(scale,0,0,scale,0,0);ctx.fillStyle='#102c39';ctx.fillRect(0,0,width,height);
  const box=(x,y,w,h,color,r=6)=>{ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();};
  const text=(v,x,y,size=24,color='#effaf8')=>{ctx.fillStyle=color;ctx.font=`700 ${size}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(v),x,y);};
+ if(s.game==='sudoku'){
+  ctx.fillStyle='#f7f6fb';ctx.fillRect(0,0,400,400);
+  for(let i=0;i<81;i++){const x=20+i%9*40,y=20+Math.floor(i/9)*40;if(s.board[i])text(s.board[i],x+20,y+20,23,'#454168');}
+  for(let i=0;i<=9;i++){ctx.strokeStyle=i%3===0?'#756d98':'#dcd8e8';ctx.lineWidth=i%3===0?2:1;ctx.beginPath();ctx.moveTo(20+i*40,20);ctx.lineTo(20+i*40,380);ctx.moveTo(20,20+i*40);ctx.lineTo(380,20+i*40);ctx.stroke();}
+ }
  if(s.game==='2048'){
   ctx.fillStyle='#bbada0';ctx.fillRect(0,0,400,400);
   const tileColors=['#eee4da','#ede0c8','#f2b179','#f59563','#f67c5f','#f65e3b','#edcf72','#edcc61','#edc850','#edc53f','#edc22e'];

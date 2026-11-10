@@ -2,7 +2,8 @@
 require 'mini_racer'
 module DiscourseRsc
   module Arcade
-    NAMES = { '2048'=>'2048', 'blocks'=>'方块堆叠', 'snake'=>'贪吃蛇', 'bird'=>'河畔飞鸟', 'hex'=>'六角消除', 'bricks'=>'打砖块', 'merge'=>'合成大河畔' }.freeze
+    NAMES = { '2048'=>'2048', 'blocks'=>'方块堆叠', 'snake'=>'贪吃蛇', 'bird'=>'河畔飞鸟', 'hex'=>'六角消除', 'bricks'=>'打砖块', 'merge'=>'合成大河畔', 'sudoku'=>'数独' }.freeze
+    ROTATION_GAMES = NAMES.keys.reject { |game| game == 'sudoku' }.freeze
     PRIZES = [100,60,40,25,15,12,10,8,6,5,4,4,4,4,4,3,3,3,3,3].freeze
     RULES_VERSION = 4
     CHECKPOINT_BATCHES = 64
@@ -43,9 +44,9 @@ module DiscourseRsc
           starts=latest.ends_at+(steps-1)*duration
           ends=starts+duration
           number=latest.ordinal+steps
-          game=NAMES.keys[(NAMES.keys.index(latest.game)+steps)%NAMES.size]
+          game=ROTATION_GAMES[((ROTATION_GAMES.index(latest.game) || -1)+steps)%ROTATION_GAMES.size]
         else
-          starts=now;number=1;game=NAMES.keys.first
+          starts=now;number=1;game=ROTATION_GAMES.first
           if cadence=='daily'
             ends=now.in_time_zone('Asia/Shanghai').beginning_of_day+20.hours
             ends+=1.day if ends<=now
@@ -64,7 +65,7 @@ module DiscourseRsc
     end
     def self.season_view(p)
       { id:p.id,number:p.ordinal,game:p.game,name:NAMES[p.game],starts_at:p.starts_at,ends_at:p.ends_at,
-        cadence:p.cadence,prizes:p.prizes,rules_version:period_rules(p),next_game:NAMES.keys[(NAMES.keys.index(p.game)+1)%NAMES.size] }
+        cadence:p.cadence,prizes:p.prizes,rules_version:period_rules(p),next_game:ROTATION_GAMES[((ROTATION_GAMES.index(p.game) || -1)+1)%ROTATION_GAMES.size] }
     end
     def self.catalog(actor)
       access!(actor)
@@ -76,6 +77,12 @@ module DiscourseRsc
     end
     def self.key!(key)
       raise Error.new('invalid_request_id') unless key.is_a?(String) && /\A[A-Za-z0-9_-]{8,100}\z/.match?(key)
+    end
+    def self.sudoku_puzzle(period_id, level)
+      Rails.cache.fetch("rsc-sudoku-v1:#{period_id}:#{level}", expires_in: SAVE_RETENTION) do
+        seed=OpenSSL::HMAC.digest('SHA256', Rails.application.secret_key_base, "rsc-sudoku-v1:#{period_id}:#{level}").unpack1('N')
+        engine('sudokuPuzzle', seed, level)
+      end
     end
     def self.start(actor:, game:, request_id:, rules_version: 1, scope: 'season')
       access!(actor,writable:true);key!(request_id)
@@ -102,7 +109,8 @@ module DiscourseRsc
         version=rules_version
         initial=randoms(game=='2048' ? 24 : 20)
         state=engine('create',game,initial,version)
-        run=ArcadeRun.create!(user_id:actor.id,period_id:p.id,game:game,start_key:request_id,state:state,inputs:[{'initial'=>initial,'version'=>version}],
+        state=engine('sudokuLoad',state,sudoku_puzzle(p.id,1)) if game=='sudoku'
+        run=ArcadeRun.create!(user_id:actor.id,period_id:p.id,game:game,start_key:request_id,state:state,inputs:[{'initial'=>initial,'version'=>version}.tap { |row| row['puzzle']=state['givens'] if game=='sudoku' }],
           expires_at:Time.current+SAVE_RETENTION)
         view(run)
       end
@@ -150,6 +158,11 @@ module DiscourseRsc
         end
         raise Error.new('arcade_invalid_actions') if frames.zero? && !finish
         state=engine('advance',run.state,frames,events)
+        next_puzzle=nil
+        if run.game=='sudoku' && state['awaiting'] && !finish
+          next_puzzle=sudoku_puzzle(run.period_id,state['score']+1)
+          state=engine('sudokuLoad',state,next_puzzle)
+        end
         # Only the next bounded window is disclosed; no complete seed ever leaves the server.
         target=20
         refill=randoms([target-state['q'].size,0].max)
@@ -160,7 +173,7 @@ module DiscourseRsc
           digest=Digest::SHA256.hexdigest(JSON.generate(run.inputs))
           run.inputs=[{'checkpoint'=>run.state.deep_dup,'at_version'=>run.version,'digest'=>digest}]
         end
-        run.inputs << { 'frames'=>frames, 'events'=>events, 'refill'=>refill }
+        run.inputs << { 'frames'=>frames, 'events'=>events, 'refill'=>refill }.tap { |row| row['puzzle']=next_puzzle if next_puzzle }
         run.expires_at=Time.current+SAVE_RETENTION if run.state['version']>=2
         run.state=state;run.score=state['score'];run.version+=1;run.last_key=request_id;run.last_digest=fingerprint
         if finish || state['over']
