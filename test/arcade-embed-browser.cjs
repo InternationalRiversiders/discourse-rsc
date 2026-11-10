@@ -49,13 +49,19 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
    console.log('Checking',game);await page.locator('.ra-card').filter({hasText:name}).click();await page.getByRole('button',{name:'开始挑战',exact:true}).click();
    await page.waitForFunction(()=>document.querySelector('[data-action=pause]')?.hidden===false);
    const canvas=page.locator('.ra-canvas');
-   if(game==='2048'){for(const key of ['ArrowLeft','ArrowDown','ArrowRight','ArrowUp'])await canvas.press(key);}
+   if(game==='2048'){for(const key of ['a','s','d','Shift+W'])await canvas.press(key);}
    else if(game==='bird'){await canvas.tap();}
    else if(game==='bricks'||game==='merge'){const r=await canvas.boundingBox();await page.touchscreen.tap(r.x+r.width*.7,r.y+r.height*.5);}
-   else if(game==='snake'){await canvas.press('ArrowUp');}
+   else if(game==='snake'){await canvas.press('w');}
    else{await page.locator('.ra-controls [data-key=r]').tap();assert(await page.locator('.ra-stage .ra-controls').count());}
    await page.waitForTimeout(300);
+   lag=700;
+   await canvas.press('Escape');
+   assert(await page.getByRole('button',{name:'继续挑战',exact:true}).isVisible(),game+' Escape pauses before network save');
+   await canvas.press('Escape');
+   assert(await page.getByRole('button',{name:'继续挑战',exact:true}).isVisible(),game+' repeated Escape does not resume');
    assert((await command('pause')).result.saved,game+' saved on background');
+   lag=0;
    assert((await command('resume')).result.saved,game+' refreshed checkpoint');
    assert(await page.getByRole('button',{name:'继续挑战',exact:true}).isVisible());
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),game+' no overflow');

@@ -200,6 +200,25 @@ class ArcadeTest < NativeBusinessTest
       assert_equal 8,p2.ordinal
     end
   end
+  def test_expanded_prizes_pay_twenty_places_once
+    SiteSetting.rsc_arcade_rewards_enabled=true
+    p=R::Arcade.period
+    assert_equal [100,60,40,25,15],p.prizes.first(5)
+    assert_equal 316,p.prizes.sum
+    state=R::Arcade.engine('create','2048',Array.new(24,333),4)
+    users=21.times.map do |i|
+      user=make_user("rsc_prize_#{i}")
+      R::Account.wallet(user.id)
+      R::ArcadeRun.create!(user_id:user.id,period_id:p.id,game:'2048',start_key:SecureRandom.uuid,
+        state:state,inputs:[],status:'finished',score:2100-i*100,finished_at:Time.current,expires_at:1.hour.from_now)
+      user
+    end
+    travel_to(p.ends_at+1.second) do
+      2.times { R::Arcade.settle }
+      users.each_with_index { |user,i| assert_equal (p.prizes[i]||0).to_s,R::Account.wallet(user.id).balance }
+      assert_equal 1,R::Journal.where(operation:'arcade_prize').count
+    end
+  end
   def test_nonseason_run_cannot_enter_next_season_but_can_finish_for_all_time
     p=R::Arcade.period
     run=nil

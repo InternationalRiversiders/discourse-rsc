@@ -50,7 +50,7 @@ export default class ArcadeApp {
  get fixedGame(){return this.args.embedded&&this.args.game;}
  get selected(){return GAMES.find(g=>g.id===this.game);}
  get rulesVersion(){return Core.version;}
- get rulesText(){return ENDLESS_RULES[this.game];}
+ get rulesText(){return `${ENDLESS_RULES[this.game]} 方向键也可使用 WASD；Esc 暂停并保存。`;}
  get grid(){return this.game==='2048';}
  get finished(){return this.run?.status==='finished';}
  get inputDisabled(){return this.paused||this.busy||this.finishing||this.finished||this.localOver;}
@@ -58,7 +58,7 @@ export default class ArcadeApp {
  get endLabel(){return this.ranking?.season?.ends_at?formatDateTime(this.ranking.season.ends_at):'';}
  get featured(){return this.args.catalog?.current;}
  get featuredEnd(){return this.featured?formatDateTime(this.featured.ends_at):'';}
- get featuredPrizes(){return this.featured?.prizes?.join(' / ') || '';}
+ get featuredPrizes(){return this.featured?.prizes?.slice(0,5).join(' / ') || '';}
  get rankPrizes(){return this.ranking?.season?.prizes?.join(' / ') || '';}
  get rankRows(){return this.rankScope==='season'?this.ranking?.season?.rows:this.ranking?.rows;}
  get nonSeasonRun(){return this.run&&this.ranking?.season&&this.run.season_id!==this.ranking.season.id;}
@@ -169,12 +169,18 @@ export default class ArcadeApp {
  }
  attachStage(canvas){
   this.canvas=canvas;this.paint();let pointer=null;
-  const keyMap={ArrowLeft:'l',ArrowRight:'r',ArrowUp:'u',ArrowDown:'d',' ':'drop'};
+  const keyMap={ArrowLeft:'l',ArrowRight:'r',ArrowUp:'u',ArrowDown:'d',a:'l',d:'r',w:'u',s:'d',' ':'drop'};
+  const mapped=e=>keyMap[e.key]||keyMap[e.key?.toLowerCase()];
+  const escape=e=>{
+   if(e.key!=='Escape'||e.repeat||e.isComposing||e.ctrlKey||e.metaKey||e.altKey||e.target.closest?.('input,textarea,select,[contenteditable="true"]')){return;}
+   if(this.run?.status==='playing'&&!this.paused&&!this.finishing){e.preventDefault();e.stopPropagation();this.pause();}
+  };
   const key=e=>{
-   const k=keyMap[e.key];if(!k){return;}e.preventDefault();
+   if(e.isComposing||e.ctrlKey||e.metaKey||e.altKey){return;}
+   const k=mapped(e);if(!k){return;}e.preventDefault();
    if(!e.repeat&&!this.inputDisabled){this.input(this.game==='bird'?'tap':k);this.playback?.hold(k);}
   };
-  const up=e=>{const k=keyMap[e.key];if(k){this.playback?.release(k);}};
+  const up=e=>{const k=mapped(e);if(k){this.playback?.release(k);}};
   const aim=e=>{const r=canvas.getBoundingClientRect();return `x:${Math.round(Math.max(0,Math.min(4000,(e.clientX-r.left)/r.width*4000)))}`;};
   const down=e=>{
    if(pointer||this.inputDisabled){return;}e.preventDefault();canvas.setPointerCapture(e.pointerId);pointer={id:e.pointerId,x:e.clientX,y:e.clientY,swiped:false};canvas.focus({preventScroll:true});
@@ -194,7 +200,7 @@ export default class ArcadeApp {
   const cancel=()=>{pointer=null;this.playback?.release();};
   const move=e=>{swipe(e);if((!pointer||pointer.id===e.pointerId)&&(this.game==='merge'||(pointer&&this.game==='bricks'&&this.rulesVersion>=2))){this.input(aim(e));}};
   const blur=()=>{cancel();this.pause();};const visibility=()=>{if(document.hidden){cancel();this.pause();}};
-  canvas.addEventListener('keydown',key);window.addEventListener('keyup',up);canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('pointermove',move);window.addEventListener('blur',blur);document.addEventListener('visibilitychange',visibility);
+  this.root.addEventListener('keydown',escape);canvas.addEventListener('keydown',key);window.addEventListener('keyup',up);canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',cancel);canvas.addEventListener('pointermove',move);window.addEventListener('blur',blur);document.addEventListener('visibilitychange',visibility);
   const loop=t=>{
    if(this.isDestroying){return;}const delta=Math.min(100,t-(this.last||t));this.last=t;
    if(!this.inputDisabled&&!this.error&&this.run?.status==='playing'){
@@ -208,7 +214,7 @@ export default class ArcadeApp {
    }else{this.accumulator=0;}
    if(this.repaint||this.effects.active()){this.paint();this.repaint=false;}this.raf=requestAnimationFrame(loop);
   };this.raf=requestAnimationFrame(loop);
-  return()=>{playArea.removeEventListener('pointerdown',flap);cancelAnimationFrame(this.raf);canvas.removeEventListener('keydown',key);window.removeEventListener('keyup',up);canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointerup',end);canvas.removeEventListener('pointercancel',cancel);canvas.removeEventListener('pointermove',move);window.removeEventListener('blur',blur);document.removeEventListener('visibilitychange',visibility);this.canvas=null;this.playback?.release();};
+  return()=>{this.root.removeEventListener('keydown',escape);playArea.removeEventListener('pointerdown',flap);cancelAnimationFrame(this.raf);canvas.removeEventListener('keydown',key);window.removeEventListener('keyup',up);canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointerup',end);canvas.removeEventListener('pointercancel',cancel);canvas.removeEventListener('pointermove',move);window.removeEventListener('blur',blur);document.removeEventListener('visibilitychange',visibility);this.canvas=null;this.playback?.release();};
  }
 
  constructor(root,options){

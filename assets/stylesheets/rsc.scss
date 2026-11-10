@@ -633,8 +633,8 @@
     gap: 5px; width: 100%; min-height: 76px; padding: 12px 8px;
     border: 2px solid transparent; border-radius: 8px; white-space: normal;
     color: #fff;
-    &[data-side="short"] { background: #147653; }
-    &[data-side="long"] { background: #b52f48; }
+    &[data-side="short"] { background: #b52f48; }
+    &[data-side="long"] { background: #147653; }
     strong { font-size: 20px; line-height: 1.3; }
     small { font-size: 11px; line-height: 1.5; font-variant-numeric: tabular-nums; span { display: block; } }
     &:hover:not(:disabled) { filter: brightness(1.1); }

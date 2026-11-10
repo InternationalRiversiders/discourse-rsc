@@ -36,7 +36,7 @@ const { chromium } = require(process.env.RSC_PLAYWRIGHT);
         const protection = await ticket.locator('.rsc-ticket-protection').boundingBox();
         assert(left.y < protection.y, 'Protection is optional and below the trading buttons');
         const colors = await ticket.locator('.rsc-submit-direction').evaluateAll(buttons => buttons.map(b => getComputedStyle(b).backgroundColor));
-        assert.equal(colors[0], 'rgb(20, 118, 83)'); assert.equal(colors[1], 'rgb(181, 47, 72)');
+        assert.equal(colors[0], 'rgb(181, 47, 72)'); assert.equal(colors[1], 'rgb(20, 118, 83)');
         assert.equal(await ticket.locator('.rsc-execution-notice').getAttribute('data-mode'), 'immediate');
         assert(!(await ticket.locator('.rsc-execution-notice').innerText()).includes('15 分钟'));
         const half = ticket.locator('.rsc-allocation-buttons').getByRole('button', {name: '1/2', exact: true});

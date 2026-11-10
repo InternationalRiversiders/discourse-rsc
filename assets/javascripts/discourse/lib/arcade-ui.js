@@ -14,7 +14,7 @@ function hidden(root,selector,value){const el=root.querySelector(selector);if(el
 function lobby(app){
  const root=app.root,featured=app.featured;
  const banner=root.querySelector('.ra-banner-slot');
- const html=featured?`<button type="button" class="ra-season-banner rh-banner" data-action="season"><span class="rh-banner-title"><small>第 ${escape(featured.number)} 赛季</small><strong>${escape(featured.name)}</strong><span>${featured.cadence==='daily'?'每日轮替':'每周轮替'} · 截止 ${escape(app.featuredEnd)}</span></span><span class="rh-banner-metric"><small>前五名奖励 · RSC</small><strong>${escape(app.featuredPrizes||'—')}</strong></span><span class="rh-banner-cta">去挑战 →</span></button>`:`<div class="rh-banner-placeholder">${escape(app.args.catalogError||'')}${app.args.catalogError?button('catalog','重试'):''}</div>`;
+ const html=featured?`<button type="button" class="ra-season-banner rh-banner" data-action="season"><span class="rh-banner-title"><small>第 ${escape(featured.number)} 赛季</small><strong>${escape(featured.name)}</strong><span>${featured.cadence==='daily'?'每日轮替':'每周轮替'} · 截止 ${escape(app.featuredEnd)}</span></span><span class="rh-banner-metric"><small>前 ${escape(featured.prizes?.length||0)} 名奖励 · RSC</small><strong>${escape(app.featuredPrizes||'—')}${featured.prizes?.length>5?' …':''}</strong></span><span class="rh-banner-cta">去挑战 →</span></button>`:`<div class="rh-banner-placeholder">${escape(app.args.catalogError||'')}${app.args.catalogError?button('catalog','重试'):''}</div>`;
  if(app.bannerHTML!==html){banner.innerHTML=html;app.bannerHTML=html;}
  root.querySelectorAll('.ra-featured-tag').forEach(el=>{el.hidden=el.dataset.game!==featured?.game;});
 }
@@ -48,7 +48,7 @@ export function renderArcade(app){
  hidden(root,'[data-action=finish]',!app.run||app.finished);disabled(root,'[data-action=finish]',app.busy||app.finishing);
  hidden(root,'[data-arg=season]',!app.ranking?.season);root.querySelectorAll('.ra-rank-tabs button').forEach(b=>{b.classList.toggle('is-active',b.dataset.arg===app.rankScope);});
  root.querySelector('[data-action=info]').setAttribute('aria-expanded',String(app.rankInfo));hidden(root,'.ra-rank-help',!app.rankInfo);
- const help=`<p>每人取最高分，同分并列。</p>${app.rankScope==='season'?`<p>第 ${escape(app.ranking?.season?.number)} 赛季 · 截止 ${escape(app.endLabel)}</p>${app.rankPrizes?`<p>前五名：${escape(app.rankPrizes)} RSC</p><p>同分平分所占名次奖金，结束后自动到账。</p>`:'<p>本期仅排名，不发放 RSC</p>'}`:'<p>历史最高分永久保留。</p>'}`;
+ const help=`<p>每人取最高分，同分并列。</p>${app.rankScope==='season'?`<p>第 ${escape(app.ranking?.season?.number)} 赛季 · 截止 ${escape(app.endLabel)}</p>${app.rankPrizes?`<p>第 1–${escape(app.ranking.season.prizes.length)} 名依次：${escape(app.rankPrizes)} RSC</p><p>同分平分所占名次奖金，结束后自动到账。</p>`:'<p>本期仅排名，不发放 RSC</p>'}`:'<p>历史最高分永久保留。</p>'}`;
  if(app.helpHTML!==help){root.querySelector('.ra-rank-help').innerHTML=help;app.helpHTML=help;}
  hidden(root,'.ra-ranking-error',!app.rankingError);setText(root,'.ra-ranking-error',app.rankingError);
  const rows=app.rankRows,html=rows?.length?rows.map(r=>`<li><span class="ra-place">${escape(r.rank)}</span>${userHTML(r.user)}<strong>${escape(r.score)}</strong></li>`).join(''):'<li class="ra-empty">还没有成绩，来占个位置。</li>';

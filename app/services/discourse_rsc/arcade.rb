@@ -3,7 +3,7 @@ require 'mini_racer'
 module DiscourseRsc
   module Arcade
     NAMES = { '2048'=>'2048', 'blocks'=>'方块堆叠', 'snake'=>'贪吃蛇', 'bird'=>'河畔飞鸟', 'hex'=>'六角消除', 'bricks'=>'打砖块', 'merge'=>'合成大河畔' }.freeze
-    PRIZES = [100,60,40,25,15].freeze
+    PRIZES = [100,60,40,25,15,12,10,8,6,5,4,4,4,4,4,3,3,3,3,3].freeze
     RULES_VERSION = 4
     CHECKPOINT_BATCHES = 64
     SAVE_RETENTION = 30.days
