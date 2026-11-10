@@ -67,7 +67,10 @@ export default class ArcadeApp {
  get fixedGame(){return this.args.embedded&&this.args.game;}
  get selected(){return GAMES.find(g=>g.id===this.game);}
  get rulesVersion(){return Core.version;}
- get rulesText(){return `${ENDLESS_RULES[this.game]} 方向键也可使用 WASD；Esc 暂停并保存。`;}
+ get rulesText(){
+  const keyboard=['2048','blocks','snake','sudoku'].includes(this.game)?'方向键也可使用 WASD。':['hex','bricks','merge'].includes(this.game)?'左右键也可使用 A／D。':'';
+  return `${ENDLESS_RULES[this.game]} ${keyboard}Esc 暂停并保存。`;
+ }
  get grid(){return this.game==='2048';}
  get turnBased(){return this.grid||this.game==='sudoku';}
  get finished(){return this.run?.status==='finished';}
