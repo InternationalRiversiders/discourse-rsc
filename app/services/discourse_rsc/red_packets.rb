@@ -51,8 +51,7 @@ module DiscourseRsc
         wallet = Account.wallet(actor.id)
         Commands.move(user_id: actor.id, action: "red_packet_claim", request_id: request_id,
                       postings: { escrow.id => -units, wallet.id => units }, metadata: { claim_id: claim.id, packet_id: packet.id, packet_token: packet.token, sender_user_id: packet.user_id },
-                      events: [Commands.event(actor.id, "red_packet_claim", { "packet_token" => packet.token, "amount" => Amount.format(units), "actor_user_id" => packet.user_id }),
-                               Commands.event(packet.user_id, "red_packet_claimed_by", { "packet_token" => packet.token, "amount" => Amount.format(units), "actor_user_id" => actor.id })])
+                      event: Commands.event(packet.user_id, "red_packet_claimed_by", { "packet_token" => packet.token, "amount" => Amount.format(units), "actor_user_id" => actor.id }))
         packet.update!(status: "exhausted") if packet.claims.count == packet.allocations.size
         { amount: Amount.format(units), token: token }
       end

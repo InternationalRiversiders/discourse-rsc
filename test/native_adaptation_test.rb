@@ -89,7 +89,9 @@ class NativeAdaptationTest < NativeBusinessTest
   def test_notifications_identify_actor_and_link_to_specific_packet_once
     fund;packet=R::RedPackets.create(actor:@alice,mode:"fixed",count:2,amount:"1",request_id:SecureRandom.uuid)
     R::RedPackets.claim(actor:@bob,token:packet["token"],request_id:SecureRandom.uuid)
-    R::Event.where(kind:%w[red_packet_claim red_packet_claimed_by]).each do |event|
+    assert_equal 0,R::Event.where(kind:'red_packet_claim').count
+    assert_equal 1,R::Event.where(kind:'red_packet_claimed_by').count
+    R::Event.where(kind:'red_packet_claimed_by').each do |event|
       R::NotificationDelivery.deliver(event);n=Notification.find(event.reload.notification_id)
       assert_equal "/rsc/packets/#{packet['token']}",n.data_hash['river_path'];assert_equal 'rsc',n.data_hash['river_app']
       assert_includes n.data_hash['river_text'],@bob.username if event.kind=='red_packet_claimed_by'

@@ -88,10 +88,32 @@ class NativeBusinessTest < DiscourseSmokeTest
     assert_equal "2", result["amount"]
     assert R::RedPackets.claim(actor: @bob, token: packet["token"], request_id: "packet-claim")["replayed"]
     assert_equal "2", R::Account.wallet(@bob.id).balance
+    assert_equal 0, R::Event.where(kind: "red_packet_claim").count
+    assert_equal 1, R::Event.where(kind: "red_packet_claimed_by", recipient_user_id: @alice.id).count
+    assert_equal 1, R::Journal.where(operation: "red_packet_claim", actor_user_id: @bob.id).count
     assert_raises(R::Error) { R::RedPackets.claim(actor: @bob, token: packet["token"], request_id: "packet-again") }
     R::RedPackets.close(actor: @alice, token: packet["token"], request_id: "packet-close")
     assert_equal "98", R::Account.wallet(@alice.id).balance
     assert_equal 1, R::Event.where(kind: "red_packet_refund").count
+  end
+
+  def test_pending_packet_claim_notification_is_consumed_silently
+    fund(@alice, "10")
+    packet = R::RedPackets.create(actor: @alice, mode: "fixed", count: 1, amount: "2", request_id: "packet-create")
+    R::RedPackets.claim(actor: @bob, token: packet["token"], request_id: "packet-claim")
+    journal = R::Journal.find_by!(operation: "red_packet_claim", actor_user_id: @bob.id)
+    event = R::Event.create!(journal_id: journal.id, recipient_user_id: @bob.id,
+      kind: "red_packet_claim", payload: { "amount" => "2", "packet_token" => packet["token"] },
+      attempts: 2, next_attempt_at: Time.current, last_error: "OldRetry")
+    count = Notification.count
+    2.times { R::NotificationDelivery.attempt(event) }
+    assert event.reload.delivered_at
+    assert_nil event.notification_id
+    assert_nil event.last_error
+    refute R::Event.due.exists?(id: event.id)
+    assert_equal count, Notification.count
+    assert_equal "2", R::Account.wallet(@bob.id).balance
+    assert_equal 1, R::Journal.where(operation: "red_packet_claim", actor_user_id: @bob.id).count
   end
 
   def test_packet_random_allocation_conserves_amount_and_expiry_commits_refund

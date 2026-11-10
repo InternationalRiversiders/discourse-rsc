@@ -32,9 +32,9 @@ module DiscourseRsc
       Safety.ensure_writable!
       event.with_lock do
         return if event.delivered_at
-        # Consume pending rewards from older releases without notifying the user.
-        # New payouts only create ledger entries, not notification events.
-        if event.kind == "daily_reward"
+        # Drain obsolete queued notifications, including retries from older releases.
+        # Claimants already see their result directly in the claim response.
+        if %w[daily_reward red_packet_claim].include?(event.kind)
           event.update!(delivered_at: Time.current, last_error: nil)
           return
         end
