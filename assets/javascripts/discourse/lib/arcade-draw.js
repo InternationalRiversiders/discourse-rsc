@@ -42,9 +42,12 @@ export default function draw(canvas,s,fx=null,now=performance.now()) {
   ctx.fillStyle='#dce7c1';for(let y=0;y<20;y++)for(let x=0;x<20;x++)if((x+y)%2)ctx.fillRect(x*20,y*20,20,20);
   ctx.strokeStyle='#6d8c57';ctx.lineWidth=3;ctx.strokeRect(0,0,400,400);ctx.lineWidth=1;
   s.walls.forEach(i=>box(i%20*20+1,Math.floor(i/20)*20+1,18,18,'#77836d',3));
-  const movement=fx?.snakeMove,t=movement&&!fx.reducedMotion?Math.min(1,Math.max(0,(now-movement.start)/85)):1;
+  const movement=fx?.snakeMove,t=movement&&!fx.reducedMotion?Math.min(1,Math.max(0,(now-movement.start)/60)):1;
   s.snake.forEach((i,k)=>{const old=movement?.from[Math.min(k,movement.from.length-1)]??i;const x=(old%20+(i%20-old%20)*t)*20,y=(Math.floor(old/20)+(Math.floor(i/20)-Math.floor(old/20))*t)*20;box(x+1,y+1,18,18,k?'#4d986d':'#2e7655',5);if(!k){const dx=[0,1,0,-1][s.dir],dy=[-1,0,1,0][s.dir];ctx.fillStyle='#ffffff';for(const side of [-1,1]){ctx.beginPath();ctx.arc(x+10+dx*5+dy*side*4,y+10+dy*5-dx*side*4,2.3,0,7);ctx.fill();}}});
   const foodX=s.food%20*20,foodY=Math.floor(s.food/20)*20;box(foodX+3,foodY+5,14,13,'#d75e62',6);box(foodX+9,foodY+1,6,4,'#538853',2);
+ }
+ if(s.game==='snake'&&s.over&&s.collision){
+  ctx.strokeStyle='#d54f55';ctx.lineWidth=4;ctx.strokeRect(s.collision.x*20+2,s.collision.y*20+2,16,16);
  }
  if(s.game==='bird'){
   const sky=ctx.createLinearGradient(0,0,0,560);sky.addColorStop(0,'#9dd6e4');sky.addColorStop(1,'#e6f2e2');ctx.fillStyle=sky;ctx.fillRect(0,0,400,560);

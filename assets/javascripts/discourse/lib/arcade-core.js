@@ -1,6 +1,6 @@
 // Shared deterministic rules. No clock, browser API, random seed or wallet access.
 // All coordinates and velocities are integers. Rendering never affects simulation.
-const ARCADE_VERSION = 4;
+const ARCADE_VERSION = 5;
 const GAME_IDS = ["2048", "blocks", "snake", "bird", "hex", "bricks", "merge", "sudoku"];
 const LIMITS = {"2048": 2000, blocks: 18000, snake: 18000, bird: 10800, hex: 10800, bricks: 18000, merge: 18000};
 const SHAPES = [[[0,0],[1,0],[2,0],[3,0]],[[0,0],[1,0],[0,1],[1,1]],[[1,0],[0,1],[1,1],[2,1]],[[1,0],[2,0],[0,1],[1,1]],[[0,0],[1,0],[1,1],[2,1]],[[0,0],[0,1],[1,1],[2,1]],[[2,0],[0,1],[1,1],[2,1]]];
@@ -9,7 +9,19 @@ const clone = (s) => JSON.parse(JSON.stringify(s));
 function take(s,n) { if (!s.q.length) { throw new Error("queue_empty"); } return s.q.shift()%n; }
 function tile(s) { const empty=s.board.map((v,i)=>v?null:i).filter(i=>i!==null); if(empty.length){s.board[empty[take(s,empty.length)]]=take(s,10)===0?4:2;} }
 function food(s) { const free=[];for(let i=0;i<400;i++){if(!s.snake.includes(i)&&!s.walls.includes(i)){free.push(i);}}if(!free.length){s.over=true;}else{s.food=free[take(s,free.length)];} }
+function drawShape(s){
+ if(!s.bag?.length)s.bag=[0,1,2,3,4,5,6];
+ return s.bag.splice(take(s,s.bag.length),1)[0];
+}
+function spawnShape(s,shape){
+ s.piece={cells:shape===0?[[0,1],[1,1],[2,1],[3,1]]:clone(SHAPES[shape]),shape,rotation:0,x:3,y:0,color:shape+1};
+ s.fall=0;s.lock=0;s.lockResets=0;if(!fits(s,s.piece))s.over=true;
+}
 function block(s) {
+ if(s.version>=5){
+  const shape=s.nextShape??drawShape(s);s.nextShape=drawShape(s);
+  spawnShape(s,shape);s.pieces++;s.heldThisPiece=false;return;
+ }
  if(s.version>=4){
   if(!s.bag?.length)s.bag=[0,1,2,3,4,5,6];
   const shape=s.bag.splice(take(s,s.bag.length),1)[0];
@@ -98,7 +110,7 @@ function sudokuStep(s,keys){
 }
 
 function create(game,q,version=ARCADE_VERSION) {
- if(![1,2,3,4].includes(version)){throw new Error("rules_version");}
+ if(![1,2,3,4,5].includes(version)){throw new Error("rules_version");}
  if(!GAME_IDS.includes(game)){throw new Error("game");}
  const s={game,version,tick:0,score:0,over:false,q:q.slice(),limit:version===1?LIMITS[game]:null};
  if(game==="sudoku"){sudokuLoad(s,'530070000600195000098000060800060003400803001700020006060000280000419005000080079'.split('').map(Number));s.awaiting=true;}
@@ -107,7 +119,7 @@ function create(game,q,version=ARCADE_VERSION) {
  if(game==="snake"){s.snake=[210,209,208];s.dir=1;s.walls=[84,85,86,87,312,313,314,315];food(s);}
  if(game==="bird"){s.y=2500;s.vy=0;s.pipes=[];s.next=0;}
  if(game==="hex"){s.lanes=Array.from({length:6},()=>[]);s.rotation=0;s.falling=null;}
- if(game==="bricks"){s.x=2000;s.y=4700;s.vx=27;s.vy=-36;s.paddle=2000;s.lives=3;s.board=Array(48).fill(1);if(version>=2){s.wave=1;}}
+ if(game==="bricks"){s.x=2000;s.y=4700;s.vx=27;s.vy=-36;s.paddle=2000;s.lives=3;s.board=Array(48).fill(1);if(version>=2){s.wave=1;}if(version>=5)s.board=brickLayout(1,version);}
  if(game==="merge"){s.balls=[];s.aim=2000;s.next=take(s,4);s.drops=0;s.cooldown=0;s.danger=0;s.serial=0;}
  return s;
 }
@@ -140,13 +152,16 @@ function mergePhysics(s) {
 }
 function nextWave(s) {
  s.wave=(s.wave||1)+1;
- s.board=Array.from({length:48},(_,i)=>{
-  const row=Math.floor(i/8),col=i%8;
-  const gap=s.wave%3===2?(row+col)%7===0:s.wave%3===0?row%2===1&&col%3===1:false;
-  return gap?0:Math.min(3,1+Math.floor((s.wave-1)/3)+(row<2?0:-1))||1;
- });
+ s.board=brickLayout(s.wave,s.version);
  s.x=s.paddle;s.y=4700;s.vx=27;s.vy=-Math.min(65,36+(s.wave-1)*3);
  delete s.target;
+}
+function brickLayout(wave,version){
+ return Array.from({length:48},(_,i)=>{
+  const row=Math.floor(i/8),col=i%8;
+  const gap=version>=5?[row%2===1&&col%3===1,Math.abs(col-3.5)+row>6,row>1&&col>1&&col<6,(row+col)%3===0][(wave-1)%4]:wave%3===2?(row+col)%7===0:wave%3===0?row%2===1&&col%3===1:false;
+  return gap?0:Math.min(3,1+Math.floor((wave-1)/3)+(row<2?0:-1))||1;
+ });
 }
 function mergePhysicsV2(s) {
  // Integer, fixed substeps: identical on the client and server. Resolve actual
@@ -333,14 +348,22 @@ function mergePhysicsV4(s) {
 const BLOCK_KICKS=[[[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],[[0,0],[1,0],[1,1],[0,-2],[1,-2]],[[0,0],[1,0],[1,-1],[0,2],[1,2]],[[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]]];
 const LINE_KICKS=[[[0,0],[-2,0],[1,0],[-2,1],[1,-2]],[[0,0],[-1,0],[2,0],[-1,-2],[2,1]],[[0,0],[2,0],[-1,0],[2,-1],[-1,2]],[[0,0],[1,0],[-2,0],[1,2],[-2,-1]]];
 function stepBlocksV4(s,keys){
+ if(s.version>=5&&s.nextShape===undefined)s.nextShape=drawShape(s);
+ if(s.version>=5&&keys.includes('x:0')&&!s.heldThisPiece){
+  const shape=s.piece.shape,held=s.holdShape;
+  if(shape!==undefined){s.holdShape=shape;if(held===undefined)block(s);else spawnShape(s,held);s.heldThisPiece=true;return;}
+ }
  let adjusted=false;
  if(keys.includes('l')||keys.includes('r')){const next={...s.piece,x:s.piece.x+(keys.includes('l')?-1:1)};if(fits(s,next)){s.piece=next;adjusted=true;}}
- if(keys.includes('u')){
+ if(keys.includes('u')||(s.version>=5&&keys.includes('tap'))){
+  const reverse=s.version>=5&&keys.includes('tap')&&!keys.includes('u');
   const current=s.piece,orientation=current.rotation||0,pivot=current.shape===0?1.5:current.shape===1?.5:1;
-  const cells=current.shape===undefined?current.cells.map(([x,y])=>[-y,x]):current.cells.map(([x,y])=>[pivot-(y-pivot),pivot+(x-pivot)]);
+  const cells=current.shape===undefined?current.cells.map(([x,y])=>[-y,x]):current.cells.map(([x,y])=>reverse?[pivot+(y-pivot),pivot-(x-pivot)]:[pivot-(y-pivot),pivot+(x-pivot)]);
   if(current.shape===undefined){const minX=Math.min(...cells.map(c=>c[0])),minY=Math.min(...cells.map(c=>c[1]));for(const c of cells){c[0]-=minX;c[1]-=minY;}}
-  const kicks=current.shape===0?LINE_KICKS[orientation]:BLOCK_KICKS[orientation];
-  for(const [dx,dy] of kicks){const next={...current,cells,x:current.x+dx,y:current.y+dy,rotation:(orientation+1)%4};if(fits(s,next)){s.piece=next;adjusted=true;break;}}
+  const nextOrientation=(orientation+(reverse?3:1))%4;
+  const table=current.shape===0?LINE_KICKS:BLOCK_KICKS;
+  const kicks=reverse?table[nextOrientation].map(([x,y])=>[-x,-y]):table[orientation];
+  for(const [dx,dy] of kicks){const next={...current,cells,x:current.x+dx,y:current.y+dy,rotation:nextOrientation};if(fits(s,next)){s.piece=next;adjusted=true;break;}}
  }
  if(keys.includes('drop')){for(let i=0;i<21;i++)if(!lower(s))break;return;}
  s.fall=(s.fall||0)+1;
@@ -386,7 +409,7 @@ function stepBricksV4(s,keys){
  const left=keys.includes('l'),right=keys.includes('r'),aim=keys.find(k=>k.startsWith('x:'));
  if(aim)s.target=Math.max(450,Math.min(3550,Number(aim.slice(2))));
  if(left||right)delete s.target;
- if(s.target!==undefined)s.paddle+=Math.max(-65,Math.min(65,s.target-s.paddle));
+ if(s.target!==undefined)s.paddle=s.version>=5?s.target:s.paddle+Math.max(-65,Math.min(65,s.target-s.paddle));
  if(left)s.paddle-=65;if(right)s.paddle+=65;s.paddle=Math.max(450,Math.min(3550,s.paddle));
  let time=1;
  for(let bounce=0;bounce<6&&time>1e-6;bounce++){
@@ -436,25 +459,25 @@ function step(s,keys=[]) {
  if(s.game==='snake'){
   const dir=keys.map(k=>['u','r','d','l'].indexOf(k)).find(d=>d>=0);if(dir!==undefined&&(dir+2)%4!==s.dir&&!s.turned&&(s.version<4||dir!==s.dir)){s.dir=dir;s.turned=true;}
   if(s.tick%7===0){s.turned=false;const h=s.snake[0],x=h%20,y=Math.floor(h/20),nx=x+[0,1,0,-1][s.dir],ny=y+[-1,0,1,0][s.dir],n=ny*20+nx,eat=n===s.food;
-   if(nx<0||nx>=20||ny<0||ny>=20||s.walls.includes(n)||s.snake.slice(0,eat?undefined:-1).includes(n)){s.over=true;}else{s.snake.unshift(n);if(eat){s.score+=100;food(s);}else{s.snake.pop();}}
+   if(nx<0||nx>=20||ny<0||ny>=20||s.walls.includes(n)||s.snake.slice(0,eat?undefined:-1).includes(n)){s.over=true;if(s.version>=5)s.collision={x:Math.max(0,Math.min(19,nx)),y:Math.max(0,Math.min(19,ny))};}else{s.snake.unshift(n);if(eat){s.score+=100;food(s);}else{s.snake.pop();}}
   }
  }
  if(s.game==='bird'){
   if(has('tap')||has('u')){s.vy=-65;}s.vy+=3;s.y+=s.vy;
-  if(s.tick>=s.next){s.pipes.push({x:4200,gap:1300+take(s,2700),passed:false,...(s.version>=2?{half:Math.max(600,750-Math.floor(s.score/15)*15)}:{})});s.next=s.tick+120;}
+  if(s.tick>=s.next){s.pipes.push({x:4200,gap:1300+take(s,2700),passed:false,...(s.version>=2?{half:Math.max(600,(s.version>=5?820:750)-Math.floor(s.score/15)*15)}:{})});s.next=s.tick+120;}
   for(const p of s.pipes){p.x-=s.version===1?25:Math.min(40,25+Math.floor(s.score/20));if(!p.passed&&p.x+400<900){p.passed=true;s.score++;}if(s.version>=3?birdHitsPipe(s.y,p):(p.x<1050&&p.x+400>750&&(s.y-120<p.gap-(p.half||750)||s.y+120>p.gap+(p.half||750)))){s.over=true;}}
   s.pipes=s.pipes.filter(p=>p.x>-500);if(s.version>=4&&s.y<85){s.y=85;s.vy=Math.max(0,s.vy);}if(s.y<(s.version>=3?85:120)||s.y>(s.version>=3?5515:5480)){s.over=true;}
  }
  if(s.game==='hex'){
   if(left){s.rotation=(s.rotation+5)%6;}if(right){s.rotation=(s.rotation+1)%6;}
   if(!s.falling){s.falling={lane:take(s,6),color:take(s,4)+1,distance:1900};}
-  s.falling.distance-=12+Math.min(s.version===1?20:28,Math.floor(s.score/300));
+  s.falling.distance-=(s.version>=5&&has('drop')?100:12)+Math.min(s.version===1?20:28,Math.floor(s.score/300));
   const lane=(s.falling.lane-s.rotation+6)%6,stack=s.lanes[lane];
   if(s.falling.distance<=stack.length*160){stack.push(s.falling.color);s.falling=null;const n=stack.length;if(s.version>=4){clearHexV4(s);}else if(n>=3&&stack[n-1]===stack[n-2]&&stack[n-2]===stack[n-3]){stack.splice(n-3,3);s.score+=100;}if((s.version>=4?s.lanes[lane]:stack).length>=10){s.over=true;}}
  }
  if(s.game==='bricks'&&s.version>=4){stepBricksV4(s,keys);}
  if(s.game==='bricks'&&s.version<4){
-  if(s.version>=2){const aim=keys.find(k=>k.startsWith('x:'));if(aim){s.target=Math.max(450,Math.min(3550,Number(aim.slice(2))));}if(left||right){delete s.target;}if(s.target!==undefined){s.paddle+=Math.max(-65,Math.min(65,s.target-s.paddle));}}
+  if(s.version>=2){const aim=keys.find(k=>k.startsWith('x:'));if(aim){s.target=Math.max(450,Math.min(3550,Number(aim.slice(2))));}if(left||right){delete s.target;}if(s.target!==undefined){s.paddle=s.version>=5?s.target:s.paddle+Math.max(-65,Math.min(65,s.target-s.paddle));}}
   if(left){s.paddle-=65;}if(right){s.paddle+=65;}s.paddle=Math.max(450,Math.min(3550,s.paddle));const px=s.x,py=s.y;s.x+=s.vx;s.y+=s.vy;
   if(s.x<60||s.x>3940){s.x=Math.max(60,Math.min(3940,s.x));s.vx=-s.vx;}if(s.y<60){s.y=60;s.vy=Math.abs(s.vy);}
   if(s.vy>0&&py<=5020&&s.y>=5020&&Math.abs(s.x-s.paddle)<=500){s.y=5020;s.vy=-(s.version===1?36:Math.min(65,36+((s.wave||1)-1)*3));s.vx=Math.round((s.x-s.paddle)/14)||12;}
@@ -474,9 +497,9 @@ function advance(state,frames,events){
  if(!Number.isInteger(frames)||frames<0||frames>180||!Array.isArray(events)||events.length>360){throw new Error('invalid_actions');}
  const s=clone(state), grouped={};let previous=-1;
  for(const e of events){if(!Array.isArray(e)||e.length!==2||!Number.isInteger(e[0])||e[0]<0||e[0]>=frames||e[0]<previous||typeof e[1]!=='string'||!(/^(l|r|u|d|drop|tap|x:[0-9]{1,4}|[vn]:[0-9]{1,2}:[0-9]|undo)$/).test(e[1])){throw new Error('invalid_actions');}previous=e[0];(grouped[e[0]]||= []).push(e[1]);if(grouped[e[0]].length>2){throw new Error('invalid_actions');}}
- if(s.game==='2048'&&(frames>16||Object.values(grouped).some(keys=>keys.length>1||!['l','r','u','d'].includes(keys[0])))){throw new Error('invalid_actions');}
+ if(s.game==='2048'&&(frames>(state.version>=5?64:16)||Object.values(grouped).some(keys=>keys.length>1||!['l','r','u','d'].includes(keys[0])))){throw new Error('invalid_actions');}
  for(let i=0;i<frames;i++){if(s.over){throw new Error('already_over');}step(s,grouped[i]||[]);}return s;
 }
 function preview(state,dir){const s=clone(state);slide(s,dir,false);s.tick++;return s;}
-const ArcadeCore={sudokuPuzzle,sudokuLoad,sudokuValid,sudokuSolutions,sudokuGrade,preview,version:ARCADE_VERSION,games:GAME_IDS,limits:LIMITS,radii:RADIUS,create,step,advance};
+const ArcadeCore={shapes:SHAPES,sudokuPuzzle,sudokuLoad,sudokuValid,sudokuSolutions,sudokuGrade,preview,version:ARCADE_VERSION,games:GAME_IDS,limits:LIMITS,radii:RADIUS,create,step,advance};
 export default ArcadeCore;

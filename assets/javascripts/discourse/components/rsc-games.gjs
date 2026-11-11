@@ -32,7 +32,7 @@ const RULES={
   slots:["每轴 6 种图案，独立且等概率。任意两个相同返还 1.5 倍；三个相同时按下表返还，不叠加。","🍒 2 倍 · 🍋 3 倍 · 🔔 5 倍 · 🍀 7 倍 · 💎 20 倍 · 7 40 倍"],
   roulette:["单零轮盘，0–36 共 37 个数字等概率。点击投注格放入当前金额，可同时选多个位置。","单号 36 倍；每列为间隔 3 的 12 个数字，三个区间各含 12 个数字，均返还 3 倍；红黑、单双、大小 2 倍。开出 0 时，单号 0 返还 36 倍；红黑、单双、大小退回一半本金，列和区间不返还。"],
   scratch:["一张大卡含 10 个独立开奖位。输入金额为整张价格，每个位点按总价的 1/10 计算返还，奖金累加。购票即结算，刮开与刷新不改变结果。","0 倍 50% · 1 倍 20% · 2 倍 27% · 5 倍 2.4% · 10 倍 0.5% · 50 倍 0.09% · 250 倍 0.01%"],
-  blackjack:["每局重新洗入 6 副牌。A 算 1 或 11，J/Q/K 算 10。比庄家更接近 21 点获胜，超过 21 点即输。","庄家不足 17 点必须要牌，达到 17 点就停牌。软 17 点是把 A 算作 11 后合计 17 点，例如 A＋6；庄家这种情况也停牌。","天然 21 点指开局两张牌为 A＋10/J/Q/K。双方都是天然 21 点时退还本金，否则天然 21 点胜过普通 21 点，获胜返还 2.5 倍；普通胜利返还 2 倍，平局退还本金。","前两张牌可加倍：追加同额投入，只再取一张牌。不设分牌、保险和投降。断线后可继续原牌局。"],
+  blackjack:["每局重新洗入 6 副牌。A 算 1 或 11，J/Q/K 算 10。比庄家更接近 21 点获胜，超过 21 点即输。","庄家不足 17 点必须要牌，达到 17 点就停牌。软 17 点是把 A 算作 11 后合计 17 点，例如 A＋6；庄家这种情况也停牌。","天然 21 点指开局两张牌为 A＋10/J/Q/K。双方都是天然 21 点时退还本金，否则天然 21 点胜过普通 21 点，获胜返还 2.5 倍；普通胜利返还 2 倍，平局退还本金。","要牌：再取一张，可继续要牌；停牌：保留当前点数，轮到庄家。前两张牌可加倍：追加同额投入，只再取一张牌，然后自动停牌。不设分牌、保险和投降。断线后可继续原牌局。"],
   coin:["正面银杏叶、反面纸船，各 50% 概率。猜中返还 2 倍，猜错不返还，不抽成。"],
   dice:["三颗公平六面骰。小为 4–10 点，大为 11–17 点。三个相同为豹子，无论选大小都退回本金。","猜中返还 2 倍。"],
 };
@@ -142,6 +142,13 @@ export default class extends Component {
   }
   get coinSide(){return this.round?.state.landed==="tails"?"反":"正";}
   get numberRows(){return [3,2,1].map(start=>Array.from({length:12},(_,i)=>start+i*3).map(n=>this.spot(`n${n}`,n,RED.includes(n)?"red":"black")));}
+  get selectedBetHints(){
+    const labels={red:'红',black:'黑',odd:'单',even:'双',low:'1–18',high:'19–36'};
+    return Object.keys(this.bets).map(key=>{
+      const matches=n=>key.startsWith('n')?n===Number(key.slice(1)):n===0?false:key==='red'?RED.includes(n):key==='black'?!RED.includes(n):key==='odd'?n%2===1:key==='even'?n%2===0:key==='low'?n<=18:key==='high'?n>=19:key.startsWith('dozen')?Math.floor((n-1)/12)+1===Number(key.slice(5)):(n-1)%3+1===Number(key.slice(6));
+      return {label:labels[key]||(key.startsWith('n')?key.slice(1):key.startsWith('column')?`第 ${key.slice(6)} 列`:`第 ${key.slice(5)} 组`),numbers:Array.from({length:37},(_,i)=>i).filter(matches).join('、')};
+    });
+  }
   get zero(){return this.spot("n0","0","zero");}
   get outside(){return [["low","1–18"],["even","双"],["red","红"],["black","黑"],["odd","单"],["high","19–36"]].map(([key,label])=>this.spot(key,label,key));}
   get dozens(){return [["dozen1","1–12"],["dozen2","13–24"],["dozen3","25–36"]].map(([key,label])=>this.spot(key,label));}
@@ -295,13 +302,13 @@ export default class extends Component {
           <aside class="rg-controls">
             <div class="rg-controls-heading"><h2>{{if this.playing "当前牌局" "本轮投入"}}</h2><button type="button" class="rg-icon-button" title="玩法与赔率" aria-label="玩法与赔率" aria-expanded={{if this.rules "true" "false"}} {{on "click" this.toggleRules}}>{{dIcon "circle-info"}}</button></div>
             {{#if this.playing}}
-              <div class="rg-hand-stake"><strong>{{this.round.stake}}</strong><span>RSC</span></div><div class="rg-blackjack-actions"><button type="button" class="rg-primary" disabled={{this.locked}} {{on "click" (fn this.move "hit")}}>要牌</button><button type="button" class="rg-secondary" disabled={{this.locked}} {{on "click" (fn this.move "stand")}}>停牌</button><button type="button" class="rg-secondary" disabled={{this.doubleDisabled}} {{on "click" (fn this.move "double")}}>加倍 · +{{this.round.stake}} RSC</button></div>
+              <div class="rg-hand-stake"><strong>{{this.round.stake}}</strong><span>RSC</span></div><div class="rg-blackjack-actions"><button type="button" class="rg-primary" title="再取一张牌，超过21点即爆牌" disabled={{this.locked}} {{on "click" (fn this.move "hit")}}>要牌</button><button type="button" class="rg-secondary" title="保留当前点数，轮到庄家" disabled={{this.locked}} {{on "click" (fn this.move "stand")}}>停牌</button><button type="button" class="rg-secondary" title="追加同额投入，再取一张后自动停牌" disabled={{this.doubleDisabled}} {{on "click" (fn this.move "double")}}>加倍 · +{{this.round.stake}} RSC</button></div>
             {{else}}
               <label class="rg-amount-label" for="rg-stake">{{if (eq this.game "roulette") "每次加减" (if (eq this.game "scratch") "整张价格" "金额")}}</label><div class="rg-amount"><input id="rg-stake" type="number" inputmode="decimal" min="0.01" max={{this.maxStake}} step="0.01" value={{this.stake}} disabled={{this.locked}} {{on "input" this.editStake}} /><span>RSC</span></div>
               <div class="rg-chips">{{#each this.chips as |n|}}<button type="button" disabled={{this.locked}} class={{if (eq this.stake (concat n)) "is-selected"}} {{on "click" (fn this.chip n)}}>{{n}}</button>{{/each}}</div>
               {{#if (eq this.game "coin")}}<div class="rg-choices"><button type="button" class={{if (eq this.choice "heads") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "heads"}} {{on "click" (fn this.pick "heads")}}>正面<small>银杏</small></button><button type="button" class={{if (eq this.choice "tails") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "tails"}} {{on "click" (fn this.pick "tails")}}>反面<small>纸船</small></button></div>{{/if}}
               {{#if (eq this.game "dice")}}<div class="rg-choices"><button type="button" class={{if (eq this.choice "small") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "small"}} {{on "click" (fn this.pick "small")}}>小<small>4–10</small></button><button type="button" class={{if (eq this.choice "big") "is-selected"}} disabled={{this.locked}} aria-pressed={{eq this.choice "big"}} {{on "click" (fn this.pick "big")}}>大<small>11–17</small></button></div>{{/if}}
-              {{#if (eq this.game "roulette")}}<div class="rg-bet-total"><span>合计 {{this.totalLabel}} RSC</span><button type="button" disabled={{this.locked}} {{on "click" this.clearBets}}>清空</button></div>{{/if}}
+              {{#if (eq this.game "roulette")}}<div class="rg-bet-total"><span>合计 {{this.totalLabel}} RSC</span><button type="button" disabled={{this.locked}} {{on "click" this.clearBets}}>清空</button></div>{{#if this.selectedBetHints.length}}<details class="rg-bet-help"><summary>已选位置与中奖数字</summary>{{#each this.selectedBetHints as |hint|}}<p><strong>{{hint.label}}：</strong>{{hint.numbers}}</p>{{/each}}<p>开出 0 时，红黑、单双、大小退一半本金。</p></details>{{/if}}{{/if}}
               <button type="button" class="rg-primary rg-play" disabled={{this.startDisabled}} {{on "click" this.play}}>{{#if this.busy}}处理中…{{else if this.animating}}开奖中…{{else if this.pending}}重试同一请求{{else}}{{if (eq this.game "scratch") "购买" "开始"}} · {{this.totalLabel}} RSC{{/if}}</button>
             {{/if}}
             {{#if this.rules}}<div class="rg-rules">{{#each this.rulesLines as |line|}}<p>{{line}}</p>{{/each}}{{#if (eq this.game "roulette")}}<dl class="rg-column-rules">{{#each this.columns as |column|}}<dt>{{column.label}}</dt><dd>{{column.numbers}}</dd>{{/each}}</dl>{{/if}}<p>返还倍数包含本金。所有金额均为社区娱乐积分 RSC。每局基础投入 0.01–{{this.maxStake}} RSC。{{#if (eq this.game "blackjack")}}加倍可追加同额投入。{{/if}}</p></div>{{/if}}

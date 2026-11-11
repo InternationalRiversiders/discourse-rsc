@@ -19,11 +19,11 @@ export default class ArcadePlayback {
   get privateGrid() { return this.grid && !Array.isArray(this.state.q); }
   get blocked() {
     if(this.sudoku){return this.state.awaiting || this.frames>=120;}
-    return this.privateGrid ? !!this.pending || this.frames > 0 : this.frames >= (this.grid ? 16 : 180) || this.state.q.length < 4;
+    return this.privateGrid ? !!this.pending || this.frames > 0 : this.frames >= (this.grid ? (this.state.version>=5?64:16) : 180) || this.state.q.length < 4;
   }
   get needsSync() {
     if(this.sudoku){return this.frames>0 && (this.state.awaiting || this.frames>=20);}
-    return this.frames > 0 && (this.privateGrid || this.frames >= (this.grid ? 4 : 120) || this.state.over || this.state.q.length < 8);
+    return this.frames > 0 && (this.privateGrid || this.frames >= (this.grid ? (this.state.version>=5?8:4) : 120) || this.state.over || this.state.q.length < 8);
   }
 
   input(key) {
@@ -48,7 +48,7 @@ export default class ArcadePlayback {
   hold(key) {
     const game = this.run.game;
     if ((["blocks", "bricks", "hex", "merge"].includes(game) && ["l", "r"].includes(key)) ||
-        (game === "blocks" && key === "d")) {
+        ((game === "blocks" && key === "d") || (game === "hex" && key === "drop"))) {
       if (!this.held.has(key)) { this.held.set(key, 0); }
     }
   }
@@ -76,7 +76,7 @@ export default class ArcadePlayback {
       return false;
     });
     for (const [key, age] of this.held) {
-      const continuous = this.run.game === "bricks" || (this.run.game === "blocks" && key === "d");
+      const continuous = this.run.game === "bricks" || (this.run.game === "hex" && key === "drop") || (this.run.game === "blocks" && key === "d");
       if ((continuous || (age >= 12 && (age - 12) % 4 === 0)) && keys.length < 2 && !keys.includes(key)) {
         keys.push(key);
       }

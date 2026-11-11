@@ -68,7 +68,7 @@ export default class ArcadeEffects {
   active(now=performance.now()){
     if(this.reducedMotion)return false;
     return (this.motion&&now-this.motion.start<110)||(this.turn&&now-this.turn.start<100)||
-      (this.snakeMove&&now-this.snakeMove.start<85)||(this.scoreGain&&now-this.scoreGain.start<650)||
+      (this.snakeMove&&now-this.snakeMove.start<60)||(this.scoreGain&&now-this.scoreGain.start<650)||
       this.bursts.some(b=>now-b.start<500)||[...this.pops.values()].some(t=>now-t<350);
   }
   pop(key,now){

@@ -19,10 +19,10 @@ const GAMES=[
 const ENDLESS_RULES={
  sudoku:'每行、每列及每个九宫格填入 1–9，不能重复。完整填对即进入下一关，按通关数排名，同关数并列。数字键填数，方向键选格，N 切换笔记，Delete 或 Backspace 擦除，Ctrl/Cmd+Z 撤销。笔记只记录候选数，不提供答案。',
  '2048':'方向键或滑动合并相同数字，每次合并累加分数。没有步数和倒计时限制，棋盘无法移动时结束。',
- blocks:'左右移动，上键旋转，下键加速，空格落下。消除 1／2／3／4 行获得 100／300／500／800 分；消行越多下落越快，堆到顶部结束。',
+ blocks:'左右或 A/D 移动，Z 逆时针、X/上键顺时针旋转，下键/S 加速，空格落下，C 暂存方块（每块一次）。消除 1／2／3／4 行获得 100／300／500／800 分；消行越多下落越快，堆到顶部结束。',
  snake:'方向键或滑动转向，吃到食物获得 100 分。不能直接掉头，撞墙、障碍或身体结束，填满可用格子通关。',
  bird:'轻点画面或空格拍动翅膀。每穿过一道障碍获得 1 分，速度和难度随进度逐步增加，碰撞结束。',
- hex:'左右旋转中心六边形，三个及以上相邻同色块消除，可跨相邻边连接。每三个约 100 分，连续消除有倍数加分；任一边堆到 10 块结束。',
+ hex:'左右或 A/D 旋转中心六边形，按住空格或加速键让当前方块快速落下。三个及以上相邻同色块消除，可跨相邻边连接。每三个约 100 分，连续消除有倍数加分；任一边堆到 10 块结束。',
  bricks:'拖动画面或按住键盘左右键移动挡板，每消除一块砖获得 100 分。清屏进入下一关，后续有更耐打的砖块、不同布局和更快球速，3 条生命耗尽结束。',
  merge:'按住拖动选择落点，松手投放；也可左右移动、空格投放。同级图案相碰合成，得分随等级增加。可贴墙投放，越过虚线持续 3 秒结束。'
 };
@@ -41,6 +41,7 @@ export default class ArcadeApp {
   clearTimeout(this.sudokuCompletionTimer);
   this.sudokuCompletionTimer=setTimeout(()=>{this.sudokuCompletion=null;this.scheduleRender();},1800);
  }
+ touchKeys=false;
  sudokuCell=0;
  sudokuNote=false;
  sudokuSelect(i){this.sudokuCell=Number(i);this.scheduleRender();}
@@ -98,14 +99,14 @@ export default class ArcadeApp {
  get status(){return this.finished?'成绩已保存':this.error?'连接中断':this.sudokuCompletion?'本关完成':this.finishing||this.localOver?'保存成绩':this.paused?'已暂停':this.waiting?'等待同步':'挑战中';}
  get startLabel(){return this.finished?'再来一局':this.run?'继续挑战':'开始挑战';}
  get progressLabel(){if(!this.state){return '';}if(this.grid){return `${this.progress} 步`;}if(this.game==='sudoku'){return `第 ${this.sudokuCompletion?.level||this.state.level||1} 关`;}if(this.game==='blocks'){return `${this.state.lines} 行`;}if(this.game==='merge'){return `${this.state.drops} 次投放`;}if(this.game==='bricks'){return `第 ${this.state.wave||1} 关`;}if(this.game==='bird'){return `${this.score} 道障碍`;}return '';}
- get controls(){return ['blocks','snake'].includes(this.game)?['u','l','d','r']:this.game==='hex'?['l','r']:[];}
- get hasControls(){return ['blocks','snake','hex'].includes(this.game);}
+ get controls(){return this.grid||['blocks','snake'].includes(this.game)?['u','l','d','r']:this.game==='hex'?['l','drop','r']:[];}
+ get hasControls(){return ['2048','blocks','snake','hex'].includes(this.game);}
  focusPlay(){if(this.game==='sudoku'){this.root.querySelector(`[data-cell="${this.sudokuCell}"]`)?.focus({preventScroll:true});return;}this.canvas?.focus({preventScroll:true});if(window.innerWidth<=767){this.canvas?.closest('.ra-play')?.scrollIntoView({block:'start',behavior:'instant'});}}
- get controlsList(){return this.controls.map(k=>({key:k,label:{l:'←',r:'→',u:'↑',d:'↓'}[k]}));}
+ get controlsList(){return this.controls.map(k=>({key:k,label:k==='u'&&this.game==='blocks'?'↻':{l:'←',r:'→',u:'↑',d:'↓',drop:'加速'}[k]}));}
  async open(game){
   if(this.fixedGame&&game!==this.args.game){return;}
   this.clearSudokuCompletion();this.sudokuCompletedLevel=null;
-  this.generation++;this.rankInfo=false;this.rankChosen=false;this.rankScope=this.featured?.game===game?'season':'all';this.game=game;this.run=null;this.playback=null;this.pending=null;this.error='';
+  this.generation++;this.rankInfo=false;this.rankChosen=false;this.rankScope=this.featured?.game===game?'season':'all';this.game=game;this.touchKeys=false;this.run=null;this.playback=null;this.pending=null;this.error='';
   this.paused=true;this.finishing=false;this.waiting=false;this.localOver=false;this.saveRequested=false;this.ranking=null;
   this.effects=new Effects({reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});this.state=Core.create(game,Array(24).fill(3733),this.rulesVersion);this.effects.observe(this.state);this.score=0;this.progress=0;this.loadRanking();
   if(game==='merge'){loadMergeSprites().then(images=>{if(!this.isDestroying){this.mergeSprites=images;this.effects.sprites=images;this.repaint=true;}});}
@@ -137,7 +138,7 @@ export default class ArcadeApp {
   this.observeSudokuCompletion(p.state);
   this.run=p.run;this.state=p.state;this.pending=p.pending;this.score=p.state.score;
   if(this.turnBased||p.state.tick%15===0||p.state.over){this.progress=p.state.tick;}
-  this.waiting=p.blocked&&!p.state.over;this.localOver=p.state.over;this.effects.observe(p.state,p.visualMove);this.repaint=true;if(this.game==='sudoku')this.scheduleRender();
+  this.waiting=p.blocked&&!p.state.over;this.localOver=p.state.over;this.effects.observe(p.state,p.visualMove);this.repaint=true;if(['sudoku','blocks'].includes(this.game))this.scheduleRender();
  }
  paint(){if(this.canvas&&this.state){draw(this.canvas,this.state,this.effects);}}
  async pause(){this.hostPaused=true;this.paused=true;this.playback?.release();await this.startPromise;this.paused=true;this.playback?.release();await this.flush();}
@@ -161,6 +162,19 @@ export default class ArcadeApp {
   if(!this.playback.pending&&!this.playback.frames&&!this.finishing){this.saveRequested=false;return Promise.resolve();}
   this.syncPromise=this.sendLoop();return this.syncPromise;
  }
+ async advanceRequest(playback){
+  // Retry only transport/server failures with the SAME immutable request ID.
+  // Local buffered play continues; validation and permission errors stop at once.
+  for(let attempt=0;;attempt++){
+   try{return await this.request('advance',{id:playback.run.id,...playback.pending,rules_version:this.rulesVersion});}
+   catch(error){
+    const status=Number(error?.status||error?.jqXHR?.status||0);
+    if(attempt>=2||(status>0&&status<500)||error?.code||this.closing||this.isDestroying||playback!==this.playback)throw error;
+    await new Promise(resolve=>setTimeout(resolve,350*(attempt+1)));
+    if(this.isDestroying||playback!==this.playback)throw error;
+   }
+  }
+ }
  async sendLoop(){
   const p=this.playback;this.syncing=true;
   try{
@@ -171,7 +185,7 @@ export default class ArcadeApp {
     }
     if(!p.pending){break;}
     this.pending=p.pending;
-    const r=await this.request('advance',{id:p.run.id,...p.pending,rules_version:this.rulesVersion});
+    const r=await this.advanceRequest(p);
     if(this.isDestroying||p!==this.playback){return;}
     p.acknowledge(r);this.updateView();
     if(r.status!=='playing'){this.paused=true;this.finishing=false;this.loadRanking();break;}
@@ -210,7 +224,7 @@ export default class ArcadeApp {
   };
   const key=e=>{
    if(e.isComposing||e.ctrlKey||e.metaKey||e.altKey){return;}
-   if(this.game==='sudoku')return;const k=mapped(e);if(!k){return;}e.preventDefault();
+   if(this.game==='sudoku')return;const k=this.game==='blocks'?({z:'tap',x:'u',c:'x:0'}[e.key.toLowerCase()]||mapped(e)):mapped(e);if(!k){return;}e.preventDefault();
    if(!e.repeat&&!this.inputDisabled){this.input(this.game==='bird'?'tap':k);this.playback?.hold(k);}
   };
   const up=e=>{const k=mapped(e);if(k){this.playback?.release(k);}};
@@ -259,7 +273,7 @@ export default class ArcadeApp {
   this.click=(e)=>{const b=e.target.closest('[data-action]');if(!b||!root.contains(b)||b.disabled){return;}
    const action=b.dataset.action,arg=b.dataset.arg;
    if(action==='profile'){if(options.onProfile){e.preventDefault();options.onProfile(arg);}return;}
-   const actions={seasonInfo:()=>{this.seasonInfo=!this.seasonInfo;this.scheduleRender();},cell:()=>this.sudokuSelect(arg),digit:()=>this.sudokuWrite(arg),note:()=>{this.sudokuNote=!this.sudokuNote;this.scheduleRender();},erase:()=>this.input(`v:${this.sudokuCell}:0`),undo:()=>this.input('undo'),open:()=>this.open(arg),back:()=>this.back(),start:()=>this.start(),pause:()=>this.pause(),finish:()=>this.finish(),retry:()=>this.retry(),recover:()=>this.recover(),rank:()=>this.selectRank(arg),info:()=>this.toggleRankInfo(),ranking:()=>this.loadRanking(),season:()=>this.openSeason(),catalog:()=>options.reloadCatalog?.()};
+   const actions={touchKeys:()=>{this.touchKeys=!this.touchKeys;this.scheduleRender();},seasonInfo:()=>{this.seasonInfo=!this.seasonInfo;this.scheduleRender();},cell:()=>this.sudokuSelect(arg),digit:()=>this.sudokuWrite(arg),note:()=>{this.sudokuNote=!this.sudokuNote;this.scheduleRender();},erase:()=>this.input(`v:${this.sudokuCell}:0`),undo:()=>this.input('undo'),open:()=>this.open(arg),back:()=>this.back(),start:()=>this.start(),pause:()=>this.pause(),finish:()=>this.finish(),retry:()=>this.retry(),recover:()=>this.recover(),rank:()=>this.selectRank(arg),info:()=>this.toggleRankInfo(),ranking:()=>this.loadRanking(),season:()=>this.openSeason(),catalog:()=>options.reloadCatalog?.()};
    if(actions[action]){Promise.resolve(actions[action]()).catch(error=>{this.error=this.errorText(error);});}
   };
   this.pointerDown=(e)=>{const b=e.target.closest('[data-key]');if(b&&root.contains(b)){this.press(b.dataset.key,{preventDefault:()=>e.preventDefault(),currentTarget:b,pointerId:e.pointerId});}};

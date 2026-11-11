@@ -1,4 +1,5 @@
 import drawCover from "./arcade-cover";
+import Core from "./arcade-core";
 const escape=(value)=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const button=(action,label,cls='btn btn-flat',arg='')=>`<button type="button" class="${cls}" data-action="${action}" data-arg="${escape(arg)}">${label}</button>`;
 const icon=(kind)=>kind==='info'?'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7v1" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10a8 8 0 0 0-14-4L3 9m0-6v6h6M4 14a8 8 0 0 0 14 4l3-3m0 6v-6h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -30,21 +31,31 @@ export function renderArcade(app){
    root.innerHTML=`<div class="ra-banner-slot"></div><div class="ra-season-details" hidden></div><div class="ra-catalog">${app.games.map(g=>`<button type="button" class="ra-card ra-card--${g.color}" data-action="open" data-arg="${g.id}"><div class="ra-card-art" aria-hidden="true"><canvas class="ra-art ra-cover" data-game="${g.id}"></canvas><span class="ra-featured-tag" data-game="${g.id}" hidden>本期挑战</span></div><div class="ra-card-label"><h3>${g.name}</h3><span aria-hidden="true">↗</span></div></button>`).join('')}</div>`;
    root.querySelectorAll('canvas.ra-cover').forEach(c=>app.coverCleanups.push(drawCover(c,c.dataset.game)));
   }else{
-   const controls=app.hasControls?`<div class="ra-controls" data-game="${app.game}">${[...app.controlsList,...(app.game==='blocks'?[{key:'drop',label:'落下'}]:[])].map(c=>`<button type="button" data-key="${c.key}" aria-label="${c.label}">${c.label}</button>`).join('')}</div>`:'';
+   const controls=app.hasControls?`<div class="ra-controls" data-game="${app.game}">${[...app.controlsList,...(app.game==='blocks'?[{key:'tap',label:'↶'},{key:'x:0',label:'暂存'},{key:'drop',label:'落下'}]:[])].map(c=>`<button type="button" data-key="${c.key}" aria-label="${c.label}">${c.label}</button>`).join('')}</div>`:'';
    const sudoku=app.game==='sudoku'?`<div class="ra-sudoku-board"><div class="ra-sudoku-grid" role="grid" aria-label="数独棋盘">${Array.from({length:9},(_,r)=>`<div role="row">${Array.from({length:9},(_,c)=>`<button type="button" role="gridcell" data-cell="${r*9+c}" data-action="cell" data-arg="${r*9+c}"></button>`).join('')}</div>`).join('')}</div><div class="ra-sudoku-complete" role="status" hidden><span aria-hidden="true">✓</span><strong></strong></div></div><div class="ra-sudoku-tools">${button('note','✎ 笔记','btn')}${button('erase','擦除','btn')}${button('undo','撤销','btn')}</div><div class="ra-sudoku-digits">${Array.from({length:9},(_,i)=>button('digit',String(i+1),'',String(i+1))).join('')}</div>`:'';
    const heading=app.fixedGame?'':`<header class="ra-heading">${button('back','← 返回挑战')}<h2>${escape(app.selected.name)}</h2></header>`;
    root.innerHTML=`${heading}<p class="ra-rank-note ra-nonseason" hidden>本局计入总排行；新开一局可参加当前赛季。</p>
     <div class="rg-error" role="alert" hidden><span class="ra-error-text"></span>${button('retry','重试并恢复进度','btn')}${button('recover','读取已保存进度')}</div>
     <div class="ra-layout"><div class="ra-play" data-game="${app.game}"><div class="ra-scorebar"><div><small>本局得分</small><strong>0</strong></div><span role="status">准备就绪</span><small class="ra-progress"></small></div>
-    <div class="ra-stage" data-game="${app.game}"><canvas class="ra-canvas" data-game="${app.game}" tabindex="0" role="img" aria-label="${escape(app.selected.name)}"></canvas>${controls}${sudoku}</div>
+    ${app.game==='blocks'?'<div class="ra-block-previews" aria-label="方块预览"></div>':''}<div class="ra-stage" data-game="${app.game}"><canvas class="ra-canvas" data-game="${app.game}" tabindex="0" role="img" aria-label="${escape(app.selected.name)}"></canvas>${controls}${sudoku}</div>${app.grid?button('touchKeys','方向键','btn ra-touch-toggle'):''}
     <div class="ra-toolbar">${button('start','开始挑战','btn btn-primary ra-start')}${button('pause','暂停并保存','btn')}${button('finish','结束并保存')}</div>
-    <details class="ra-rules"><summary>玩法与操作</summary><p>${escape(app.rulesText)}</p><p>允许程序策略，正式成绩以服务器复核为准。后台同步成绩；网络长时间中断时暂停，恢复后继续；存档每次操作后保留 30 天，可暂停后回来继续；赛季结束自动结算已同步的进度，跨期不计入新赛季。</p></details>
+    <details class="ra-rules"><summary>玩法与操作</summary>${app.game==='hex'?'<div class="ra-hex-demo" aria-label="三个相邻同色块连成一组即可消除"><span>↶</span><i></i><i></i><i></i><span>→ 消除</span></div>':''}<p>${escape(app.rulesText)}</p><p>允许程序策略，正式成绩以服务器复核为准。后台同步成绩；网络长时间中断时暂停，恢复后继续；存档每次操作后保留 30 天，可暂停后回来继续；赛季结束自动结算已同步的进度，跨期不计入新赛季。</p></details>
     </div><aside class="ra-rank"><div class="ra-rank-heading"><div class="ra-rank-tabs">${button('rank','赛季排行','','season')}${button('rank','总排行','','all')}</div><div class="ra-rank-tools"><button type="button" class="rg-icon-button" data-action="info" aria-label="排行说明" title="排行说明" aria-expanded="false">${icon('info')}</button><button type="button" class="rg-icon-button" data-action="ranking" aria-label="刷新排行" title="刷新排行">${icon('refresh')}</button></div></div><div class="rg-rules ra-rank-help" hidden></div><p class="ra-ranking-error" role="alert" hidden></p><ol></ol></aside></div>`;
    app.stageCleanup=app.attachStage(root.querySelector('.ra-canvas'));
   }
  }
  if(!app.game){lobby(app);return;}
  if(app.game==='sudoku')renderSudoku(app);
+ if(app.game==='2048'){
+  root.querySelector('.ra-controls').hidden=!app.touchKeys;
+  root.querySelector('[data-action=touchKeys]').setAttribute('aria-expanded',String(app.touchKeys));
+ }
+ if(app.game==='blocks'){
+  const previews=[['暂存 · C',app.state?.holdShape],['下一块',app.state?.nextShape]];
+  const html=previews.map(([label,shape])=>`<div><small>${label}</small><span class="ra-piece-preview" aria-label="${shape===undefined?'空':label}">${Array.from({length:8},(_,i)=>`<i class="${Core.shapes[shape]?.some(([x,y])=>x===i%4&&y===Math.floor(i/4))?'is-filled':''}" data-shape="${shape??''}"></i>`).join('')}</span></div>`).join('');
+  const el=root.querySelector('.ra-block-previews');if(el.innerHTML!==html)el.innerHTML=html;
+ }
+
  setText(root,'.ra-scorebar div small',app.game==='sudoku'?'已通关':'本局得分');
  hidden(root,'.ra-nonseason',!app.nonSeasonRun);hidden(root,'.rg-error',!app.error);setText(root,'.ra-error-text',app.error);
  disabled(root,'[data-action=back]',app.busy||app.finishing);disabled(root,'[data-action=retry],[data-action=recover]',app.busy||app.syncing);

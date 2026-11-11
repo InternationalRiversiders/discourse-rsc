@@ -53,11 +53,11 @@ effects.observe(playback.state, playback.visualMove);
 draw(canvas, playback.state, effects);
 // 同时最多一份请求；网络慢时允许有限尾帧继续推进。
 const request = playback.checkpoint(crypto.randomUUID());
-// response = await nativeBridge.advance(playback.run.id, {...request, rules_version:4})
+// response = await nativeBridge.advance(playback.run.id, {...request, rules_version:5})
 // playback.acknowledge(response)
 ```
 
-不要在每帧调用接口。实时类通常每 120 帧同步，最多 180 帧尾缓冲；2048 使用服务端预发的最多 20 个随机数（最多约 9 步），每 4 步或停手 250ms 后同步，单批最多 16 步。完整种子不下发；预取耗尽时等待补充，不能自行生成随机值。旧版客户端需刷新或升级 SDK；服务端不再接受旧规则写入，恢复存档时直接升级并保留已验证进度。随机种子不公开，但少量前瞻及机器人策略仍可能存在；服务器复核的是规则合法性，不保证操作者是人。
+不要在每帧调用接口。实时类通常每 120 帧同步，最多 180 帧尾缓冲；2048 v5 使用服务端预发的最多 128 个随机数，每 8 步或停手 250ms 后同步，单批最多 64 步；窗口耗尽仍会等待服务端补充。完整种子不下发；预取耗尽时等待补充，不能自行生成随机值。旧版客户端需刷新或升级 SDK；服务端兼容 v2–v5 规则写入，恢复存档时直接升级并保留已验证进度。随机种子不公开，但少量前瞻及机器人策略仍可能存在；服务器复核的是规则合法性，不保证操作者是人。
 
 ## SDK 自建页面方式（备选，不满足控件自动同步目标）
 
@@ -81,8 +81,8 @@ const request = playback.checkpoint(crypto.randomUUID());
 | --- | --- | --- |
 | GET | `/rsc/arcade/catalog.json` | 游戏列表、规则版本、当前轮替赛季、服务端时间 |
 | GET | `/rsc/arcade/ranking.json?game=2048` | 永久 `rows`，该游戏当期 `season`，当前轮替 `featured` |
-| POST | `/rsc/arcade/start.json` | `{game, request_id, rules_version:4}`；同用户同游戏恢复未过期局 |
-| POST | `/rsc/arcade/:id/advance.json` | `{version, request_id, frames, events, finish, rules_version:4}`；分数由服务端计算 |
+| POST | `/rsc/arcade/start.json` | `{game, request_id, rules_version:5}`；同用户同游戏恢复未过期局 |
+| POST | `/rsc/arcade/:id/advance.json` | `{version, request_id, frames, events, finish, rules_version:5}`；分数由服务端计算 |
 
 - 默认一周一个游戏，顺序：2048 → 方块堆叠 → 贪吃蛇 → 河畔飞鸟 → 六角消除 → 打砖块 → 合成大河畔。
 - 后台 `rsc_arcade_rotation_cadence` 可切 `daily`；从下一期生效，不中途缩短当前赛季。默认周日北京时间 20:00 换期，日赛沿用北京时间 20:00。
@@ -122,3 +122,5 @@ Flutter 原生包尚未集成或真机验收；后续至少测 Android WebView�
 - 飞鸟版本 3 使用内缩椭圆碰撞体，管口边角按最近点检测；鸟嘴、翅膀不计入碰撞体。参考 [Floppy Bird 的碰撞框修正](https://github.com/nebez/floppybird/blob/gh-pages/js/main.js)，没有复制其图片或源码。
 - [老河畔合成游戏](https://bbs.uestc.edu.cn/merge_qshp/) 的 `src/project.js` 使用 Cocos `PhysicsManager` / `RigidBody`，重力配置为 `(0,-300)`；引擎包含 `b2World`。本插件没有直接嵌入其物理引擎，采用共享确定性圆体求解，新增接触摩擦、角速度、旋转绘制与小幅弹性，避免只消除重叠带来的僵硬感。
 - 当前规则为 3，桥协议仍为 1。服务端兼容已打开的规则 2 页面；新版恢复旧局时保留位置/得分、升级检查点并递增版本，旧页面不得继续写入已升级局。排名不清空。
+
+方块 v5 的事件按游戏解释：`u` 顺时针旋转，`tap` 逆时针旋转，`x:0` 暂存（每块一次），`drop` 硬降。六角消除 `drop` 加速当前落块。沿用现有桥接事件格式，无需新增原生控件或修改协议版本。

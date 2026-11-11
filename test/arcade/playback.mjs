@@ -100,10 +100,10 @@ async function settle(c,r){const req=requests.shift();assert(req);const response
  const c=component('blocks');let r=run('blocks');r.id=c.run.id;
  for(let i=0;i<10;i++)c.advanceFrame();c.flush();const lost=requests.shift();r=server(r,lost.body);
  c.input('r');for(let i=0;i<20;i++)c.advanceFrame();lost.reject(new Error('offline'));
- await new Promise(resolve=>setImmediate(resolve));assert(c.paused);assert.equal(c.playback.frames,20);
- const retry=c.retry();const same=requests.shift();assert.deepEqual(same.body,lost.body);
+ await new Promise(resolve=>setTimeout(resolve,400));assert(!c.paused,'transient outage keeps local play running');assert.equal(c.playback.frames,20);
+ const same=requests.shift();assert.deepEqual(same.body,lost.body,'automatic retry preserves idempotency');
  same.resolve(view(r));await new Promise(resolve=>setImmediate(resolve));
- r=await settle(c,r);await retry;assert(!c.paused);assert.equal(c.playback.frames,0);assert.deepEqual(comparable(c.state),comparable(r.state));
+ const saved=c.flush();r=await settle(c,r);await saved;assert(!c.paused);assert.equal(c.playback.frames,0);assert.deepEqual(comparable(c.state),comparable(r.state));
 }
 assert.equal(requests.length,0);
 console.log('PASS seven-game reconciliation, legacy private 2048 and prefetched window, bounded backlog, held controls, snake turns, delayed sync, finish drain and lost-response retry');
