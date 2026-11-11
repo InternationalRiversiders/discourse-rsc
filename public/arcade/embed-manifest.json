@@ -2,11 +2,11 @@
   "protocol": 1,
   "rules_version": 4,
   "entry": "/rsc/arcade/embed",
-  "script": "/plugins/discourse-rsc/arcade/arcade-embed-9b366cf777f019f4.js",
-  "stylesheet": "/plugins/discourse-rsc/arcade/arcade-embed-900f2769474f1bb8.css",
+  "script": "/plugins/discourse-rsc/arcade/arcade-embed-3e1fc649173a8b90.js",
+  "stylesheet": "/plugins/discourse-rsc/arcade/arcade-embed-cd35d6f82915f043.css",
   "sha256": {
-    "script": "9b366cf777f019f4074aef20323995a9a7ec2a85a0dfee8c00594dda1daccf3b",
-    "stylesheet": "900f2769474f1bb85a371935deb3bdd23ff3c5d091c83ffed6ffbfe10e54c8c2"
+    "script": "3e1fc649173a8b90f0a19ad514e7af35f2ec2db5817ae4a1e3d68a35ad8cff22",
+    "stylesheet": "cd35d6f82915f04385bc537afe226325ba012ff37eb14441a2bc45daca725ba6"
   },
   "sources": {
     "arcade-core": "409ca19672c5d91843678837e14754d5ccf29e6e6c2dc2ea7ff3af694cae56d2",
@@ -16,12 +16,12 @@
     "arcade-sprites": "1f906d4fba7947a510373388e5ffa052af954c30ca221225b88afab3b43dabcc",
     "campus-time": "63f09fbc224fc607e26397d4375ddf6076074cf95868b980c4e2ae793105c12b",
     "arcade-cover": "5467cb745d7e3080a887eb46bc4b198e8ba90ac494aeaba3b599a841dbafb411",
-    "arcade-ui": "43372aa27b1b778906318228fe57b09f84c187cee768640c51a94375510a85f5",
-    "arcade-app": "2ccc174c07b2975487a156ffc09f183e40fe6094f4903ee8a78834239d5f72a1",
+    "arcade-ui": "b68232e1ce8fbd057bf410afa5d38e4f7a0dd805dd23d288a753a54df71dd27b",
+    "arcade-app": "aa95c0c8adf3f80f7d9963c8f461df748b35fc33c8ef9c20bfd342141fcab196",
     "arcade-transport": "b346cf7ae8bd408a1a02de227273ec12f65d25dbaa7b9325e68dba0229efc19e",
     "arcade-bridge": "c72342fb74ebf6f94d15c37e22edc22881602aa12812b06b0dd532c5196fe808",
     "arcade-embed": "91a139ef39773430fcf975d930d7d8dbba5cdea9c530673280a0a40053a16a36",
-    "rsc-arcade.scss": "ce9cd40db4b50d1d5891256b050195bf464a1e81218dfe2ae5237c7984bcfb4a",
+    "rsc-arcade.scss": "bf0756e23134fdaacd24a07e6e6c8c7fcb229b2d8d7e525f1eca5dca1b32dcb1",
     "rsc-arcade-embed.scss": "56d896137190f5c0865b47bb95bf734e70383c44c4c9e4bdf375f7b1a438127e"
   }
 }

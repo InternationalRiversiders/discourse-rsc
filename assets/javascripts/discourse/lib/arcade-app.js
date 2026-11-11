@@ -31,6 +31,16 @@ export default class ArcadeApp {
  rankScope='all';
  rankInfo=false;
  seasonInfo=false;
+ sudokuCompletion=null;
+ sudokuCompletedLevel=null;
+ clearSudokuCompletion(){clearTimeout(this.sudokuCompletionTimer);this.sudokuCompletion=null;this.scheduleRender();}
+ observeSudokuCompletion(state){
+  if(this.game!=='sudoku'||!state.awaiting||this.sudokuCompletedLevel===state.level)return;
+  this.sudokuCompletedLevel=state.level;
+  this.sudokuCompletion=structuredClone(state);
+  clearTimeout(this.sudokuCompletionTimer);
+  this.sudokuCompletionTimer=setTimeout(()=>{this.sudokuCompletion=null;this.scheduleRender();},1800);
+ }
  sudokuCell=0;
  sudokuNote=false;
  sudokuSelect(i){this.sudokuCell=Number(i);this.scheduleRender();}
@@ -74,7 +84,7 @@ export default class ArcadeApp {
  get grid(){return this.game==='2048';}
  get turnBased(){return this.grid||this.game==='sudoku';}
  get finished(){return this.run?.status==='finished';}
- get inputDisabled(){return this.paused||this.busy||this.finishing||this.finished||this.localOver;}
+ get inputDisabled(){return this.paused||this.busy||this.finishing||this.finished||this.localOver||!!this.sudokuCompletion;}
  get navigationBusy(){return this.busy||this.syncing||!!this.pending;}
  get endLabel(){return this.ranking?.season?.ends_at?formatDateTime(this.ranking.season.ends_at):'';}
  get featured(){return this.args.catalog?.current;}
@@ -85,15 +95,16 @@ export default class ArcadeApp {
  get nonSeasonRun(){return this.run&&this.ranking?.season&&this.run.season_id!==this.ranking.season.id;}
  selectRank(scope){this.rankScope=scope;this.rankChosen=true;}
  openSeason(){if(this.featured){this.open(this.featured.game);this.rankScope='season';}}
- get status(){return this.finished?'成绩已保存':this.error?'连接中断':this.finishing||this.localOver?'保存成绩':this.paused?'已暂停':this.waiting?'等待同步':'挑战中';}
+ get status(){return this.finished?'成绩已保存':this.error?'连接中断':this.sudokuCompletion?'本关完成':this.finishing||this.localOver?'保存成绩':this.paused?'已暂停':this.waiting?'等待同步':'挑战中';}
  get startLabel(){return this.finished?'再来一局':this.run?'继续挑战':'开始挑战';}
- get progressLabel(){if(!this.state){return '';}if(this.grid){return `${this.progress} 步`;}if(this.game==='sudoku'){return `第 ${this.state.level||1} 关`;}if(this.game==='blocks'){return `${this.state.lines} 行`;}if(this.game==='merge'){return `${this.state.drops} 次投放`;}if(this.game==='bricks'){return `第 ${this.state.wave||1} 关`;}if(this.game==='bird'){return `${this.score} 道障碍`;}return '';}
+ get progressLabel(){if(!this.state){return '';}if(this.grid){return `${this.progress} 步`;}if(this.game==='sudoku'){return `第 ${this.sudokuCompletion?.level||this.state.level||1} 关`;}if(this.game==='blocks'){return `${this.state.lines} 行`;}if(this.game==='merge'){return `${this.state.drops} 次投放`;}if(this.game==='bricks'){return `第 ${this.state.wave||1} 关`;}if(this.game==='bird'){return `${this.score} 道障碍`;}return '';}
  get controls(){return ['blocks','snake'].includes(this.game)?['u','l','d','r']:this.game==='hex'?['l','r']:[];}
  get hasControls(){return ['blocks','snake','hex'].includes(this.game);}
  focusPlay(){if(this.game==='sudoku'){this.root.querySelector(`[data-cell="${this.sudokuCell}"]`)?.focus({preventScroll:true});return;}this.canvas?.focus({preventScroll:true});if(window.innerWidth<=767){this.canvas?.closest('.ra-play')?.scrollIntoView({block:'start',behavior:'instant'});}}
  get controlsList(){return this.controls.map(k=>({key:k,label:{l:'←',r:'→',u:'↑',d:'↓'}[k]}));}
  async open(game){
   if(this.fixedGame&&game!==this.args.game){return;}
+  this.clearSudokuCompletion();this.sudokuCompletedLevel=null;
   this.generation++;this.rankInfo=false;this.rankChosen=false;this.rankScope=this.featured?.game===game?'season':'all';this.game=game;this.run=null;this.playback=null;this.pending=null;this.error='';
   this.paused=true;this.finishing=false;this.waiting=false;this.localOver=false;this.saveRequested=false;this.ranking=null;
   this.effects=new Effects({reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});this.state=Core.create(game,Array(24).fill(3733),this.rulesVersion);this.effects.observe(this.state);this.score=0;this.progress=0;this.loadRanking();
@@ -102,7 +113,7 @@ export default class ArcadeApp {
  async back(){
   if(this.fixedGame){return;}
   if(this.busy||this.finishing){return;}this.paused=true;this.playback?.release();await this.flush();
-  if(!this.error&&!this.isDestroying){this.startKey=null;this.game=null;this.playback=null;this.generation++;}
+  if(!this.error&&!this.isDestroying){this.clearSudokuCompletion();this.startKey=null;this.game=null;this.playback=null;this.generation++;}
  }
  async loadRanking(){const game=this.game;this.rankingError='';try{const r=await this.request('ranking',{game});if(this.game===game&&!this.isDestroying){this.ranking=r;this.args.updateSeason?.(r.featured);if(!this.rankChosen){this.rankScope=r.season?'season':'all';}else if(!r.season){this.rankScope='all';}}}catch(e){if(!this.isDestroying){this.rankingError=this.errorText(e);}}}
  start(){
@@ -116,20 +127,21 @@ export default class ArcadeApp {
   try{
    const r=await this.request('start',{game:this.game,request_id:this.startKey ||= crypto.randomUUID(),rules_version:this.rulesVersion,scope:this.rankScope});
    if(this.isDestroying||generation!==this.generation){return;}
-   this.effects=new Effects({reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});this.effects.sprites=this.mergeSprites;this.playback=new Playback(r);this.finishing=false;this.saveRequested=false;this.updateView();
+   this.effects=new Effects({reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});this.effects.sprites=this.mergeSprites;this.clearSudokuCompletion();this.sudokuCompletedLevel=null;this.playback=new Playback(r);this.finishing=false;this.saveRequested=false;this.updateView();
    this.startKey=null;this.paused=this.hostPaused||r.status!=='playing';this.focusPlay();
   }catch(e){if(!this.isDestroying){this.error=this.errorText(e);}}
   finally{if(!this.isDestroying){this.busy=false;}}
  }
  updateView(){
   const p=this.playback;if(!p){return;}
+  this.observeSudokuCompletion(p.state);
   this.run=p.run;this.state=p.state;this.pending=p.pending;this.score=p.state.score;
   if(this.turnBased||p.state.tick%15===0||p.state.over){this.progress=p.state.tick;}
   this.waiting=p.blocked&&!p.state.over;this.localOver=p.state.over;this.effects.observe(p.state,p.visualMove);this.repaint=true;if(this.game==='sudoku')this.scheduleRender();
  }
  paint(){if(this.canvas&&this.state){draw(this.canvas,this.state,this.effects);}}
  async pause(){this.hostPaused=true;this.paused=true;this.playback?.release();await this.startPromise;this.paused=true;this.playback?.release();await this.flush();}
- async finish(){this.paused=true;this.playback?.release();if(this.playback){this.playback.keys=[];}await this.flush(true);}
+ async finish(){this.clearSudokuCompletion();this.paused=true;this.playback?.release();if(this.playback){this.playback.keys=[];}await this.flush(true);}
  recover(){
   if(this.busy||this.syncing){return;}
   this.pending=null;this.playback=null;this.run=null;this.startKey=null;this.finishing=false;this.error='';return this.start();
@@ -277,7 +289,7 @@ export default class ArcadeApp {
   this.paused=true;return {saved:!this.error,run_id:this.run?.id||null,version:this.run?.version??null,...(this.error?{error:this.error}:{})};
  }
  destroy(){
-  this.closing=true;this.stageCleanup?.();this.coverCleanups?.forEach(fn=>fn());
+  this.clearSudokuCompletion();this.closing=true;this.stageCleanup?.();this.coverCleanups?.forEach(fn=>fn());
   this.root.removeEventListener('keydown',this.sudokuKeyboard);this.root.removeEventListener('click',this.click);this.root.removeEventListener('click',this.keyClick);this.root.removeEventListener('pointerdown',this.pointerDown);
   for(const event of ['pointerup','pointercancel','lostpointercapture']){this.root.removeEventListener(event,this.pointerUp);}
   return this.pause().finally(()=>{this.isDestroying=true;this.generation++;});
