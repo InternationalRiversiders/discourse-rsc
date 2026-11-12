@@ -18,10 +18,13 @@ const {chromium}=require(process.env.RSC_PLAYWRIGHT);
    for (const m of metrics) {
      assert(Math.abs(m.inputs[0].height-44)<1);
      assert(Math.abs(m.button.height-44)<1);
-     if(width>600 || m.inputs.length===1) assert(Math.abs(m.inputs[0].y-m.button.y)<1,`misaligned button at ${width}`);
+     if(metrics[0].form.y===metrics[1].form.y || m.inputs.length===1) assert(Math.abs(m.inputs[0].y-m.button.y)<1,`misaligned button at ${width}`);
      if(m.inputs.length===2) assert(Math.abs(m.inputs[0].y-m.inputs[1].y)<1);
-     assert(Math.abs(m.inputs[0].x-metrics[0].inputs[0].x)<1);
-     assert(Math.abs(m.button.right-metrics[0].button.right)<1);
+     assert(m.button.right <= m.form.right+1);
+   }
+   if(width===1440) {
+     assert(Math.abs(metrics[0].form.y-metrics[1].form.y)<1, 'close and margin should share a row');
+     assert((await page.locator('#rsc-positions').boundingBox()).height<420, 'position panel should stay compact');
    }
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
    await page.locator('#rsc-positions').screenshot({path:`${process.env.RSC_BROWSER_OUTPUT}/position-${width}.png`});

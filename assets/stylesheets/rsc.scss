@@ -2242,64 +2242,88 @@
 }
 html.rsc-market-resizing, html.rsc-market-resizing * { cursor: col-resize !important; user-select: none !important; }
 
-// Keep each position action on the same field/button baseline. Discourse's
-// default input bottom margin must not become extra space inside the label.
-.rsc-app .rsc-position-details {
-  > form.rsc-partial-close,
-  > form.rsc-protection {
+// Compact position management, responsive to the panel width as well as mobile.
+.rsc-app[data-section="market"] {
+  .rsc-position { container-type: inline-size; }
+  .rsc-position-overview { width: 100%; }
+  .rsc-position-details { width: 100%; }
+  .rsc-position-details > .rsc-position-metrics { margin-top: 8px; }
+  .rsc-position-actions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 116px;
-    align-items: end;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
-    width: 100%;
-    box-sizing: border-box;
-    margin: 12px 0 0;
-    padding: 12px;
-    border: 0;
-    border-radius: 9px;
-    background: var(--primary-very-low);
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--rsc-line);
 
-    > label {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+    > form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 108px;
+      align-items: end;
+      gap: 8px;
+      width: 100%;
       min-width: 0;
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      line-height: 20px;
+      border: 0;
+      background: none;
+
+      > label {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        line-height: 18px;
+      }
+      input, > .btn {
+        box-sizing: border-box;
+        width: 100%;
+        height: 44px;
+        min-height: 44px;
+        margin: 0;
+      }
+      > .btn {
+        padding: 0 8px;
+        white-space: nowrap;
+        justify-content: center;
+      }
     }
-
-    input,
-    > .btn {
-      box-sizing: border-box;
-      width: 100%;
-      height: 44px;
-      min-height: 44px;
-      margin: 0;
-    }
-
-    > .btn {
-      padding: 0 10px;
-      white-space: nowrap;
-      justify-content: center;
-    }
-  }
-
-  > form.rsc-position-stops {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) 116px;
-  }
-
-  @media (max-width: 600px) {
-    > form.rsc-partial-close,
-    > form.rsc-protection {
-      grid-template-columns: minmax(0, 1fr) 104px;
-      gap: 10px;
-    }
-
     > form.rsc-position-stops {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-
       > .btn { grid-column: 1 / -1; }
+    }
+    > p { margin: -4px 0 0; font-size: 11px; }
+  }
+
+  @container (min-width: 600px) {
+    .rsc-position-overview {
+      display: grid;
+      grid-template-columns: minmax(150px, .8fr) minmax(0, 2fr);
+      align-items: center;
+      gap: 12px;
+      .rsc-position-title { margin-bottom: 0; }
+      > p { grid-column: 1 / -1; }
+    }
+    .rsc-position-overview .rsc-position-metrics > div,
+    .rsc-position-details > .rsc-position-metrics > div {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
+      dt { margin-bottom: 0; }
+    }
+    .rsc-position-actions {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 20px;
+      > form.rsc-position-stops {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) 108px;
+        > .btn { grid-column: auto; }
+      }
+      > p { grid-column: 1 / -1; }
     }
   }
 }
