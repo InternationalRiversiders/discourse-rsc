@@ -1,3 +1,4 @@
+import RscLotteryPlan from "./rsc-lottery-plan";
 import RscGameRanking from "./rsc-game-ranking";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
@@ -90,6 +91,7 @@ export default class extends Component {
     while (values.length < 4) { const n = crypto.getRandomValues(new Uint8Array(1))[0]; if (n < 250) { values.push(n % 10); } }
     this.number = values.join(""); this.success = "";
   }
+  @action updatePlan(plan) { this.data = { ...this.data, auto_plan:plan }; }
   @action showMine() { this.tab = "mine"; }
   @action showHistory() { this.tab = "history"; }
   savePending(value) {
@@ -153,6 +155,7 @@ export default class extends Component {
           {{#if this.latest}}<div class="rl-last"><span>上期开奖号码 · {{this.latest.date}}</span><div class="rl-balls">{{#each this.latest.digits key="index" as |digit|}}<b>{{digit.value}}</b>{{/each}}</div></div>{{/if}}
         </section>
       </div>
+      <RscLotteryPlan @plan={{this.data.auto_plan}} @drawId={{this.current.id}} @drawAt={{this.current.draw_at}} @readOnly={{this.data.read_only}} @onSaved={{this.updatePlan}} />
       <section class="rl-records">
         <nav class="rl-tabs" aria-label="彩票记录"><button type="button" class={{if (eq this.tab "mine") "active"}} {{on "click" this.showMine}}>我的彩票</button><button type="button" class={{if (eq this.tab "history") "active"}} {{on "click" this.showHistory}}>往期开奖</button></nav>
         {{#if (eq this.tab "mine")}}<div class="rl-ticket-list">{{#each this.tickets key="id" as |ticket|}}<article class="rl-ticket {{if ticket.winning 'winning'}}"><div><strong>{{ticket.number}}</strong><span>× {{ticket.quantity}} 注</span><small>{{ticket.date}} 开奖</small></div><div><b>{{ticket.state}}</b>{{#if ticket.winning}}<span>+{{ticket.payoutLabel}} RSC</span>{{/if}}</div></article>{{else}}<p class="rl-empty">还没有彩票，选一个属于你的号码。</p>{{/each}}</div>

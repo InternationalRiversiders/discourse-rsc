@@ -34,6 +34,7 @@ after_initialize do
   %w[
     app/models/discourse_rsc/lottery_draw
     app/models/discourse_rsc/lottery_ticket
+    app/models/discourse_rsc/lottery_plan
     app/models/discourse_rsc/arcade_run
     app/models/discourse_rsc/game_round
     app/models/discourse_rsc/account
@@ -70,6 +71,7 @@ after_initialize do
     app/services/discourse_rsc/arcade
     app/services/discourse_rsc/game_ranking
     app/services/discourse_rsc/lottery
+    app/services/discourse_rsc/lottery_autobet
     app/services/discourse_rsc/red_packets
     app/services/discourse_rsc/packet_sharing
     app/services/discourse_rsc/sports

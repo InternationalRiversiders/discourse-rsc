@@ -52,18 +52,25 @@ module DiscourseRsc
         # Check after acquiring the draw lock. A request queued before the cutoff
         # must not buy into a draw that has already closed or been settled.
         raise Error.new('lottery_closed', status: 409) unless draw && Time.current < draw.draw_at
-        count = LotteryTicket.where(draw_id: draw.id, user_id: actor.id).sum(:quantity)
-        raise Error.new('lottery_limit', status: 409) if count + quantity > LIMIT
-        ticket = LotteryTicket.create!(draw_id: draw.id, user_id: actor.id, number: number, quantity: quantity)
-        Ledger.post(operation: 'lottery_ticket', actor_user_id: actor.id, request_id: "lottery-ticket-#{ticket.id}",
-          postings: { Account.wallet(actor.id).id => -quantity * PRICE * Amount::UNIT,
-            Account.internal('lottery:pool').id => quantity * CONTRIBUTION * Amount::UNIT,
-            Account.internal('system:lottery', kind: 'system').id => quantity * (PRICE - CONTRIBUTION) * Amount::UNIT },
-          metadata: { lottery_draw_id: draw.id, lottery_ticket_id: ticket.id, number: number, quantity: quantity, reason: 'Riverside 大乐透购票' })
+        ticket = purchase!(actor:actor,draw:draw,number:number,quantity:quantity)
         { ticket_id: ticket.id }
       end
       { ticket: ticket_view(LotteryTicket.includes(:draw).find_by!(id: result.fetch('ticket_id'), user_id: actor.id)),
         replayed: result['replayed'], balance: Account.wallet_snapshot(actor.id).balance }
+    end
+
+    # Caller holds the draw advisory lock inside a transaction.
+    def self.purchase!(actor:, draw:, number:, quantity:, automatic:false)
+      raise Error.new('lottery_closed',status:409) unless draw.settled_at.nil? && Time.current < draw.draw_at
+      count = LotteryTicket.where(draw_id: draw.id, user_id: actor.id).sum(:quantity)
+      raise Error.new('lottery_limit', status: 409) if count + quantity > LIMIT
+      ticket = LotteryTicket.create!(draw_id: draw.id, user_id: actor.id, number: number, quantity: quantity)
+      Ledger.post(operation: 'lottery_ticket', actor_user_id: actor.id, request_id: "lottery-ticket-#{ticket.id}",
+        postings: { Account.wallet(actor.id).id => -quantity * PRICE * Amount::UNIT,
+          Account.internal('lottery:pool').id => quantity * CONTRIBUTION * Amount::UNIT,
+          Account.internal('system:lottery', kind: 'system').id => quantity * (PRICE - CONTRIBUTION) * Amount::UNIT },
+        metadata: { lottery_draw_id: draw.id, lottery_ticket_id: ticket.id, number: number, quantity: quantity, automatic:automatic, reason: automatic ? 'Riverside 大乐透自动购票' : 'Riverside 大乐透购票' })
+      ticket
     end
 
     def self.matches(number, result)
@@ -144,7 +151,7 @@ module DiscourseRsc
       draw = LotteryDraw.find_by(settled_at: nil)
       wallet = Account.wallet_snapshot(actor.id)
       { balance: wallet.balance, wallet_status: wallet.status, read_only: Safety.read_only?, price: PRICE,
-        contribution: CONTRIBUTION, limit: LIMIT,
+        contribution: CONTRIBUTION, limit: LIMIT, auto_plan: LotteryAutobet.view(actor),
         accounting: Access.admin?(actor) ? accounting : nil,
         current: draw && { id: draw.id, draw_at: draw.draw_at, pool: Account.find_by(key: 'lottery:pool')&.balance || '0',
           tickets: LotteryTicket.where(draw_id: draw.id).sum(:quantity),

@@ -5,6 +5,7 @@ module Jobs
     def execute(args)
       return unless SiteSetting.rsc_enabled && SiteSetting.rsc_native_trial_enabled
       DiscourseRsc::Lottery.tick
+      DiscourseRsc::LotteryAutobet.process
     end
   end
 end

@@ -6,6 +6,7 @@ class LotteryTest < NativeBusinessTest
   NativeBusinessTest.instance_methods(false).grep(/^test_/).each { |n| undef_method n }
   def setup
     super
+    R::LotteryPlan.delete_all
     R::LotteryTicket.delete_all
     R::LotteryDraw.delete_all
     SiteSetting.rsc_games_enabled = true
@@ -16,6 +17,7 @@ class LotteryTest < NativeBusinessTest
     @draw = R::LotteryDraw.find_by!(settled_at: nil)
   end
   def teardown
+    @bob&.update!(suspended_till:nil)
     travel_back
     SiteSetting.rsc_lottery_enabled = false
     super
@@ -255,6 +257,91 @@ class LotteryTest < NativeBusinessTest
     consistent
   ensure
     @bob.update!(admin:false)
+  end
+
+  def save_plan(rows = [{'number'=>'0012','quantity'=>2,'enabled'=>true}], actor:@alice, version:0)
+    R::LotteryAutobet.save(actor:actor,selections:rows,version:version)
+  end
+  def open_next_draw
+    travel_to @draw.draw_at + 1.second
+    R::Lottery.tick
+    @draw = R::LotteryDraw.find_by!(settled_at:nil)
+  end
+  def test_auto_plan_next_draw_multiple_numbers_and_idempotency
+    save_plan([{'number'=>'0012','quantity'=>2,'enabled'=>true},{'number'=>'3456','quantity'=>3,'enabled'=>true},{'number'=>'9999','quantity'=>1,'enabled'=>false}])
+    R::LotteryAutobet.process
+    assert_equal 0,R::LotteryTicket.count
+    open_next_draw
+    threads=3.times.map { Thread.new { ActiveRecord::Base.connection_pool.with_connection { R::LotteryAutobet.process } } };threads.each(&:value)
+    assert_equal [['0012',2],['3456',3]],R::LotteryTicket.order(:id).pluck(:number,:quantity)
+    assert_equal '1975',R::Account.wallet(@alice.id).balance
+    result=R::LotteryAutobet.view(@alice)[:last_result]
+    assert_equal @draw.id,result['draw_id']
+    assert result['rows'].all? { |r| r['status']=='bought' }
+    R::LotteryAutobet.process
+    assert_equal 2,R::LotteryTicket.count
+    consistent
+  end
+  def test_auto_plan_validation_and_concurrent_editor_version
+    save_plan
+    assert_equal 'lottery_plan_changed',assert_raises(R::Error) { save_plan }.code
+    assert_equal 'lottery_plan_duplicate',assert_raises(R::Error) { save_plan([{'number'=>'0000','quantity'=>1,'enabled'=>true}]*2,version:1) }.code
+    assert_equal 'lottery_plan_limit',assert_raises(R::Error) { save_plan([{'number'=>'0000','quantity'=>20,'enabled'=>true},{'number'=>'0001','quantity'=>1,'enabled'=>true}],version:1) }.code
+    [[],nil,'1',1.5].each { |q| assert_raises(R::Error) { save_plan([{'number'=>'0001','quantity'=>q,'enabled'=>true}],version:1) } }
+    assert_equal 1,R::LotteryPlan.find_by!(user_id:@alice.id).version
+  end
+  def test_auto_plan_shares_manual_limit_and_does_not_retry_skips
+    save_plan
+    open_next_draw
+    buy('8888',quantity:19)
+    R::LotteryAutobet.process
+    assert_equal 19,R::LotteryTicket.sum(:quantity)
+    assert_equal 'skipped',R::LotteryAutobet.view(@alice)[:last_result]['rows'][0]['status']
+    assert_equal '1905',R::Account.wallet(@alice.id).balance
+    2.times { R::LotteryAutobet.process }
+    assert_equal 1,R::LotteryTicket.count
+    consistent
+  end
+  def test_auto_plan_insufficient_frozen_and_suspended_accounts
+    stranger=make_user('auto_empty');@group.add(stranger)
+    save_plan(actor:stranger);save_plan(actor:@alice);save_plan(actor:@bob)
+    open_next_draw
+    R::Account.wallet(@alice.id).update!(status:'frozen')
+    @bob.update!(suspended_till:2.days.from_now)
+    R::LotteryAutobet.process
+    assert_equal 0,R::LotteryTicket.count
+    [stranger,@alice,@bob].each { |u| assert_equal 'skipped',R::LotteryAutobet.view(u)[:last_result]['rows'][0]['status'] }
+    fund(stranger,'20')
+    R::LotteryAutobet.process
+    assert_equal 0,R::LotteryTicket.count
+    consistent
+  end
+  def test_auto_plan_partial_budget_and_pause_keeps_existing_tickets
+    stranger=make_user('auto_small');@group.add(stranger);fund(stranger,'5')
+    save_plan([{'number'=>'0001','quantity'=>2,'enabled'=>true},{'number'=>'0002','quantity'=>1,'enabled'=>true}],actor:stranger)
+    open_next_draw;R::LotteryAutobet.process
+    assert_equal ['0002'],R::LotteryTicket.pluck(:number)
+    assert_equal %w[skipped bought],R::LotteryAutobet.view(stranger)[:last_result]['rows'].map { |r| r['status'] }
+    save_plan([],actor:stranger,version:1)
+    assert_equal 1,R::LotteryTicket.count
+    open_next_draw;R::LotteryAutobet.process
+    assert_equal 1,R::LotteryTicket.count
+    consistent
+  end
+  def test_auto_plan_failure_rolls_back_and_can_retry
+    save_plan;open_next_draw
+    original=R::Lottery.method(:purchase!)
+    R::Lottery.define_singleton_method(:purchase!) { |**args| original.call(**args);raise 'simulated failure' }
+    assert_raises(RuntimeError) { R::LotteryAutobet.process }
+    assert_equal 0,R::LotteryTicket.count
+    assert_nil R::LotteryPlan.find_by!(user_id:@alice.id).last_draw_id
+    assert_equal '2000',R::Account.wallet(@alice.id).balance
+    R::Lottery.define_singleton_method(:purchase!,original)
+    R::LotteryAutobet.process
+    assert_equal 1,R::LotteryTicket.count
+    consistent
+  ensure
+    R::Lottery.define_singleton_method(:purchase!,original) if original
   end
 
 end

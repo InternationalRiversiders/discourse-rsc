@@ -98,6 +98,11 @@ zh_CN:
       lottery_number: 请输入四位数字，范围为 0000–9999。
       lottery_quantity: 每次可购买 1–20 注。
       lottery_limit: 本期每人最多购买 20 注，请查看已购数量。
+      lottery_plan_user_unavailable: 账号暂不可自动购票，本期已跳过。
+      lottery_plan_invalid: 自动投注计划格式不正确，请刷新后重试。
+      lottery_plan_duplicate: 同一个号码请合并设置注数，不要重复添加。
+      lottery_plan_limit: 每日启用的自动投注合计不能超过 20 注。
+      lottery_plan_changed: 计划已在其他页面修改，请刷新后重新编辑。
       lottery_closed: 本期已截止，请刷新后购买下一期。
       games_disabled: 游戏暂未开放。
       invalid_game: 请选择有效的游戏。

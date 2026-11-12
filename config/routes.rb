@@ -4,6 +4,7 @@ DiscourseRsc::Engine.routes.draw do
   get "/arcade/embed" => "arcade_embed#index"
   get "/lottery" => "lottery#index"
   get "/lottery/state" => "lottery#state"
+  put "/lottery/auto-plan" => "lottery#auto_plan"
   post "/lottery/buy" => "lottery#buy"
   get "/arcade/ranking" => "arcade#ranking"
   get "/arcade/catalog" => "arcade#catalog"

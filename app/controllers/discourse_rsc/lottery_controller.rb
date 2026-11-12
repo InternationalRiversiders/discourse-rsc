@@ -8,6 +8,13 @@ module DiscourseRsc
     def state
       render_json_dump Lottery.state(current_user)
     end
+    def auto_plan
+      RateLimiter.new(current_user, 'rsc-lottery-plan', 20, 1.minute).performed!
+      rows = params[:selections]
+      raise Error.new('lottery_plan_invalid') unless rows.is_a?(Array)
+      rows = rows.map { |r| r.respond_to?(:permit) ? r.permit(:number,:quantity,:enabled).to_h : r }
+      render_json_dump LotteryAutobet.save(actor:current_user,selections:rows,version:params[:version])
+    end
     def buy
       RateLimiter.new(current_user, 'rsc-lottery-buy', 30, 1.minute).performed!
       quantity = params.require(:quantity).to_s
