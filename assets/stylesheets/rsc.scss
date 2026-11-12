@@ -2241,3 +2241,65 @@
   }
 }
 html.rsc-market-resizing, html.rsc-market-resizing * { cursor: col-resize !important; user-select: none !important; }
+
+// Keep each position action on the same field/button baseline. Discourse's
+// default input bottom margin must not become extra space inside the label.
+.rsc-app .rsc-position-details {
+  > form.rsc-partial-close,
+  > form.rsc-protection {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 116px;
+    align-items: end;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 12px 0 0;
+    padding: 12px;
+    border: 0;
+    border-radius: 9px;
+    background: var(--primary-very-low);
+
+    > label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      line-height: 20px;
+    }
+
+    input,
+    > .btn {
+      box-sizing: border-box;
+      width: 100%;
+      height: 44px;
+      min-height: 44px;
+      margin: 0;
+    }
+
+    > .btn {
+      padding: 0 10px;
+      white-space: nowrap;
+      justify-content: center;
+    }
+  }
+
+  > form.rsc-position-stops {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 116px;
+  }
+
+  @media (max-width: 600px) {
+    > form.rsc-partial-close,
+    > form.rsc-protection {
+      grid-template-columns: minmax(0, 1fr) 104px;
+      gap: 10px;
+    }
+
+    > form.rsc-position-stops {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+
+      > .btn { grid-column: 1 / -1; }
+    }
+  }
+}
