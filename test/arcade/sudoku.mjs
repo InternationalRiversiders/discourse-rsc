@@ -31,3 +31,19 @@ const req=p.checkpoint('complete');const authoritative=Core.advance(r.state,req.
 const next=Core.sudokuLoad(authoritative,Core.sudokuPuzzle(456,2));p.acknowledge({...r,version:2,state:next});assert.equal(p.state.level,2);assert(!p.blocked);assert.equal(p.state.score,1);assert(p.state.notes.every(n=>n===0));assert.equal(p.keys.length,0);
 assert(!Core.sudokuValid(Array(81).fill(1)));
 console.log('PASS 180 unique reproducible graded puzzles, immutable givens, notes/undo, replay, weak-network tail and next-level gating; worst generation ms',Math.round(worst));
+
+// Peer notes are removed atomically and undo restores the whole change.
+let t=Core.sudokuLoad(Core.create('sudoku',[]),Array(81).fill(0));
+t=Core.advance(t,1,[[0,'n:1:3']]);
+t=Core.advance(t,1,[[0,'n:40:3']]);
+t=Core.advance(t,1,[[0,'v:0:3']]);
+assert.equal(t.notes[1],0);assert.equal(t.notes[40],8);
+t=Core.advance(t,1,[[0,'undo']]);assert.equal(t.notes[1],8);assert.equal(t.board[0],0);
+t=Core.advance(t,1,[[0,'v:0:3']]);
+const beforeReset=structuredClone(t);
+t=Core.advance(t,1,[[0,'reset']]);assert(t.board.every(n=>n===0));assert(t.notes.every(n=>n===0));assert.equal(t.score,beforeReset.score);
+t=Core.advance(t,1,[[0,'undo']]);assert.deepEqual(t.board,beforeReset.board);assert.deepEqual(t.notes,beforeReset.notes);
+for(let i=0;i<9;i++)t=Core.advance(t,1,[[0,`v:${i}:1`]]);
+t=Core.advance(t,1,[[0,'v:9:1']]);assert.equal(t.board[9],0);
+t=Core.advance(t,1,[[0,'v:0:0']]);t=Core.advance(t,1,[[0,'v:9:1']]);assert.equal(t.board[9],1);
+console.log('PASS note pruning/undo, reset/undo, digit exhaustion and recovery');

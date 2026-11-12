@@ -2,26 +2,26 @@
   "protocol": 1,
   "rules_version": 5,
   "entry": "/rsc/arcade/embed",
-  "script": "/plugins/discourse-rsc/arcade/arcade-embed-0704ee7c9d99cc6e.js",
-  "stylesheet": "/plugins/discourse-rsc/arcade/arcade-embed-00ae5fa1251e5cb5.css",
+  "script": "/plugins/discourse-rsc/arcade/arcade-embed-0ef20f30cb01f10e.js",
+  "stylesheet": "/plugins/discourse-rsc/arcade/arcade-embed-1b4d46d30fe44402.css",
   "sha256": {
-    "script": "0704ee7c9d99cc6e097403df2d3e761e91770d0792ee17b7d1798cbce11e5bd4",
-    "stylesheet": "00ae5fa1251e5cb5050afbc58eb39ef58f1067397048e74059e12481f4e4a7db"
+    "script": "0ef20f30cb01f10ec1e08f6e7d4d057394170e736abe2d871df0b18eaa133049",
+    "stylesheet": "1b4d46d30fe444029a52bf8ec62912b75c4aaff0947332c328f8a16926589d8c"
   },
   "sources": {
-    "arcade-core": "ba5d0edb24389bcab29ed508f535b2c5f6381f98783a70b423bc2ce5593fe6f3",
-    "arcade-playback": "7af8ab0bc360402561733a6b47bfbf521baf9da9f4bd6ab9022cb459d89d8746",
+    "arcade-core": "5cce78b1a72a3a5aa7c4884f029ddd2eb6c26ea9aa32a1cf03e8fa1839503b3b",
+    "arcade-playback": "e80e5ebefb6be6e25e2fe6093d28919ab533df6835cc359f46435868c625cde9",
     "arcade-effects": "4c20631d66d44a404466344e5897361d740a2b9f45e370046c9a8325f487d6e4",
     "arcade-draw": "72b4f91fde59359a2c686a9aea1785837d64788b33df6d9245214a5493f617fa",
     "arcade-sprites": "1f906d4fba7947a510373388e5ffa052af954c30ca221225b88afab3b43dabcc",
     "campus-time": "63f09fbc224fc607e26397d4375ddf6076074cf95868b980c4e2ae793105c12b",
     "arcade-cover": "5467cb745d7e3080a887eb46bc4b198e8ba90ac494aeaba3b599a841dbafb411",
-    "arcade-ui": "313341771c700fcbb437b1218370fd33557b7d7e9fc5896e156b28e0359df649",
-    "arcade-app": "4a25f29c5bdf2b8e60eadf4f7a76d85e2dde86d173f29f80750e847eda8d5272",
+    "arcade-ui": "352bf7cbf0a7d66d622a4e8f5aaa131d85046938052017c2592b1b4318b409ad",
+    "arcade-app": "6ea8b9a66eb8d5e4eb6fc0eb172e76f993b245525a6536c327c7724574a17239",
     "arcade-transport": "d967049c8cadd3ee8d89e14d8c9ad8bf096c05e47f1eac9ceff17e1fb7b5e8a4",
     "arcade-bridge": "c72342fb74ebf6f94d15c37e22edc22881602aa12812b06b0dd532c5196fe808",
     "arcade-embed": "91a139ef39773430fcf975d930d7d8dbba5cdea9c530673280a0a40053a16a36",
-    "rsc-arcade.scss": "3d483f1793ee7f2c9a80f9d364638081a446606059349becf693efb2aa933dd3",
+    "rsc-arcade.scss": "30a87dbb1257276879b8fe4eddf1d3d171ba32a1b36f1b39d708966d166caf49",
     "rsc-arcade-embed.scss": "56d896137190f5c0865b47bb95bf734e70383c44c4c9e4bdf375f7b1a438127e"
   }
 }

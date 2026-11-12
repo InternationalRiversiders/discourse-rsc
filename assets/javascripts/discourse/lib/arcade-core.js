@@ -97,14 +97,15 @@ function sudokuStep(s,keys){
  if(s.awaiting)return;
  for(const key of keys){
   if(key==='undo'){
-   const prev=s.history.pop();if(prev){s.board[prev[0]]=prev[1];s.notes[prev[0]]=prev[2];}continue;
+   const prev=s.history.pop();if(prev){if(prev.board){s.board=prev.board;s.notes=prev.notes;}else{s.board[prev[0]]=prev[1];s.notes[prev[0]]=prev[2];for(const [j,n] of prev[3]||[])s.notes[j]=n;}}continue;
   }
+  if(key==='reset'){s.history.push({board:s.board.slice(),notes:s.notes.slice()});if(s.history.length>200)s.history.shift();s.board=s.givens.slice();s.notes=Array(81).fill(0);continue;}
   const m=/^([vn]):([0-9]{1,2}):([0-9])$/.exec(key);if(!m)continue;
   const i=Number(m[2]),v=Number(m[3]);if(i>80||s.givens[i])continue;
   const previous=[i,s.board[i],s.notes[i]];
   if(m[1]==='n'){if(v&& !s.board[i])s.notes[i]^=1<<v;}
-  else{s.board[i]=v;s.notes[i]=0;}
-  if(previous[1]!==s.board[i]||previous[2]!==s.notes[i]){s.history.push(previous);if(s.history.length>200)s.history.shift();}
+  else{if(v&&s.board[i]!==v&&s.board.filter(n=>n===v).length>=9)continue;s.board[i]=v;s.notes[i]=0;previous[3]=[];if(v)for(const j of sudokuPeers[i])if(s.notes[j]&(1<<v)){previous[3].push([j,s.notes[j]]);s.notes[j]&=~(1<<v);}}
+  if(previous[1]!==s.board[i]||previous[2]!==s.notes[i]||previous[3]?.length){s.history.push(previous);if(s.history.length>200)s.history.shift();}
   if(sudokuValid(s.board)){s.score++;s.awaiting=true;s.history=[];break;}
  }
 }
@@ -496,7 +497,7 @@ function step(s,keys=[]) {
 function advance(state,frames,events){
  if(!Number.isInteger(frames)||frames<0||frames>180||!Array.isArray(events)||events.length>360){throw new Error('invalid_actions');}
  const s=clone(state), grouped={};let previous=-1;
- for(const e of events){if(!Array.isArray(e)||e.length!==2||!Number.isInteger(e[0])||e[0]<0||e[0]>=frames||e[0]<previous||typeof e[1]!=='string'||!(/^(l|r|u|d|drop|tap|x:[0-9]{1,4}|[vn]:[0-9]{1,2}:[0-9]|undo)$/).test(e[1])){throw new Error('invalid_actions');}previous=e[0];(grouped[e[0]]||= []).push(e[1]);if(grouped[e[0]].length>2){throw new Error('invalid_actions');}}
+ for(const e of events){if(!Array.isArray(e)||e.length!==2||!Number.isInteger(e[0])||e[0]<0||e[0]>=frames||e[0]<previous||typeof e[1]!=='string'||!(/^(l|r|u|d|drop|tap|x:[0-9]{1,4}|[vn]:[0-9]{1,2}:[0-9]|undo|reset)$/).test(e[1])){throw new Error('invalid_actions');}previous=e[0];(grouped[e[0]]||= []).push(e[1]);if(grouped[e[0]].length>2){throw new Error('invalid_actions');}}
  if(s.game==='2048'&&(frames>(state.version>=5?64:16)||Object.values(grouped).some(keys=>keys.length>1||!['l','r','u','d'].includes(keys[0])))){throw new Error('invalid_actions');}
  for(let i=0;i<frames;i++){if(s.over){throw new Error('already_over');}step(s,grouped[i]||[]);}return s;
 }

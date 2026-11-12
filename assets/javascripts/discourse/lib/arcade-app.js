@@ -44,8 +44,9 @@ export default class ArcadeApp {
  touchKeys=false;
  sudokuCell=0;
  sudokuNote=false;
- sudokuSelect(i){this.sudokuCell=Number(i);this.scheduleRender();}
- sudokuWrite(n){this.input(`${this.sudokuNote?'n':'v'}:${this.sudokuCell}:${n}`);}
+ sudokuDigit=null;
+ sudokuSelect(i){this.sudokuDigit=null;this.sudokuCell=Number(i);this.scheduleRender();}
+ sudokuWrite(n){this.sudokuDigit=Number(n);this.scheduleRender();if(!this.sudokuNote&&this.state?.board.filter(v=>v===Number(n)).length>=9)return;this.input(`${this.sudokuNote?'n':'v'}:${this.sudokuCell}:${n}`);}
  sudokuKey(e){
   if(this.game!=='sudoku'||e.isComposing||e.altKey||e.target.closest('input,textarea,select'))return;
   const k=e.key.toLowerCase(),dirs={arrowleft:-1,a:-1,arrowright:1,d:1,arrowup:-9,w:-9,arrowdown:9,s:9};
@@ -97,7 +98,7 @@ export default class ArcadeApp {
  selectRank(scope){this.rankScope=scope;this.rankChosen=true;}
  openSeason(){if(this.featured){this.open(this.featured.game);this.rankScope='season';}}
  get status(){return this.finished?'成绩已保存':this.error?'连接中断':this.sudokuCompletion?'本关完成':this.finishing||this.localOver?'保存成绩':this.paused?'已暂停':this.waiting?'等待同步':'挑战中';}
- get startLabel(){return this.finished?'再来一局':this.run?'继续挑战':'开始挑战';}
+ get startLabel(){return this.finished?(this.game==='sudoku'?'继续挑战':'再来一局'):this.run?'继续挑战':'开始挑战';}
  get progressLabel(){if(!this.state){return '';}if(this.grid){return `${this.progress} 步`;}if(this.game==='sudoku'){return `第 ${this.sudokuCompletion?.level||this.state.level||1} 关`;}if(this.game==='blocks'){return `${this.state.lines} 行`;}if(this.game==='merge'){return `${this.state.drops} 次投放`;}if(this.game==='bricks'){return `第 ${this.state.wave||1} 关`;}if(this.game==='bird'){return `${this.score} 道障碍`;}return '';}
  get controls(){return this.grid||['blocks','snake'].includes(this.game)?['u','l','d','r']:this.game==='hex'?['l','drop','r']:[];}
  get hasControls(){return ['2048','blocks','snake','hex'].includes(this.game);}
@@ -273,7 +274,7 @@ export default class ArcadeApp {
   this.click=(e)=>{const b=e.target.closest('[data-action]');if(!b||!root.contains(b)||b.disabled){return;}
    const action=b.dataset.action,arg=b.dataset.arg;
    if(action==='profile'){if(options.onProfile){e.preventDefault();options.onProfile(arg);}return;}
-   const actions={touchKeys:()=>{this.touchKeys=!this.touchKeys;this.scheduleRender();},seasonInfo:()=>{this.seasonInfo=!this.seasonInfo;this.scheduleRender();},cell:()=>this.sudokuSelect(arg),digit:()=>this.sudokuWrite(arg),note:()=>{this.sudokuNote=!this.sudokuNote;this.scheduleRender();},erase:()=>this.input(`v:${this.sudokuCell}:0`),undo:()=>this.input('undo'),open:()=>this.open(arg),back:()=>this.back(),start:()=>this.start(),pause:()=>this.pause(),finish:()=>this.finish(),retry:()=>this.retry(),recover:()=>this.recover(),rank:()=>this.selectRank(arg),info:()=>this.toggleRankInfo(),ranking:()=>this.loadRanking(),season:()=>this.openSeason(),catalog:()=>options.reloadCatalog?.()};
+   const actions={reset:()=>{if(window.confirm('清空本关填写和笔记？已通关进度会保留。'))this.input('reset');},touchKeys:()=>{this.touchKeys=!this.touchKeys;this.scheduleRender();},seasonInfo:()=>{this.seasonInfo=!this.seasonInfo;this.scheduleRender();},cell:()=>this.sudokuSelect(arg),digit:()=>this.sudokuWrite(arg),note:()=>{this.sudokuNote=!this.sudokuNote;this.scheduleRender();},erase:()=>this.input(`v:${this.sudokuCell}:0`),undo:()=>this.input('undo'),open:()=>this.open(arg),back:()=>this.back(),start:()=>this.start(),pause:()=>this.pause(),finish:()=>this.finish(),retry:()=>this.retry(),recover:()=>this.recover(),rank:()=>this.selectRank(arg),info:()=>this.toggleRankInfo(),ranking:()=>this.loadRanking(),season:()=>this.openSeason(),catalog:()=>options.reloadCatalog?.()};
    if(actions[action]){Promise.resolve(actions[action]()).catch(error=>{this.error=this.errorText(error);});}
   };
   this.pointerDown=(e)=>{const b=e.target.closest('[data-key]');if(b&&root.contains(b)){this.press(b.dataset.key,{preventDefault:()=>e.preventDefault(),currentTarget:b,pointerId:e.pointerId});}};

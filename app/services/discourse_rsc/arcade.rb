@@ -99,19 +99,35 @@ module DiscourseRsc
           next view(previous)
         end
         ArcadeRun.where(user_id:actor.id,game:game,status:'playing').where('expires_at <= ?',Time.current).update_all(status:'expired')
+        p=period
         active=ArcadeRun.find_by(user_id:actor.id,game:game,status:'playing')
+        if game=='sudoku' && active && active.period_id!=p.id && (p.game==game || ArcadePeriod.find(active.period_id).game==game)
+          active.update!(status:'finished',finished_at:Time.current)
+          active=nil
+        end
         if active
           raise Error.new('arcade_upgrade') if active.state['version']>rules_version
           upgrade_save!(active, rules_version)
           next view(active)
         end
-        p=period
         version=rules_version
         initial=randoms(game=='2048' && version>=5 ? 128 : game=='2048' ? 24 : 20)
         state=engine('create',game,initial,version)
-        state=engine('sudokuLoad',state,sudoku_puzzle(p.id,1)) if game=='sudoku'
+        if game=='sudoku'
+          # Ordinary play keeps verified progress across calendar periods.
+          # A featured Sudoku season has its own progress and never imports it.
+          progress=ArcadeRun.where(user_id:actor.id,game:game)
+          progress= p.game==game ? progress.where(period_id:p.id) : progress.where(period_id:ArcadePeriod.where.not(game:game).or(ArcadePeriod.where(game:nil)).select(:id))
+          prior=progress.order(score: :desc, updated_at: :desc).first
+          state=prior.state.deep_dup if prior
+          state['over']=false
+          state['version']=version
+          state.delete('season_closed')
+          state=engine('sudokuLoad',state,sudoku_puzzle(p.id,state['score']+1)) if !prior || state['awaiting']
+        end
         run=ArcadeRun.create!(user_id:actor.id,period_id:p.id,game:game,start_key:request_id,state:state,inputs:[{'initial'=>initial,'version'=>version}.tap { |row| row['puzzle']=state['givens'] if game=='sudoku' }],
-          expires_at:Time.current+SAVE_RETENTION)
+          expires_at:Time.current+SAVE_RETENTION,score:state['score'])
+        run.update!(inputs:[{'checkpoint'=>state.deep_dup}]) if game=='sudoku'
         view(run)
       end
     end

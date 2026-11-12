@@ -27,7 +27,7 @@ export default class ArcadePlayback {
   }
 
   input(key) {
-    if(this.sudoku && (this.state.awaiting || !/^(?:[vn]:[0-9]{1,2}:[0-9]|undo)$/.test(key))){return;}
+    if(this.sudoku && (this.state.awaiting || !/^(?:[vn]:[0-9]{1,2}:[0-9]|undo|reset)$/.test(key))){return;}
     if (this.state.over || this.run.status !== "playing") { return; }
     if ((this.grid || this.run.game === "snake") && !["l", "r", "u", "d"].includes(key)) { return; }
     if (this.run.game === "snake") {

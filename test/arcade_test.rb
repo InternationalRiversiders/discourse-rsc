@@ -97,8 +97,7 @@ class ArcadeTest < NativeBusinessTest
     assert_equal 1,done[:state]['score'];assert_equal 2,done[:state]['level']
     assert done[:state]['notes'].all?(&:zero?)
     refute_equal board,done[:state]['givens']
-    row=R::ArcadeRun.find(done[:id]);replay=R::Arcade.engine('create','sudoku',row.inputs.first['initial'],row.inputs.first['version'])
-    replay=R::Arcade.engine('sudokuLoad',replay,row.inputs.first['puzzle'])
+    row=R::ArcadeRun.find(done[:id]);replay=row.inputs.first.fetch('checkpoint').deep_dup
     row.inputs.drop(1).each do |batch|
       replay=R::Arcade.engine('advance',replay,batch['frames'],batch['events']);replay['q'].concat(batch['refill'])
       replay=R::Arcade.engine('sudokuLoad',replay,batch['puzzle']) if batch['puzzle']
@@ -107,6 +106,34 @@ class ArcadeTest < NativeBusinessTest
     finished=advance(done,frames:0,events:[],finish:true)
     assert_equal 'finished',finished[:status]
     assert_equal [[@alice.id,1]],R::Arcade.ranked(nil,'sudoku')
+    resumed=start('sudoku')
+    assert_equal 1,resumed[:state]['score']
+    assert_equal 2,resumed[:state]['level']
+    assert_equal finished[:state]['board'],resumed[:state]['board']
+    reset=advance(resumed,events:[[0,'reset']])
+    assert_equal 1,reset[:state]['score']
+    assert_equal reset[:state]['givens'],reset[:state]['board']
+    advance(reset,frames:0,events:[],finish:true)
+    travel 8.days do
+      continued=start('sudoku')
+      assert_equal 1,continued[:state]['score']
+      assert_equal 2,continued[:state]['level']
+    end
+  end
+  def test_sudoku_season_progress_is_separate_from_ordinary_play
+    r=start('sudoku')
+    ordinary=R::ArcadeRun.find(r[:id])
+    ordinary.update!(score:4,state:ordinary.state.merge('score'=>4,'level'=>5))
+    old=R::ArcadePeriod.find(r[:period_id]);old.update!(starts_at:2.days.ago,ends_at:1.second.ago)
+    season=R::ArcadePeriod.create!(starts_at:Time.current,ends_at:1.day.from_now,game:'sudoku',cadence:'daily',ordinal:old.ordinal+1,prizes:[],results:{})
+    fresh=start('sudoku')
+    assert_equal 0,fresh[:state]['score']
+    assert_equal 1,fresh[:state]['level']
+    assert_equal 'finished',ordinary.reload.status
+    season.update!(starts_at:1.day.ago,ends_at:1.second.ago)
+    continued=start('sudoku')
+    assert_equal 4,continued[:state]['score']
+    assert_equal 5,continued[:state]['level']
   end
   def test_sudoku_invalid_fill_cannot_claim_a_level
     r=start('sudoku');events=r[:state]['givens'].each_index.select { |j| r[:state]['givens'][j]==0 }.each_with_index.map { |j,t| [t,"v:#{j}:1"] }
@@ -137,8 +164,7 @@ class ArcadeTest < NativeBusinessTest
     R::Arcade::NAMES.each_key do |game|
       r=start(game)
       r=advance(r,frames:game=='2048' ? 1 : 20,events:game=='2048' ? [[0,'l']] : [])
-      row=R::ArcadeRun.find(r[:id]);replay=R::Arcade.engine('create',game,row.inputs.first['initial'],row.inputs.first['version'])
-      replay=R::Arcade.engine('sudokuLoad',replay,row.inputs.first['puzzle']) if game=='sudoku'
+      row=R::ArcadeRun.find(r[:id]);replay=row.inputs.first['checkpoint']&.deep_dup || R::Arcade.engine('create',game,row.inputs.first['initial'],row.inputs.first['version'])
       row.inputs.drop(1).each do |batch|
         replay=R::Arcade.engine('advance',replay,batch['frames'],batch['events']);replay['q'].concat(batch['refill'])
         replay=R::Arcade.engine('sudokuLoad',replay,batch['puzzle']) if batch['puzzle']

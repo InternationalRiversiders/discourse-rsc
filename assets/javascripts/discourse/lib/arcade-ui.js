@@ -32,7 +32,7 @@ export function renderArcade(app){
    root.querySelectorAll('canvas.ra-cover').forEach(c=>app.coverCleanups.push(drawCover(c,c.dataset.game)));
   }else{
    const controls=app.hasControls?`<div class="ra-controls" data-game="${app.game}">${[...app.controlsList,...(app.game==='blocks'?[{key:'tap',label:'↶'},{key:'x:0',label:'暂存'},{key:'drop',label:'落下'}]:[])].map(c=>`<button type="button" data-key="${c.key}" aria-label="${c.label}">${c.label}</button>`).join('')}</div>`:'';
-   const sudoku=app.game==='sudoku'?`<div class="ra-sudoku-board"><div class="ra-sudoku-grid" role="grid" aria-label="数独棋盘">${Array.from({length:9},(_,r)=>`<div role="row">${Array.from({length:9},(_,c)=>`<button type="button" role="gridcell" data-cell="${r*9+c}" data-action="cell" data-arg="${r*9+c}"></button>`).join('')}</div>`).join('')}</div><div class="ra-sudoku-complete" role="status" hidden><span aria-hidden="true">✓</span><strong></strong></div></div><div class="ra-sudoku-tools">${button('note','✎ 笔记','btn')}${button('erase','擦除','btn')}${button('undo','撤销','btn')}</div><div class="ra-sudoku-digits">${Array.from({length:9},(_,i)=>button('digit',String(i+1),'',String(i+1))).join('')}</div>`:'';
+   const sudoku=app.game==='sudoku'?`<div class="ra-sudoku-board"><div class="ra-sudoku-grid" role="grid" aria-label="数独棋盘">${Array.from({length:9},(_,r)=>`<div role="row">${Array.from({length:9},(_,c)=>`<button type="button" role="gridcell" data-cell="${r*9+c}" data-action="cell" data-arg="${r*9+c}"></button>`).join('')}</div>`).join('')}</div><div class="ra-sudoku-complete" role="status" hidden><span aria-hidden="true">✓</span><strong></strong></div></div><div class="ra-sudoku-tools">${button('note','✎ 笔记','btn')}${button('erase','擦除','btn')}${button('undo','撤销','btn')}${button('reset','重置','btn')}</div><div class="ra-sudoku-digits">${Array.from({length:9},(_,i)=>button('digit',String(i+1),'',String(i+1))).join('')}</div>`:'';
    const heading=app.fixedGame?'':`<header class="ra-heading">${button('back','← 返回挑战')}<h2>${escape(app.selected.name)}</h2></header>`;
    root.innerHTML=`${heading}<p class="ra-rank-note ra-nonseason" hidden>本局计入总排行；新开一局可参加当前赛季。</p>
     <div class="rg-error" role="alert" hidden><span class="ra-error-text"></span>${button('retry','重试并恢复进度','btn')}${button('recover','读取已保存进度')}</div>
@@ -78,7 +78,7 @@ function renderSudoku(app){
  const completed=!!app.sudokuCompletion;
  app.root.querySelector('.ra-sudoku-board').classList.toggle('is-complete',completed);
  hidden(app.root,'.ra-sudoku-complete',!completed);
- setText(app.root,'.ra-sudoku-complete strong',completed?`第 ${s.level} 关完成`:'');const selected=app.sudokuCell,value=s.board[selected];
+ setText(app.root,'.ra-sudoku-complete strong',completed?`第 ${s.level} 关完成`:'');const selected=app.sudokuCell,value=app.sudokuDigit||s.board[selected];
  app.root.querySelectorAll('[data-cell]').forEach(el=>{
   const i=Number(el.dataset.cell),r=Math.floor(i/9),c=i%9,peer=r===Math.floor(selected/9)||c===selected%9||(Math.floor(r/3)===Math.floor(selected/27)&&Math.floor(c/3)===Math.floor(selected%9/3));
   const conflict=!!s.board[i]&&s.board.some((v,j)=>j!==i&&v===s.board[i]&&(Math.floor(j/9)===r||j%9===c||(Math.floor(j/27)===Math.floor(r/3)&&Math.floor(j%9/3)===Math.floor(c/3))));
@@ -89,7 +89,8 @@ function renderSudoku(app){
   const html=s.board[i]?String(s.board[i]):`<span class="ra-sudoku-notes">${Array.from({length:9},(_,n)=>`<span>${s.notes[i]&(1<<(n+1))?n+1:''}</span>`).join('')}</span>`;
   if(el.innerHTML!==html)el.innerHTML=html;
  });
+ app.root.querySelectorAll('.ra-sudoku-digits button').forEach(el=>{const n=Number(el.dataset.arg),left=Math.max(0,9-s.board.filter(v=>v===n).length);el.innerHTML=`${n}<small>${left}</small>`;el.classList.toggle('is-exhausted',left===0);el.classList.toggle('is-active',n===value);el.setAttribute('aria-label',`${n}，剩余 ${left} 个`);});
  const note=app.root.querySelector('[data-action=note]');note.classList.toggle('is-active',app.sudokuNote);note.setAttribute('aria-pressed',String(app.sudokuNote));
- disabled(app.root,'.ra-sudoku-digits button,[data-action=note],[data-action=erase],[data-action=undo]',app.inputDisabled||s.awaiting);
+ disabled(app.root,'.ra-sudoku-digits button,[data-action=note],[data-action=erase],[data-action=undo],[data-action=reset]',app.inputDisabled||s.awaiting);
  disabled(app.root,'[data-action=undo]',app.inputDisabled||s.awaiting||!s.history?.length);
 }
