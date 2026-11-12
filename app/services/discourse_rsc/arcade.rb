@@ -3,6 +3,7 @@ require 'mini_racer'
 module DiscourseRsc
   module Arcade
     NAMES = { '2048'=>'2048', 'blocks'=>'方块堆叠', 'snake'=>'贪吃蛇', 'bird'=>'河畔飞鸟', 'hex'=>'六角消除', 'bricks'=>'打砖块', 'merge'=>'合成大河畔', 'sudoku'=>'数独' }.freeze
+    COVERS = JSON.parse(File.read(File.expand_path('../../../public/arcade/covers/manifest.json', __dir__))).freeze
     ROTATION_GAMES = NAMES.keys.reject { |game| game == 'sudoku' }.freeze
     PRIZES = [100,60,40,25,15,12,10,8,6,5,4,4,4,4,4,3,3,3,3,3].freeze
     RULES_VERSION = 5
@@ -69,7 +70,7 @@ module DiscourseRsc
     end
     def self.catalog(actor)
       access!(actor)
-      { protocol:1,rules_version:RULES_VERSION,games:NAMES.map { |id,name| {id:id,name:name} },
+      { protocol:1,rules_version:RULES_VERSION,games:NAMES.map { |id,name| {id:id,name:name,cover_url:Discourse.base_path + COVERS.fetch(id)} },
         current:season_view(period),server_time:Time.current }
     end
     def self.randoms(n)

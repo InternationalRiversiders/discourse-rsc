@@ -18,6 +18,15 @@ class ArcadeTest < NativeBusinessTest
   def advance(run,**args)
     R::Arcade.advance(**{actor:@alice,id:run[:id],version:run[:version],request_id:SecureRandom.uuid,frames:1,events:[[0,'l']],rules_version:2}.merge(args))
   end
+  def test_catalog_exposes_existing_versioned_covers
+    games=R::Arcade.catalog(@alice)[:games]
+    assert_equal R::Arcade::NAMES.keys,games.map { |g| g[:id] }
+    games.each do |game|
+      assert_match %r{\A/plugins/discourse-rsc/arcade/covers/[a-z0-9]+-[a-f0-9]{12}\.webp\z},game[:cover_url]
+      file=Rails.root.join('plugins/discourse-rsc/public',game[:cover_url].delete_prefix('/plugins/discourse-rsc/'))
+      assert_equal 'RIFF',File.binread(file,4)
+    end
+  end
   def test_v5_window_and_same_request_retry
     r=R::Arcade.start(actor:@alice,game:'2048',request_id:SecureRandom.uuid,rules_version:5)
     assert_equal 124,r[:state]['q'].length

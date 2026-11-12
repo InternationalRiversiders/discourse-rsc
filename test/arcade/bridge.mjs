@@ -27,3 +27,8 @@ const command=envelope({type:'command',id:'pause-1',action:'pause'});bridge.rece
 await new Promise(r=>setTimeout(r,5));assert.deepEqual(commands,['pause']);assert(sent.some(m=>m.type==='command-result'&&m.result.saved));
 bridge.close();await assert.rejects(bridge.request('catalog'),/尚未就绪/);
 console.log('PASS allowlist, handshake version/session, duplicate and stale replies, timeout, native errors and idempotent lifecycle commands');
+
+const reset={id:1,version:0,request_id:'reset-test',rules_version:5,frames:1,events:[[0,'reset']],finish:false};
+assert.deepEqual(arcadeRequest('advance',reset).body.events,[[0,'reset']]);
+for(const event of ['reset:any','reset_all','reset\\n'])assert.throws(()=>arcadeRequest('advance',{...reset,events:[[0,event]]}));
+console.log('PASS reset passes the shared transport allowlist; unknown reset variants rejected');

@@ -1,0 +1,10 @@
+{
+  "2048": "/plugins/discourse-rsc/arcade/covers/2048-d131f81b1fbf.webp",
+  "blocks": "/plugins/discourse-rsc/arcade/covers/blocks-7b8f847129cf.webp",
+  "snake": "/plugins/discourse-rsc/arcade/covers/snake-1da1a12bcfcd.webp",
+  "bird": "/plugins/discourse-rsc/arcade/covers/bird-213870cdf313.webp",
+  "hex": "/plugins/discourse-rsc/arcade/covers/hex-d726656a40fe.webp",
+  "bricks": "/plugins/discourse-rsc/arcade/covers/bricks-01f2a17980dc.webp",
+  "merge": "/plugins/discourse-rsc/arcade/covers/merge-2f284b902016.webp",
+  "sudoku": "/plugins/discourse-rsc/arcade/covers/sudoku-f94cc119d2bf.webp"
+}
