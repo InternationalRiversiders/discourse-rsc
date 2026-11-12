@@ -2224,3 +2224,20 @@
     .rsc-fx-ranks li { gap: .4rem; grid-template-columns: 1.5rem minmax(0, 1fr) minmax(4rem, auto) 2rem; font-size: .85rem; }
   }
 }
+
+.rsc-market-resizer { display: none; }
+@media (min-width: 1100px) {
+  .rsc-app[data-section="market"] .rsc-workbench.detail-open {
+    grid-template-columns: minmax(0, var(--rsc-market-left, 1.15fr)) 20px minmax(0, 1fr);
+    gap: 0;
+  }
+  .rsc-market-resizer {
+    display: block; align-self: stretch; position: relative; min-height: 100px;
+    cursor: col-resize; touch-action: none; user-select: none; outline: none;
+    &::before { content: ""; position: absolute; left: 9px; top: 0; bottom: 0; width: 2px; background: var(--primary-low); border-radius: 2px; }
+    > span { display: block; position: sticky; top: calc(var(--header-offset, 60px) + 120px); margin: 120px auto 0; width: 4px; height: 40px; border-radius: 4px; background: var(--primary-medium); }
+    &:hover::before, &:focus-visible::before { background: var(--tertiary); }
+    &:hover > span, &:focus-visible > span { background: var(--tertiary); box-shadow: 0 0 0 4px var(--tertiary-low); }
+  }
+}
+html.rsc-market-resizing, html.rsc-market-resizing * { cursor: col-resize !important; user-select: none !important; }

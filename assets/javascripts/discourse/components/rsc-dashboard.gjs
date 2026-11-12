@@ -4,6 +4,8 @@ import RscSportsPanel from "./rsc-sports-panel";
 import RscWalletPanel from "./rsc-wallet-panel";
 import ForumUser from "./rsc-user";
 import dIcon from "discourse/ui-kit/helpers/d-icon";
+import { modifier } from "ember-modifier";
+import attachMarketResize from "../lib/rsc-market-resize";
 import Component from "@glimmer/component";
 import { tracked } from "@glimmer/tracking";
 import { action } from "@ember/object";
@@ -55,6 +57,7 @@ const points = (history) => {
 };
 
 export default class RscDashboard extends Component {
+  resizeMarket = modifier((element) => attachMarketResize(element));
   @service siteSettings;
   @tracked snapshot;
   @tracked busy = false;
@@ -616,6 +619,7 @@ export default class RscDashboard extends Component {
             @readOnly={{this.data.read_only}}
           />{{/each}}</div>
           {{#if this.marketDetailVisible}}
+            <div class="rsc-market-resizer" role="separator" aria-orientation="vertical" aria-label="调整行情列表和详情宽度" tabindex="0" title="拖动调整宽度，双击恢复默认；方向键可微调" {{this.resizeMarket}}><span aria-hidden="true"></span></div>
             <div class="rsc-market-layout"><section class="rsc-card rsc-chart">
                 <div class="rsc-detail-heading"><div><p
                       class="rsc-eyebrow"
