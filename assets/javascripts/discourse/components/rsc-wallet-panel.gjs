@@ -48,9 +48,7 @@ export default class RscWalletPanel extends Component {
     }
   }
 
-  get rewardLabel() {
-    return i18n("discourse_rsc.ui.estimated_reward", { max: this.data.reward.daily_max });
-  }
+  get rewardPosts() { return Math.min(this.data.reward.posts, 10); }
 
   <template>
         <section class="rsc-card rsc-reward-summary"><h2>{{uiText
@@ -60,9 +58,9 @@ export default class RscWalletPanel extends Component {
             {{this.data.reward.date}}</h2><div class="rsc-market-summary"><div
             ><span>{{uiText "reward_login"}}</span><strong
               >{{this.data.reward.login_reward}} RSC</strong></div><div><span>{{uiText
-                  "reward_topics"
-                }}</span><strong>{{this.data.reward.topics}}</strong></div><div><span>{{uiText "reward_replies"}}</span><strong>{{this.data.reward.replies}}</strong></div><div
-            ><span>{{this.rewardLabel}}</span><strong>{{formatAmount
+                  "reward_streak"
+                }}</span><strong>{{this.data.reward.login_streak}}</strong></div><div><span>{{uiText "reward_posts"}}</span><strong>{{this.rewardPosts}} / 10</strong></div><div
+            ><span>{{uiText "estimated_reward"}}</span><strong>{{formatAmount
                   this.data.reward.estimated
                 }}
                 RSC</strong></div></div>{{#unless this.data.reward.enabled}}<p

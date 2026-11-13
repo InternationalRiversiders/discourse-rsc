@@ -444,11 +444,12 @@ en:
         return_pct: Return
         sort: Sort by
         today_reward: Today’s activity reward
-        reward_login: Login reward
-        reward_posts: Topics and replies
+        reward_login: Daily login reward
+        reward_streak: Consecutive logins
+        reward_posts: Topics or replies
         reward_topics: Topics
         reward_replies: Replies
-        estimated_reward: Estimated reward (up to %{max} RSC/day)
+        estimated_reward: Estimated reward
         rewards_disabled: Automatic payout is disabled; this shows today’s activity
           score.
         packet_days: Packet expiry (days)

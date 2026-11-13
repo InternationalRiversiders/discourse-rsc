@@ -19,8 +19,10 @@ class RewardStreakTest < NativeBusinessTest
       visits(day,n)
       assert_equal expected,R::Rewards.login_rewards(day,[@alice.id])[@alice.id]
     end
+    travel_to(Time.utc(2026,11,14,4)) { assert_equal 40,R::Rewards.today(@alice.id)[:login_streak] }
     UserVisit.where(user_id:@alice.id,visited_at:day-1).delete_all
     assert_equal 1,R::Rewards.login_rewards(day,[@alice.id])[@alice.id]
+    assert_equal 1,R::Rewards.login_streaks(day,[@alice.id],limit:nil)[@alice.id]
     UserVisit.where(user_id:@alice.id,visited_at:day).delete_all
     assert_equal 0,R::Rewards.login_rewards(day,[@alice.id])[@alice.id]
   end
