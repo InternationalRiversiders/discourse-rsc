@@ -1,6 +1,6 @@
 // Shared deterministic rules. No clock, browser API, random seed or wallet access.
 // All coordinates and velocities are integers. Rendering never affects simulation.
-const ARCADE_VERSION = 5;
+const ARCADE_VERSION = 6;
 const GAME_IDS = ["2048", "blocks", "snake", "bird", "hex", "bricks", "merge", "sudoku"];
 const LIMITS = {"2048": 2000, blocks: 18000, snake: 18000, bird: 10800, hex: 10800, bricks: 18000, merge: 18000};
 const SHAPES = [[[0,0],[1,0],[2,0],[3,0]],[[0,0],[1,0],[0,1],[1,1]],[[1,0],[0,1],[1,1],[2,1]],[[1,0],[2,0],[0,1],[1,1]],[[0,0],[1,0],[1,1],[2,1]],[[0,0],[0,1],[1,1],[2,1]],[[2,0],[0,1],[1,1],[2,1]]];
@@ -15,7 +15,7 @@ function drawShape(s){
 }
 function spawnShape(s,shape){
  s.piece={cells:shape===0?[[0,1],[1,1],[2,1],[3,1]]:clone(SHAPES[shape]),shape,rotation:0,x:3,y:0,color:shape+1};
- s.fall=0;s.lock=0;s.lockResets=0;if(!fits(s,s.piece))s.over=true;
+ s.fall=0;if(s.version>=6)s.gravityUnits=0;s.lock=0;s.lockResets=0;if(!fits(s,s.piece))s.over=true;
 }
 function block(s) {
  if(s.version>=5){
@@ -111,7 +111,7 @@ function sudokuStep(s,keys){
 }
 
 function create(game,q,version=ARCADE_VERSION) {
- if(![1,2,3,4,5].includes(version)){throw new Error("rules_version");}
+ if(![1,2,3,4,5,6].includes(version)){throw new Error("rules_version");}
  if(!GAME_IDS.includes(game)){throw new Error("game");}
  const s={game,version,tick:0,score:0,over:false,q:q.slice(),limit:version===1?LIMITS[game]:null};
  if(game==="sudoku"){sudokuLoad(s,'530070000600195000098000060800060003400803001700020006060000280000419005000080079'.split('').map(Number));s.awaiting=true;}
@@ -367,9 +367,19 @@ function stepBlocksV4(s,keys){
   for(const [dx,dy] of kicks){const next={...current,cells,x:current.x+dx,y:current.y+dy,rotation:nextOrientation};if(fits(s,next)){s.piece=next;adjusted=true;break;}}
  }
  if(keys.includes('drop')){for(let i=0;i<21;i++)if(!lower(s))break;return;}
- s.fall=(s.fall||0)+1;
- if(keys.includes('d')||s.fall>=Math.max(5,35-Math.floor(s.lines/5))){
-  s.fall=0;const next={...s.piece,y:s.piece.y+1};if(fits(s,next)){s.piece=next;s.lock=0;}
+ if(s.version>=6){
+  // Integer fixed-point gravity: preserve the early curve, then progress from
+  // 1 cell/5 ticks through 1G to 20G. 20 cells already span the entire board.
+  const level=Math.floor(s.lines/5),rate=level<=30?Math.floor(100000/Math.max(5,35-level)):Math.min(2000000,20000*2**Math.min(7,Math.floor((level-30)/5)));
+  s.gravityUnits=(s.gravityUnits||0)+rate;
+  let cells=Math.floor(s.gravityUnits/100000);s.gravityUnits%=100000;
+  if(keys.includes('d'))cells=Math.max(1,cells);
+  for(let i=0;i<cells;i++){const next={...s.piece,y:s.piece.y+1};if(!fits(s,next))break;s.piece=next;s.lock=0;}
+ }else{
+  s.fall=(s.fall||0)+1;
+  if(keys.includes('d')||s.fall>=Math.max(5,35-Math.floor(s.lines/5))){
+   s.fall=0;const next={...s.piece,y:s.piece.y+1};if(fits(s,next)){s.piece=next;s.lock=0;}
+  }
  }
  if(fits(s,{...s.piece,y:s.piece.y+1})){s.lock=0;}else{
   if(adjusted&&(s.lockResets||0)<15){s.lock=0;s.lockResets=(s.lockResets||0)+1;}

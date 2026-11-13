@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 module DiscourseRsc
   class Rewards
+    STREAK_START = Date.new(2026, 11, 14).freeze
+
     def self.catchup_dates(now = Time.current)
       latest = (now.utc + 8.hours - SiteSetting.rsc_daily_reward_delay_hours.hours).to_date - 1
       6.downto(0).map { |days| (latest - days).iso8601 }
@@ -14,7 +16,8 @@ module DiscourseRsc
       topics = posts.where(post_number: 1).count
       replies = posts.where("post_number > 1").count
       login = visit_ids(day, starts, user_id: user_id).include?(user_id) ? 1 : 0
-      { date: day.iso8601, login: login, posts: topics + replies, topics: topics, replies: replies, estimated: [login + topics + replies, 10].min, enabled: SiteSetting.rsc_daily_rewards_enabled }
+      login_reward = day >= STREAK_START ? login_rewards(day, [user_id]).fetch(user_id, 0) : login
+      { date: day.iso8601, login_reward: login_reward, daily_max: day >= STREAK_START ? 20 : 10, login: login, posts: topics + replies, topics: topics, replies: replies, estimated: score(day, login_reward, topics + replies), enabled: SiteSetting.rsc_daily_rewards_enabled }
     end
 
     # Preserve the old business-day fallback: user_visits may not yet contain
@@ -28,6 +31,26 @@ module DiscourseRsc
         users = users.where(id: user_id)
       end
       (visits.pluck(:user_id) | users.pluck(:id)).to_set
+    end
+
+    # 28 consecutive days suffice to reach the cap. Batch the lookback instead
+    # of querying once per member, and retain today's visit fallback.
+    def self.login_rewards(day, ids)
+      return {} if ids.empty?
+      dates = Hash.new { |h, id| h[id] = Set.new }
+      UserVisit.where(user_id: ids, visited_at: (day - 27)..day).pluck(:user_id, :visited_at).each { |id, date| dates[id] << date }
+      User.where(id: ids).pluck(:id, :last_seen_at, :previous_visit_at).each do |id, last, previous|
+        [last, previous].compact.each { |stamp| dates[id] << (stamp.utc + 8.hours).to_date }
+      end
+      ids.to_h do |id|
+        count = 0
+        count += 1 while count < 28 && dates[id].include?(day - count)
+        [id, count.zero? ? 0 : [1 + (count - 1) / 3, 10].min]
+      end
+    end
+
+    def self.score(day, login_reward, posts)
+      day >= STREAK_START ? login_reward + [posts, 10].min : [login_reward + posts, 10].min
     end
 
     def self.preview(date)
@@ -46,10 +69,12 @@ module DiscourseRsc
       keys = members.keys.to_h { |id| [id, "daily_reward:#{id}:daily-#{date}"] }
       paid = Command.where(key: keys.values).pluck(:key).to_set
       statuses = Account.where(kind: "wallet", user_id: members.keys).pluck(:user_id, :status).to_h
+      login_amounts = day >= STREAK_START ? login_rewards(day, members.keys) : {}
       ids.filter_map do |user_id|
         user = members[user_id]
         next unless user && !user.suspended?
-        score = [posts.fetch(user_id, 0) + (visits.include?(user_id) ? 1 : 0), 10].min
+        login_reward = day >= STREAK_START ? login_amounts.fetch(user_id, 0) : (visits.include?(user_id) ? 1 : 0)
+        score = self.score(day, login_reward, posts.fetch(user_id, 0))
         { user_id: user_id, username: user.username, forum_user: UserIdentity.serialize(user), score: score, paid: paid.include?(keys.fetch(user_id)), frozen: statuses.fetch(user_id, "active") != "active" }
       end
     rescue ArgumentError

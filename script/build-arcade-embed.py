@@ -25,7 +25,7 @@ js_name='arcade-embed-'+sha(js)[:16]+'.js';css_name='arcade-embed-'+sha(css)[:16
 html=f'''<!doctype html>
 <html lang="zh-CN" data-theme="auto"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="referrer" content="same-origin"><title>街机区</title><link rel="stylesheet" href="{prefix+css_name}"><script defer src="{prefix+js_name}"></script></head><body><main class="ra-embed"><p id="connection" role="status">正在连接游戏…</p><div class="ra-hub"><section id="arcade" class="ra-app" aria-label="街机区"></section></div></main></body></html>
 '''
-manifest=json.dumps({'protocol':1,'rules_version':5,'entry':'/rsc/arcade/embed','script':prefix+js_name,'stylesheet':prefix+css_name,'sha256':{'script':sha(js),'stylesheet':sha(css)},'sources':sources},ensure_ascii=False,indent=2)+'\n'
+manifest=json.dumps({'protocol':1,'rules_version':6,'entry':'/rsc/arcade/embed','script':prefix+js_name,'stylesheet':prefix+css_name,'sha256':{'script':sha(js),'stylesheet':sha(css)},'sources':sources},ensure_ascii=False,indent=2)+'\n'
 for name,content in [(js_name,js),(css_name,css),('embed.html',html),('embed-manifest.json',manifest)]:
  if args.check:assert (out/name).read_text()==content,'Outdated embed artifact: '+name
  else:(out/name).write_text(content)

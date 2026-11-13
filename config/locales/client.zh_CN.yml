@@ -436,11 +436,11 @@ zh_CN:
         return_pct: 收益率
         sort: 排序方式
         today_reward: 今日活跃奖励
-        reward_login: 登录
+        reward_login: 登录奖励
         reward_posts: 发帖与回复
         reward_topics: 发主题
         reward_replies: 回复
-        estimated_reward: 预计奖励（每日最多 10 RSC）
+        estimated_reward: 预计奖励（每日最多 %{max} RSC）
         rewards_disabled: 自动发放尚未启用；此处显示今日活跃积分。
         packet_days: 红包有效期（天）
         packet_minimum: 每份最少（RSC）

@@ -27,6 +27,19 @@ class ArcadeTest < NativeBusinessTest
       assert_equal 'RIFF',File.binread(file,4)
     end
   end
+  def test_v6_gravity_run_and_v5_save_upgrade_keep_score
+    old=R::Arcade.start(actor:@alice,game:'blocks',request_id:SecureRandom.uuid,rules_version:5,scope:'all')
+    saved=R::ArcadeRun.find(old[:id]);state=saved.state.merge('score'=>12000,'lines'=>200)
+    saved.update!(state:state,score:12000)
+    current=R::Arcade.start(actor:@alice,game:'blocks',request_id:SecureRandom.uuid,rules_version:6,scope:'all')
+    assert_equal old[:id],current[:id]
+    assert_equal 6,current[:state]['version']
+    assert_equal 12000,current[:state]['score']
+    result=advance(current,frames:1,events:[],rules_version:6)
+    assert_equal 6,result[:state]['version']
+    assert_equal 12000,result[:state]['score']
+  end
+
   def test_v5_window_and_same_request_retry
     r=R::Arcade.start(actor:@alice,game:'2048',request_id:SecureRandom.uuid,rules_version:5)
     assert_equal 124,r[:state]['q'].length
@@ -260,7 +273,7 @@ class ArcadeTest < NativeBusinessTest
     assert_equal 1,R::Journal.where(operation:'arcade_prize').count
   end
   def test_node_and_embedded_v8_match_exactly
-    (%w[fixtures.json fixtures-v2.json fixtures-v3.json fixtures-v4.json fixtures-v5.json].flat_map { |name| JSON.parse(File.read("/rsc/test/arcade/#{name}")) }).each do |f|
+    (%w[fixtures.json fixtures-v2.json fixtures-v3.json fixtures-v4.json fixtures-v5.json fixtures-v6.json].flat_map { |name| JSON.parse(File.read("/rsc/test/arcade/#{name}")) }).each do |f|
       assert_equal f["expected"],R::Arcade.engine("advance",f["initial"],f["frames"],f["events"]),f["game"]
     end
   end

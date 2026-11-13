@@ -32,3 +32,5 @@ const reset={id:1,version:0,request_id:'reset-test',rules_version:5,frames:1,eve
 assert.deepEqual(arcadeRequest('advance',reset).body.events,[[0,'reset']]);
 for(const event of ['reset:any','reset_all','reset\\n'])assert.throws(()=>arcadeRequest('advance',{...reset,events:[[0,event]]}));
 console.log('PASS reset passes the shared transport allowlist; unknown reset variants rejected');
+assert.equal(arcadeRequest('advance',{...reset,rules_version:6}).body.rules_version,6);
+console.log('PASS rules v6 accepted without changing the native bridge protocol');

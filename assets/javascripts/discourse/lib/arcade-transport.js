@@ -9,7 +9,7 @@ export function arcadeRequest(action,payload={}){
   return {method:'GET',path:'/rsc/arcade/ranking.json?game='+encodeURIComponent(payload.game)};
  }
  if(!['start','advance'].includes(action)){fail();}
- if(typeof payload.request_id!=='string'||payload.request_id.length<1||payload.request_id.length>100||![2,3,4,5].includes(payload.rules_version)){fail();}
+ if(typeof payload.request_id!=='string'||payload.request_id.length<1||payload.request_id.length>100||![2,3,4,5,6].includes(payload.rules_version)){fail();}
  if(action==='start'){
   if(!games.includes(payload.game)||!['all','season'].includes(payload.scope)){fail();}
   const {game,request_id,rules_version,scope}=payload;
