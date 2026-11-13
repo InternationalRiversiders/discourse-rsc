@@ -154,6 +154,56 @@ class ForecastTest < Minitest::Test
     assert_equal ['Yes','No'],@market.outcomes
     assert_equal 'forecast_closed',assert_raises(R::Error) { execute(q) }.code
   end
+  def test_schedule_change_refreshes_market_but_invalidates_old_quote
+    q = quote
+    previous = @market.terms_digest
+    @raw['endDate'] = (Time.iso8601(@raw['endDate']) + 10.minutes).iso8601
+    provider { R::ForecastProvider.refresh(@market) }
+    assert_equal 'open', @market.reload.state
+    refute_equal previous, @market.terms_digest
+    assert_equal 'forecast_quote_expired', assert_raises(R::Error) { execute(q) }.code
+  end
+
+  def test_schedule_only_review_recovers_and_settles_once
+    execute(quote)
+    @market.update!(state: 'review', resolution: final, resolution_seen_at: 1.day.ago,
+      resolution_digest: R::ForecastSettlement.resolution_identity(final, [1_000_000, 0]))
+    @raw['endDate'] = (Time.iso8601(@raw['endDate']) + 10.minutes).iso8601
+    @raw['closed'] = true
+    @resolution = final
+    provider { R::ForecastSettlement.refresh_market(@market.id) }
+    assert_equal 'awaiting', @market.reload.state
+    assert_nil @market.settled_at
+    assert @market.resolution_seen_at > 1.minute.ago
+    assert R::Audit.exists?(action: 'forecast_terms_review_cleared')
+    @market.update!(resolution_seen_at: 3.minutes.ago)
+    provider { R::ForecastSettlement.refresh_market(@market.id, confirm: true) }
+    assert_equal '110', R::Account.wallet(@alice.id).balance
+    assert_equal 1, R::ForecastTrade.where(side: 'settlement').count
+    provider { R::ForecastSettlement.refresh_market(@market.id, confirm: true) }
+    assert_equal 1, R::ForecastTrade.where(side: 'settlement').count
+  end
+
+  def test_real_contract_changes_cannot_escape_review_with_date_change
+    execute(quote)
+    original = @raw.deep_dup
+    %w[question description outcomes clobTokenIds conditionId].each do |field|
+      @raw = original.deep_dup
+      @raw['endDate'] = (Time.iso8601(@raw['endDate']) + 10.minutes).iso8601
+      @raw[field] = case field
+      when 'outcomes' then '["No","Yes"]'
+      when 'clobTokenIds' then '["456","123"]'
+      when 'conditionId' then '0x' + '2'*64
+      else @raw[field] + ' Changed'
+      end
+      @resolution = final
+      provider { R::ForecastSettlement.refresh_market(@market.id) }
+      assert_equal 'review', @market.reload.state, field
+      assert_nil @market.settled_at, field
+      assert_equal '90', R::Account.wallet(@alice.id).balance
+    end
+  end
+
   def test_proposed_disputed_invalid_result_dont_pay
     execute(quote)
     %w[proposed disputed unknown resolved].each do |state|

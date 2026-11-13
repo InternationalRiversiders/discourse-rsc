@@ -52,15 +52,32 @@ module DiscourseRsc
       ForecastMarket.transaction do
         market = ForecastMarket.lock.find_by(external_id: attrs[:external_id])
         if market
-          # Never silently relabel an existing position or change its contract.
-          if market.terms_digest != attrs[:terms_digest]
-            market.update!(state: 'review', synced_at: Time.current) unless market.settled_at
+          return market if market.settled_at && market.terms_digest != attrs[:terms_digest]
+          # Scheduling metadata may move after a match ends. Only changes to
+          # the held contract require review; keep ends_at in the quote digest
+          # so a schedule update still invalidates outstanding trade quotes.
+          contract_fields = %i[condition_id question rules outcomes token_ids]
+          changed = contract_fields.select { |key| market.public_send(key) != attrs[key] }
+          if changed.any?
+            unless market.settled_at
+              if market.state != 'review'
+                Audit.create!(action: 'forecast_terms_review', details: { market_id: market.id, changed_fields: changed }, created_at: Time.current)
+              end
+              market.update!(state: 'review', synced_at: Time.current)
+            end
             return market
+          end
+          if market.state == 'review' && !market.settled_at
+            Audit.create!(action: 'forecast_terms_review_cleared', details: { market_id: market.id,
+              old_ends_at: market.ends_at, new_ends_at: attrs[:ends_at] }, created_at: Time.current)
+            # Recovered rows must obtain two fresh final-result observations.
+            market.assign_attributes(resolution: {}, resolution_digest: nil,
+              resolution_seen_at: nil, confirmed_at: nil)
           end
           # Detail refreshes may omit event metadata. Keep the known title rather
           # than replacing it with the question and invalidating translation caches.
           attrs.delete(:event_title) if raw.dig('events', 0, 'title').blank?
-          attrs.except!(:state) if market.state == 'review' || market.settled_at
+          attrs.except!(:state) if market.settled_at
           attrs[:featured] = featured unless featured.nil?
           market.update!(attrs)
         else

@@ -117,6 +117,9 @@ module DiscourseRsc
         market = ForecastMarket.find_by(id: id)
         return unless market && !market.settled_at
         ForecastProvider.refresh(market)
+        # A real contract change still requires review; do not spend another
+        # provider request on a result we are not allowed to apply.
+        return if market.state == 'review'
         row = ForecastProvider.resolution(market)
         observe(market, row) if row
         settle(market.reload)
