@@ -59,7 +59,7 @@ export default class RscWalletPanel extends Component {
             ><span>{{uiText "reward_login"}}</span><strong
               >{{this.data.reward.login_reward}} RSC</strong></div><div><span>{{uiText
                   "reward_streak"
-                }}</span><strong title={{if this.data.reward.login_streak_estimated (uiText "reward_streak_estimated")}}>{{#if this.data.reward.login_streak_estimated}}≈{{/if}}{{this.data.reward.login_streak}}</strong></div><div><span>{{uiText "reward_posts"}}</span><strong>{{this.rewardPosts}} / 10</strong></div><div
+                }}</span><strong>{{this.data.reward.login_streak}}</strong></div><div><span>{{uiText "reward_posts"}}</span><strong>{{this.rewardPosts}} / 10</strong></div><div
             ><span>{{uiText "estimated_reward"}}</span><strong>{{formatAmount
                   this.data.reward.estimated
                 }}
