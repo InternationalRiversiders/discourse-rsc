@@ -153,6 +153,10 @@ after_initialize do
     { url: DiscourseRsc::PacketSharing.url(packet), title: DiscourseRsc::PacketSharing.title(packet) } if packet
   end
 
+  on(:user_seen) do |user, _previous_seen_at|
+    DiscourseRsc::Rewards.record_visit(user.id, user.last_seen_at) if SiteSetting.rsc_enabled
+  end
+
   # These guards remain effective even while the plugin is disabled for cutover.
   UserMerger.prepend(DiscourseRsc::Safety::MergeGuard)
   UserDestroyer.prepend(DiscourseRsc::Safety::DeleteGuard)

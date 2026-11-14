@@ -6,12 +6,21 @@ class RewardStreakTest < NativeBusinessTest
   include ActiveSupport::Testing::TimeHelpers
   def setup
     super
+    PluginStoreRow.where("plugin_name LIKE ?", "#{R::Rewards::VISIT_STORE}%").delete_all
     UserVisit.where(user_id: [@alice.id, @bob.id]).delete_all
     [@alice,@bob].each { |u| u.update_columns(last_seen_at: nil, previous_visit_at: nil) }
   end
   def visits(day, count)
     UserVisit.where(user_id: @alice.id).delete_all
-    count.times { |i| UserVisit.create!(user_id: @alice.id, visited_at: day-i, posts_read: 0) }
+    PluginStoreRow.where(plugin_name:"#{R::Rewards::VISIT_STORE}#{@alice.id}").delete_all
+    count.times do |i|
+      d=day-i
+      if d<R::Rewards::VISIT_START
+        UserVisit.create!(user_id:@alice.id,visited_at:d,posts_read:0)
+      else
+        PluginStore.set("#{R::Rewards::VISIT_STORE}#{@alice.id}",d.iso8601,true)
+      end
+    end
   end
   def test_streak_steps_cap_and_gap
     day=Date.new(2026,11,14)
@@ -24,6 +33,7 @@ class RewardStreakTest < NativeBusinessTest
     assert_equal 1,R::Rewards.login_rewards(day,[@alice.id])[@alice.id]
     assert_equal 1,R::Rewards.login_streaks(day,[@alice.id],limit:nil)[@alice.id]
     UserVisit.where(user_id:@alice.id,visited_at:day).delete_all
+    PluginStoreRow.where(plugin_name:"#{R::Rewards::VISIT_STORE}#{@alice.id}",key:day.iso8601).delete_all
     assert_equal 0,R::Rewards.login_rewards(day,[@alice.id])[@alice.id]
   end
   def test_streak_effective_business_day_and_historical_visits
@@ -59,4 +69,28 @@ class RewardStreakTest < NativeBusinessTest
     @alice.update_columns(last_seen_at:Time.utc(2026,11,14,16,1))
     assert_equal 0,R::Rewards.login_rewards(day,[@alice.id])[@alice.id]
   end
+  def test_streak_beijing_midnight_and_utc_midnight_are_distinct
+    travel_to(Time.utc(2026,11,14,15,59)) do
+      @alice.update_last_seen!(Time.current,force:true)
+      @alice.update_last_seen!(Time.current,force:true)
+      assert_equal 1,PluginStoreRow.where(plugin_name:"#{R::Rewards::VISIT_STORE}#{@alice.id}").count
+      assert_equal 1,R::Rewards.today(@alice.id)[:login_streak]
+    end
+    travel_to(Time.utc(2026,11,14,16,1)) do
+      assert_equal 0,R::Rewards.today(@alice.id)[:login_streak], 'UTC visit on Nov 14 must not count for Beijing Nov 15'
+      @alice.update_last_seen!(Time.current,force:true)
+      assert_equal 2,R::Rewards.today(@alice.id)[:login_streak]
+    end
+    travel_to(Time.utc(2026,11,15,0,1)) do
+      @alice.update_last_seen!(Time.current,force:true)
+      assert_equal 2,R::Rewards.today(@alice.id)[:login_streak], 'UTC midnight must not increment the Beijing streak'
+    end
+    travel_to(Time.utc(2026,11,17,4)) do
+      @alice.update_last_seen!(Time.current,force:true)
+      assert_equal 1,R::Rewards.today(@alice.id)[:login_streak]
+      # A stored visit survives last_seen/previous_visit moving forward.
+      assert_includes R::Rewards.visit_ids(Date.new(2026,11,15),Time.utc(2026,11,14,16)),@alice.id
+    end
+  end
+
 end
