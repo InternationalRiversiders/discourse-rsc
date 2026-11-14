@@ -445,6 +445,7 @@ en:
         sort: Sort by
         today_reward: Today’s activity reward
         reward_login: Daily login reward
+        reward_streak_estimated: Some historical browsing visits lack timestamps. This streak is estimated and bounded by your Beijing registration date.
         reward_streak: Consecutive logins
         reward_posts: Topics or replies
         reward_topics: Topics

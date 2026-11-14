@@ -437,6 +437,7 @@ zh_CN:
         sort: 排序方式
         today_reward: 今日活跃奖励
         reward_login: 每日登录奖励
+        reward_streak_estimated: 历史仅浏览记录缺少具体时间，已按北京时间注册日校正；此连续天数为估算。
         reward_streak: 连续登录次数
         reward_posts: 发帖或回帖
         reward_topics: 发主题
